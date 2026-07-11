@@ -1,0 +1,10 @@
+/target/
+**/node_modules/
+**/dist/
+**/test-results/
+**/playwright-report/
+**/.vite/
+*.log
+.DS_Store
+.idea/
+.vscode/
