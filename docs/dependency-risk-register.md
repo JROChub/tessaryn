@@ -19,16 +19,17 @@ TESSARYN does not call it directly.
 
 ## RUSTSEC-2025-0055
 
-`tracing-subscriber 0.2.25` can emit unescaped ANSI control sequences when an
-application logs attacker-controlled text through an initialized subscriber.
-It enters the graph through the Arkworks 0.4 `std` feature. Neither Power House
-nor TESSARYN initializes or calls `tracing-subscriber`, so the affected logging
-path is not reachable in this release. Disabling the feature also disables the
-parallel Groth16 path and is therefore not an equivalent remediation.
+Remediated in `0.1.0-rc.1`. The published Arkworks 0.4 crate constrains
+`tracing-subscriber` to the vulnerable 0.2 line. TESSARYN carries a minimal,
+licensed compatibility backport in `vendor/ark-relations`: it updates the
+dependency to 0.3 and renames the empty `Layer::new_span` hook to
+`Layer::on_new_span`. It also scopes a current-compiler lint allowance to one
+unchanged upstream no-op. No proof or constraint behavior changes. The RustSec
+exception was removed, and byte-identical conformance remains mandatory.
 
 ## Removal Gate
 
-These exceptions must be removed when Power House migrates from the Arkworks 0.4
-dependency graph or an upstream-compatible release eliminates them. Any new
+The unmaintained-crate exceptions must be removed when Power House migrates from
+the Arkworks 0.4 dependency graph. Any new
 advisory remains release-blocking until separately analyzed and recorded. This
 record is risk acceptance, not a claim that an unmaintained dependency is ideal.

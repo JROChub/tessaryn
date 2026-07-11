@@ -2,6 +2,8 @@
 /fuzz/artifacts/
 /fuzz/corpus/
 /fuzz/target/
+/vendor/**/Cargo.lock
+/vendor/**/target/
 **/node_modules/
 **/dist/
 **/test-results/

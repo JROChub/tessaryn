@@ -98,6 +98,35 @@
     },
     {
       "type": "library",
+      "bom-ref": "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
+      "author": "arkworks contributors",
+      "name": "ark-relations",
+      "version": "0.4.0",
+      "description": "A library for rank-one constraint systems",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/ark-relations@0.4.0?download_url=file://../../vendor/ark-relations",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/ark-relations/"
+        },
+        {
+          "type": "website",
+          "url": "https://arkworks.rs"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/arkworks-rs/snark"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#ahash@0.8.12",
       "author": "Tom Kaitchuck <Tom.Kaitchuck@gmail.com>",
       "name": "ahash",
@@ -474,41 +503,6 @@
         {
           "type": "vcs",
           "url": "https://github.com/arkworks-rs/r1cs-std"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
-      "author": "arkworks contributors",
-      "name": "ark-relations",
-      "version": "0.4.0",
-      "description": "A library for rank-one constraint systems",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "00796b6efc05a3f48225e59cb6a2cda78881e7c390872d5786aaf112f31fb4f0"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/ark-relations@0.4.0",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/ark-relations/"
-        },
-        {
-          "type": "website",
-          "url": "https://arkworks.rs"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/arkworks-rs/snark"
         }
       ]
     },
@@ -2255,16 +2249,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.2.25",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.3.23",
       "author": "Eliza Weisman <eliza@buoyant.io>, David Barsky <me@davidbarsky.com>, Tokio Contributors <team@tokio.rs>",
       "name": "tracing-subscriber",
-      "version": "0.2.25",
+      "version": "0.3.23",
       "description": "Utilities for implementing and composing `tracing` subscribers. ",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0e0d2eaa99c3c2e41547cfa109e910a68ea03823cccad4a0525dcbc9b01e8c71"
+          "content": "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
         }
       ],
       "licenses": [
@@ -2272,7 +2266,7 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:cargo/tracing-subscriber@0.2.25",
+      "purl": "pkg:cargo/tracing-subscriber@0.3.23",
       "externalReferences": [
         {
           "type": "website",
@@ -2373,32 +2367,6 @@
         {
           "type": "vcs",
           "url": "https://github.com/dtolnay/unicode-ident"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#valuable@0.1.1",
-      "name": "valuable",
-      "version": "0.1.1",
-      "description": "Object-safe value inspection, used to pass un-typed structured data across trait-object boundaries. ",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT"
-        }
-      ],
-      "purl": "pkg:cargo/valuable@0.1.1",
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "https://github.com/tokio-rs/valuable"
         }
       ]
     },
@@ -2645,6 +2613,15 @@
       ]
     },
     {
+      "ref": "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
+        "registry+https://github.com/rust-lang/crates.io-index#ark-std@0.4.0",
+        "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44",
+        "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.3.23"
+      ]
+    },
+    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#ahash@0.8.12",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
@@ -2667,7 +2644,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#ark-ec@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-r1cs-std@0.4.0",
-        "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
+        "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-serialize@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-snark@0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-std@0.4.0",
@@ -2746,7 +2723,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#ark-ec@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-poly@0.4.2",
-        "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
+        "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-serialize@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-std@0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#rayon@1.12.0"
@@ -2768,22 +2745,13 @@
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#ark-ec@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
-        "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
+        "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-std@0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#derivative@2.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#num-bigint@0.4.8",
         "registry+https://github.com/rust-lang/crates.io-index#num-integer@0.1.46",
         "registry+https://github.com/rust-lang/crates.io-index#num-traits@0.2.19",
         "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44"
-      ]
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
-        "registry+https://github.com/rust-lang/crates.io-index#ark-std@0.4.0",
-        "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44",
-        "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.2.25"
       ]
     },
     {
@@ -2807,7 +2775,7 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#ark-snark@0.4.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
-        "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
+        "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-serialize@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-std@0.4.0"
       ]
@@ -2970,7 +2938,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#ark-ff@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#ark-groth16@0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-r1cs-std@0.4.0",
-        "registry+https://github.com/rust-lang/crates.io-index#ark-relations@0.4.0",
+        "path+file:///workspace/tessaryn/vendor/ark-relations#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#ark-serialize@0.4.2",
         "registry+https://github.com/rust-lang/crates.io-index#blake2@0.10.6",
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
@@ -3134,12 +3102,11 @@
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36",
       "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4",
-        "registry+https://github.com/rust-lang/crates.io-index#valuable@0.1.1"
+        "registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4"
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.2.25",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.3.23",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36"
       ]
@@ -3157,9 +3124,6 @@
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.24"
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#valuable@0.1.1"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#version_check@0.9.5"

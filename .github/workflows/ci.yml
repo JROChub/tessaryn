@@ -26,6 +26,7 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+      - run: cargo test --manifest-path vendor/ark-relations/Cargo.toml --all-features
       - run: cargo test --workspace --locked
       - run: cargo run --locked -q -p tessaryn-cli -- generate-demo /tmp/vesper-court.json
       - run: diff -u apps/viewer-web/public/world/vesper-court.json /tmp/vesper-court.json

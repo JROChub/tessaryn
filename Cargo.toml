@@ -14,6 +14,7 @@ members = [
   "crates/tessaryn-powerhouse",
   "tools/tessaryn-cli",
 ]
+exclude = ["vendor/ark-relations"]
 resolver = "2"
 
 [workspace.package]
@@ -39,6 +40,9 @@ sha2 = "0.10"
 thiserror = "2"
 x25519-dalek = { version = "2.0.1", features = ["static_secrets", "zeroize"] }
 zeroize = "1.8.2"
+
+[patch.crates-io]
+ark-relations = { path = "vendor/ark-relations" }
 
 [profile.release]
 lto = "thin"

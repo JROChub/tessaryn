@@ -12,13 +12,10 @@ updates:
       - dependency-name: sha2
         update-types:
           - "version-update:semver-major"
-      - dependency-name: tracing-subscriber
   - package-ecosystem: cargo
     directory: /fuzz
     schedule:
       interval: weekly
-    ignore:
-      - dependency-name: tracing-subscriber
   - package-ecosystem: npm
     directory: /apps/viewer-web
     schedule:

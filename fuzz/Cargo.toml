@@ -39,3 +39,6 @@ bench = false
 
 [workspace]
 members = ["."]
+
+[patch.crates-io]
+ark-relations = { path = "../vendor/ark-relations" }

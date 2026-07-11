@@ -4,7 +4,6 @@ yanked = "deny"
 ignore = [
   { id = "RUSTSEC-2024-0388", reason = "Arkworks 0.4 transitively uses derivative; this is an unmaintained notice, not a vulnerability, and is tracked in docs/dependency-risk-register.md" },
   { id = "RUSTSEC-2024-0436", reason = "Arkworks 0.4 transitively uses paste; this is an unmaintained notice, not a vulnerability, and is tracked in docs/dependency-risk-register.md" },
-  { id = "RUSTSEC-2025-0055", reason = "The transitive tracing-subscriber is never initialized by Power House or TESSARYN; migration is tracked in docs/dependency-risk-register.md" },
 ]
 
 [licenses]
