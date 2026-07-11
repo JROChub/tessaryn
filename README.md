@@ -99,12 +99,15 @@ and leaked workstation paths.
 
 ## Public Origin
 
-The release workflow publishes the same tested, static viewer artifact to GitHub
-Pages. It contains no runtime map dependency, analytics SDK, remote world model,
-or upload endpoint. `tessaryn.com` must not be attached until its DNS points to
-the deployed origin and HTTPS is verified; see [deployment.md](docs/deployment.md).
+The tested static viewer is published at the first-party MFENX path below and
+mirrored by this repository's GitHub Pages workflow. Both distributions contain
+no runtime map dependency, analytics SDK, remote world model, or upload endpoint.
+`tessaryn.com` must not be attached until its DNS points to the deployed origin
+and HTTPS is verified; see [deployment.md](docs/deployment.md).
 
-[Open the experimental synthetic Origin](https://jrochub.github.io/tessaryn/)
+[Open the experimental synthetic Origin](https://mfenx.com/tessaryn/)
+
+[Open the GitHub Pages mirror](https://jrochub.github.io/tessaryn/)
 
 ## License
 

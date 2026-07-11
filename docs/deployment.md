@@ -6,6 +6,17 @@ before GitHub Pages can deploy it. The browser fetches only versioned applicatio
 assets and the bundled synthetic world fixture. A service worker retains those
 assets for offline reconstruction after the first successful load.
 
+## Published Origins
+
+- Canonical first-party path: `https://mfenx.com/tessaryn/`
+- Repository Pages mirror: `https://jrochub.github.io/tessaryn/`
+
+The first-party path is deployed as an exact copy of the tested
+`apps/viewer-web/dist` output. The release fixture at both origins must hash to
+the value recorded in `conformance/SHA256SUMS`. Neither distribution changes the
+TESSARYN trust boundary or makes the MFENX website part of canonical Cell
+identity.
+
 ## Custom Domain Gate
 
 Do not configure `tessaryn.com` as the Pages custom domain until all of these
