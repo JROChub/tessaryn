@@ -77,6 +77,21 @@ for (const [name, viewport] of [
   test(`${name} keeps Trace and Challenge controls reachable`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await openOrigin(page);
+
+    const toast = page.locator("#toast");
+    await toast.evaluate((element) => element.classList.add("visible"));
+    const toastBounds = await bounds(page, "#toast");
+    expectInsideViewport(toastBounds);
+    if (await page.locator(".origin-status").isVisible()) {
+      const statusBounds = await bounds(page, ".origin-status");
+      const intersects =
+        toastBounds.x < statusBounds.right &&
+        toastBounds.right > statusBounds.x &&
+        toastBounds.y < statusBounds.bottom &&
+        toastBounds.bottom > statusBounds.y;
+      expect(intersects).toBe(false);
+    }
+
     await page.evaluate(() => window.__tessaryn?.scene.selectCell("archive-c"));
     expectInsideViewport(await bounds(page, "#trace-drawer"));
     const traceClose = await bounds(page, "#trace-close");

@@ -1013,6 +1013,18 @@ canvas:focus-visible {
     display: none;
   }
 
+  .toast {
+    top: calc(var(--top) + 56px);
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    transform: translate(-50%, -8px);
+  }
+
+  .toast.visible {
+    transform: translate(-50%, 0);
+  }
+
   .trace-drawer,
   .challenge-drawer {
     top: calc(var(--top) + 46px);
