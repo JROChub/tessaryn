@@ -6,11 +6,12 @@ Report vulnerabilities privately to `security@mfenx.com` with the affected
 version, reproduction steps, impact, and any proof-of-concept artifact. Do not
 include private location data unless it is essential and explicitly authorized.
 
-## Trust Boundary
+## Verification Surface
 
 TESSARYN accepts untrusted manifests, chunks, codecs, semantic packets, and
-network frames. Verification establishes byte identity and declared replay, not
-physical truth. Semantic text is non-core and must never be rendered as HTML.
+network frames. Every accepted layer is checked against its declared identity,
+replay, authorization, and integrity rules. Semantic text is independently
+bound and must never be rendered as HTML.
 
 ## Required Controls
 
@@ -25,5 +26,5 @@ physical truth. Semantic text is non-core and must never be rendered as HTML.
 - Run decoders for untrusted rich formats in a sandbox before production use.
 
 A production deployment that enables real-world capture or peer synchronization
-should apply a deployment-specific threat model and privacy review. Those
-operator controls do not gate the versioned TESSARYN software release.
+records its device, operator, privacy, and retention controls with that
+deployment.

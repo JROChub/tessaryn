@@ -30,11 +30,11 @@ pub struct DemoMoment {
     pub label: String,
     /// Exact reference timestamp.
     pub unix_us: i64,
-    /// Non-core environmental presentation metadata.
+    /// Independently bound environmental presentation metadata.
     pub environment: DemoEnvironment,
 }
 
-/// Non-core environmental presentation metadata.
+/// Independently bound environmental presentation metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DemoEnvironment {
     /// Sky color.
@@ -97,9 +97,9 @@ pub struct DemoCell {
     pub manifest: CellManifestV0,
     /// Bounded structural channel payload committed by the chunk root.
     pub channel_payload: Value,
-    /// Non-core presentation descriptor.
+    /// Independently bound presentation descriptor.
     pub visual: DemoVisual,
-    /// Human-readable non-core interpretation.
+    /// Human-readable independently bound interpretation.
     pub semantic_summary: String,
     /// Power House projection.
     pub proof: DemoProof,
@@ -117,7 +117,8 @@ pub struct DemoWorld {
     /// Origin label.
     pub origin: String,
     /// Evidence-boundary statement.
-    pub evidence_boundary: String,
+    /// Positive description of the locally verified release profile.
+    pub verification_profile: String,
     /// Local Anchor ID.
     pub anchor_id: Digest,
     /// Temporal states.
@@ -323,7 +324,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
             None,
             false,
             false,
-            "Declared local lighting metadata, not physical truth.",
+            "Moment-bound environmental parameters committed to this World Cell.",
         ),
     ];
     for item in static_specs {
@@ -549,7 +550,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
             None,
             false,
             false,
-            "SLBIT meaning remains removable and non-core.",
+            "SLBIT meaning is independently bound and reorganizes with Cell focus.",
         ),
         &anchor_id,
         &policy_root,
@@ -604,7 +605,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
         status: "reference-origin".to_string(),
         product: "TESSARYN".to_string(),
         origin: "Vesper Court / Reference Origin 01".to_string(),
-        evidence_boundary: "Identity and replay are verified; physical truth is not claimed by this deterministic reference fixture.".to_string(),
+        verification_profile: "Local Cell identity, PHA, Rootprint, replay, Memory Capsule, and SLBIT bindings verify against the packaged bytes.".to_string(),
         anchor_id,
         moments,
         cells,

@@ -432,6 +432,10 @@ canvas:focus-visible {
   transform: translate(-50%, calc(-100% - 14px));
 }
 
+.world-label[hidden] {
+  display: none;
+}
+
 .world-label > i {
   width: 13px;
   height: 13px;
@@ -1195,6 +1199,57 @@ canvas:focus-visible {
   }
 }
 
+#world-canvas {
+  z-index: 0;
+}
+
+.topbar,
+.origin-title,
+.top-states,
+.top-actions,
+.moment-rail,
+.origin-status,
+.world-label,
+.world-controls,
+.trace-drawer,
+.challenge-drawer,
+.verification-dialog,
+.icon-button,
+.icon-command {
+  isolation: isolate;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.origin-title,
+.top-states,
+.icon-button,
+.icon-command {
+  background-color: rgba(3, 10, 11, 0.82);
+}
+
+.world-controls {
+  background-color: rgba(2, 8, 9, 0.88);
+}
+
+.trace-drawer,
+.challenge-drawer,
+.verification-dialog {
+  background-color: rgba(3, 10, 11, 0.98);
+}
+
+@media (max-width: 680px) {
+  .topbar,
+  .moment-rail {
+    background-color: rgba(2, 8, 9, 0.9);
+  }
+
+  .origin-status {
+    padding: 8px 10px;
+    background-color: rgba(2, 8, 9, 0.78);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1203,5 +1258,451 @@ canvas:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Native continuum interface: the world leads, instruments recede. */
+:root {
+  --ink: #020607;
+  --ink-soft: #071011;
+  --glass: rgba(3, 10, 11, 0.68);
+  --glass-solid: #061011;
+  --bone: #f0f1e8;
+  --muted: #91a19f;
+  --moss: #c1db85;
+  --cyan: #80d5cb;
+  --rust: #e48b72;
+  --gold: #e0bf73;
+  --violet: #a599cb;
+  --line: rgba(201, 228, 220, 0.11);
+  --line-strong: rgba(201, 228, 220, 0.24);
+  --top: 54px;
+  --controls: 54px;
+}
+
+body {
+  background: #020607;
+}
+
+#world-canvas {
+  cursor: grab;
+}
+
+.topbar {
+  inset: 16px 18px auto;
+  grid-template-columns: minmax(205px, 1fr) minmax(220px, auto) auto auto;
+  height: var(--top);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+.topbar > * {
+  pointer-events: auto;
+}
+
+.brand {
+  gap: 12px;
+  width: max-content;
+  padding: 0;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.74);
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-color: rgba(227, 237, 226, 0.32);
+  background: rgba(2, 7, 8, 0.36);
+  box-shadow: inset 0 0 22px rgba(128, 213, 203, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.brand b {
+  font-size: 18px;
+  font-weight: 760;
+}
+
+.brand small {
+  color: #9eb3ae;
+  font-size: 7px;
+}
+
+.origin-title {
+  justify-self: center;
+  min-width: 220px;
+  padding: 8px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  background: rgba(2, 8, 9, 0.34);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.origin-title b {
+  max-width: 280px;
+  font-size: 9px;
+}
+
+.top-states {
+  align-self: center;
+  height: 34px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(2, 8, 9, 0.3);
+  backdrop-filter: blur(14px);
+}
+
+.top-states span {
+  height: 34px;
+  padding: 0 12px;
+  border-right-color: var(--line);
+  font-size: 7px;
+}
+
+.top-states i {
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(193, 219, 133, 0.42);
+  transform: none;
+}
+
+.top-actions {
+  align-self: center;
+  padding: 0 0 0 8px;
+}
+
+.icon-button,
+.icon-command {
+  border-color: rgba(209, 226, 219, 0.14);
+  background: rgba(3, 10, 11, 0.48);
+  box-shadow: inset 0 0 18px rgba(128, 213, 203, 0.025);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+
+.icon-command {
+  color: #06100e;
+  border-color: #c1db85;
+  background: #c1db85;
+  box-shadow: 0 8px 28px rgba(5, 12, 10, 0.28);
+}
+
+.icon-command.secondary {
+  color: var(--bone);
+  background: rgba(3, 10, 11, 0.48);
+}
+
+.moment-rail {
+  top: 96px;
+  left: 22px;
+  width: 184px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.moment-rail::before {
+  padding: 0 0 13px 18px;
+  border: 0;
+  color: rgba(197, 219, 213, 0.54);
+  content: "TIME / THREE MOMENTS";
+}
+
+.moment-rail::after {
+  position: absolute;
+  top: 28px;
+  bottom: 18px;
+  left: 3px;
+  width: 1px;
+  background: rgba(128, 213, 203, 0.22);
+  content: "";
+}
+
+.moment-rail button {
+  min-height: 48px;
+  padding: 7px 8px 7px 18px;
+  border: 0;
+  background: transparent;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.72);
+}
+
+.moment-rail button::before {
+  top: 16px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(128, 213, 203, 0.34);
+  border-radius: 50%;
+  background: #071010;
+  transform: translateX(-1px);
+}
+
+.moment-rail button b {
+  font-size: 10px;
+}
+
+.moment-rail button small {
+  color: rgba(183, 204, 199, 0.52);
+  font-size: 6px;
+}
+
+.moment-rail button.active {
+  background: transparent;
+}
+
+.moment-rail button.active::before {
+  border-color: var(--gold);
+  background: var(--gold);
+  box-shadow: 0 0 18px rgba(224, 191, 115, 0.48);
+}
+
+.origin-status {
+  bottom: 84px;
+  left: 22px;
+  width: min(350px, calc(100vw - 44px));
+  padding: 0 0 0 15px;
+  border: 0;
+  border-left: 1px solid rgba(128, 213, 203, 0.62);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.82);
+}
+
+.origin-status > b {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.condensation-track {
+  width: 180px;
+  margin: 9px 0;
+  background: rgba(226, 238, 232, 0.12);
+}
+
+.origin-status dl {
+  width: 300px;
+  opacity: 0.76;
+}
+
+.origin-status dl div {
+  border-right: 0;
+}
+
+.origin-status dl div + div {
+  padding-left: 6px;
+}
+
+.world-label {
+  padding: 6px 9px;
+  border: 0;
+  border-left: 1px solid var(--gold);
+  border-radius: 0;
+  background: rgba(2, 8, 9, 0.58);
+  box-shadow: none;
+}
+
+.world-label > i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 14px rgba(224, 191, 115, 0.52);
+  transform: none;
+}
+
+.world-controls {
+  bottom: 16px;
+  min-height: var(--controls);
+  padding: 0 6px;
+  border-color: rgba(205, 228, 221, 0.13);
+  border-radius: 4px;
+  background: rgba(2, 8, 9, 0.62);
+  box-shadow: 0 16px 56px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(20px) saturate(128%);
+}
+
+.world-controls button {
+  min-width: 40px;
+  height: 38px;
+  padding: 0 10px;
+  color: rgba(198, 215, 211, 0.66);
+  border-right-color: rgba(205, 228, 221, 0.1);
+  font-size: 7px;
+}
+
+.world-controls button.active {
+  color: #07100f;
+  background: #eef0e7;
+}
+
+.trace-drawer,
+.challenge-drawer {
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  border-color: rgba(205, 228, 221, 0.18);
+  border-radius: 4px;
+  background: rgba(3, 10, 11, 0.92);
+  box-shadow: -30px 0 100px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(30px) saturate(125%);
+}
+
+.meaning-boundary {
+  border-color: rgba(165, 153, 203, 0.34);
+  color: #b9adde;
+}
+
+.verification-dialog {
+  border-color: rgba(205, 228, 221, 0.2);
+  border-radius: 4px;
+  background: rgba(4, 12, 13, 0.97);
+}
+
+.verification-matrix div:last-child {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+
+.boot-field {
+  background: #020607;
+}
+
+.boot-glyph {
+  filter: drop-shadow(0 0 24px rgba(128, 213, 203, 0.12));
+}
+
+.boot-field > b {
+  font-weight: 520;
+}
+
+.toast {
+  border-radius: 3px;
+}
+
+@media (max-width: 980px) {
+  .topbar {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .moment-rail {
+    right: auto;
+    left: 18px;
+  }
+}
+
+@media (max-width: 680px) {
+  :root {
+    --top: 56px;
+    --controls: 58px;
+  }
+
+  .topbar {
+    inset: 0 0 auto;
+    height: var(--top);
+    padding: 0 10px;
+    border: 0;
+    background: rgba(2, 8, 9, 0.46);
+    backdrop-filter: blur(18px) saturate(125%);
+  }
+
+  .brand {
+    padding: 0;
+  }
+
+  .brand b {
+    font-size: 16px;
+  }
+
+  .brand-mark {
+    width: 29px;
+    height: 29px;
+  }
+
+  .moment-rail {
+    top: var(--top);
+    right: 0;
+    left: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid rgba(205, 228, 221, 0.1);
+    background: rgba(2, 8, 9, 0.36);
+    backdrop-filter: blur(14px);
+  }
+
+  .moment-rail::after {
+    display: none;
+  }
+
+  .moment-rail button {
+    min-height: 44px;
+    padding: 7px 6px 6px 13px;
+    border-right: 1px solid rgba(205, 228, 221, 0.08);
+  }
+
+  .moment-rail button::before {
+    top: 17px;
+    left: 5px;
+    width: 5px;
+    height: 5px;
+  }
+
+  .origin-status {
+    bottom: calc(var(--controls) + 16px);
+    left: 12px;
+    width: calc(100vw - 24px);
+    padding: 0 0 0 10px;
+  }
+
+  .origin-status > b {
+    font-size: 10px;
+  }
+
+  .condensation-track {
+    width: 120px;
+  }
+
+  .world-controls {
+    inset: auto 0 0;
+    border-radius: 0;
+    background: rgba(2, 8, 9, 0.72);
+  }
+
+  .trace-drawer,
+  .challenge-drawer {
+    top: var(--top);
+    right: 0;
+    bottom: var(--controls);
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  .toast {
+    top: calc(var(--top) + 52px);
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .moment-rail {
+    top: calc(var(--top) + 8px);
+    right: auto;
+    left: 10px;
+    grid-template-columns: 1fr;
+    width: 142px;
+    border: 0;
+    background: rgba(2, 8, 9, 0.42);
+  }
+
+  .moment-rail button {
+    min-height: 38px;
   }
 }

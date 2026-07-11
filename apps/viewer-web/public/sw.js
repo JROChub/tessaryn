@@ -1,4 +1,4 @@
-const CACHE = "tessaryn-origin-v0-1-0-portable1";
+const CACHE = "tessaryn-origin-v0-1-1-portable1";
 const CORE = [
   "./",
   "./world/vesper-court.json",

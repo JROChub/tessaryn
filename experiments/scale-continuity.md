@@ -11,6 +11,8 @@ Success metric: Selection identity and perceptual focus persist through object, 
 Failure threshold: Selection changes, leaves the view unexpectedly, or loses its deterministic correspondence during a transition.
 Fallback: Discrete but animated scale states with explicit correspondences.
 Security and privacy implications: Aggregate state must not reveal restricted geometry.
-Power House verification boundary: Presentation transforms are non-core in `0.1.0`.
+Power House integration: Presentation transforms preserve the `0.1.1` Cell and
+Rootprint identities.
 Measured result: Automated desktop, portrait, landscape, and reduced-motion interaction replay preserves selection and verification state.
-Decision: Supported for the three bounded `0.1.0` scale states. Broader human-comprehension studies may extend the design but do not gate this behavior.
+Decision: Supported for the three bounded `0.1.1` scale states. Broader
+human-comprehension studies may extend the design.

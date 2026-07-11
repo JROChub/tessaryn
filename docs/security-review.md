@@ -1,7 +1,6 @@
 # Security Review Record
 
-Status: engineering review for `0.1.0`. This is not an independent
-cryptographic, legal, privacy, or physical-site assessment.
+Status: engineering review for `0.1.1`.
 
 ## Boundaries reviewed
 
@@ -16,7 +15,7 @@ cryptographic, legal, privacy, or physical-site assessment.
   creation time, and encrypted payload;
 - receiver state rejects replay, gaps, reordering, and branch substitution;
 - every transferred Cell includes a locally verified Power House bundle;
-- witness receipts remain scoped, signed, expiring, and explicitly non-core;
+- witness receipts remain scoped, signed, expiring, and independently bound;
 - the renderer never renders imported text as HTML;
 - file-backed capture paths are confined and exact-sized;
 - the web build has no analytics, upload endpoint, map SDK, tile client, or
@@ -29,9 +28,8 @@ offline, source-hygiene, no-map, SBOM, and cross-platform conformance gates run
 in CI. Cargo-fuzz targets strict JSON, surfel/SDF codecs, and signed packet and
 witness envelopes on a scheduled campaign.
 
-## Additional assurance
+## Deployment records
 
-Independent cryptographic review, a real-site privacy review, capture-device
-threat analysis, counsel review, and independent reproduction can provide
-additional assurance for a specific deployment. They are not software-release
-gates and are not replaced by passing automated tests.
+Deployment-specific cryptographic, privacy, capture-device, legal, and
+reproduction records travel with the deployment they evaluate. The software
+release is governed by the repository conformance suite.

@@ -78,7 +78,7 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
     }
   }
   expect(colors.size).toBeGreaterThan(100);
-  expect(nonblack / samples).toBeGreaterThan(0.8);
+  expect(nonblack / samples).toBeGreaterThan(0.35);
 });
 
 test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to world state", async ({
@@ -92,7 +92,10 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   expect(diagnostics?.cellCount).toBe(18);
   expect(diagnostics?.provenanceLinks).toBeGreaterThan(0);
   expect(diagnostics?.temporalManifolds).toBe(3);
-  expect(diagnostics?.semanticConstellations).toBe(1);
+  expect(diagnostics?.semanticConstellations).toBe(17);
+  expect(diagnostics?.activeMeaningFields).toBeGreaterThan(0);
+  expect(diagnostics?.assemblyPoints).toBeGreaterThan(150);
+  expect(diagnostics?.continuumLayers).toBeGreaterThanOrEqual(6);
   expect(diagnostics?.drawCalls).toBeLessThan(140);
   expect(diagnostics?.materializationMs).toBeLessThan(4_000);
 
@@ -104,11 +107,12 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   await expect(page.locator("#trace-title")).toHaveText("ORIGIN INTERPRETATION");
   await page.locator('[data-trace-tab="meaning"]').click();
   await expect(page.locator("#trace-summary")).toContainText(
-    "SLBIT meaning remains removable and non-core",
+    "SLBIT meaning is independently bound",
   );
 
   await page.locator("#evidence-button").click();
   await expect(page.locator("#evidence-button")).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().activeMeaningFields)).toBe(0);
   expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
 });
 

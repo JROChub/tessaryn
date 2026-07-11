@@ -48,7 +48,7 @@ pub struct CellProofReport {
     pub replay_valid: bool,
     /// Memory Capsule verifies under the strict local policy.
     pub memory_capsule_valid: bool,
-    /// Clarifies the evidence boundary.
+    /// Declares whether the report includes a physical-observation claim.
     pub physical_truth_claimed: bool,
 }
 

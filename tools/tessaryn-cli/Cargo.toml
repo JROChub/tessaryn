@@ -12,12 +12,12 @@ description = "TESSARYN Cell capture, reconstruction, inspection, and conformanc
 power_house.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tessaryn-canonical = { version = "=0.1.0", path = "../../crates/tessaryn-canonical" }
-tessaryn-forge = { version = "=0.1.0", path = "../../crates/tessaryn-forge" }
-tessaryn-powerhouse = { version = "=0.1.0", path = "../../crates/tessaryn-powerhouse" }
-tessaryn-reconstruct = { version = "=0.1.0", path = "../../crates/tessaryn-reconstruct" }
-tessaryn-schema = { version = "=0.1.0", path = "../../crates/tessaryn-schema" }
-tessaryn-sync = { version = "=0.1.0", path = "../../crates/tessaryn-sync" }
+tessaryn-canonical = { version = "=0.1.1", path = "../../crates/tessaryn-canonical" }
+tessaryn-forge = { version = "=0.1.1", path = "../../crates/tessaryn-forge" }
+tessaryn-powerhouse = { version = "=0.1.1", path = "../../crates/tessaryn-powerhouse" }
+tessaryn-reconstruct = { version = "=0.1.1", path = "../../crates/tessaryn-reconstruct" }
+tessaryn-schema = { version = "=0.1.1", path = "../../crates/tessaryn-schema" }
+tessaryn-sync = { version = "=0.1.1", path = "../../crates/tessaryn-sync" }
 thiserror.workspace = true
 
 [lib]

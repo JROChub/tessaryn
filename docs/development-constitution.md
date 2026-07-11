@@ -8,5 +8,5 @@
 6. Time is native, branch-aware world state, not playback attached to a model.
 7. A capability is Implemented, Measured, Reproduced, Experimental, or Speculative.
 8. No feature becomes stable without implementation, security/privacy,
-   performance, comprehension, and evidence-boundary review.
+   performance, comprehension, and verification-model review.
 9. A failed bounded experiment is a valid result and must be recorded.

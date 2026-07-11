@@ -8,11 +8,11 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.1.0`. It contains the tested World Cell kernel,
+This repository is `0.1.1`. It contains the tested World Cell kernel,
 capture-to-Cell reconstruction, authenticated private Locus exchange, signed
 witness receipts, Power House packaging, a browser-local verifier, and the
-Vesper Court deterministic reference Origin. See [STATUS.md](STATUS.md) for the
-software release contract and optional field-evidence profile.
+Vesper Court reference Origin. See [STATUS.md](STATUS.md) for the software
+release contract.
 
 The release implements:
 
@@ -34,9 +34,10 @@ The release implements:
 - strict local browser import, verification, rendering, and exact-layer
   mutation rejection for portable reconstruction artifacts;
 - full-bleed native Three.js construction, Condensation, Scale Breathing,
-  Chronofold, evidence Lens, and inside-out Cell Trace inspection;
-- deterministic crystalline Cell lattices, Rootprint flow, SLBIT meaning
-  constellations, temporal manifolds, and an adaptive software-renderer path;
+  Chronofold, provenance Lens, and inside-out Cell Trace inspection;
+- identity-derived matter, branching memory architecture, Cell condensation,
+  Rootprint currents, living SLBIT constellations, temporal manifolds, and an
+  adaptive software-renderer path;
 - service-worker-backed offline operation after the first successful load.
 
 ## Run The Origin
@@ -94,16 +95,17 @@ Cell schema -> canonical identity -> local store -> Anchor Graph
 ```
 
 Power House remains the verification and provenance authority. Rendering,
-capture, reconstruction, and world networking remain outside its trusted core.
-SLBIT meaning is bound to verified state but remains non-core.
+capture, reconstruction, and world networking remain separate product layers.
+SLBIT meaning is independently bound to verified state and can be removed or
+replaced without changing Cell identity.
 
-## Evidence Boundary
+## Local Verification
 
-A valid Cell proves that canonical bytes, declared chunks, provenance bindings,
-and replay state match their committed identities. It does not prove that a
-sensor was honest or that a physical claim is true. TESSARYN exposes identity,
-lineage, replay, attribution, freshness, dispute, disclosure, witnesses, and
-semantic status separately. It never compresses them into one truth score.
+The local verifier checks canonical Cell identity, declared chunk digests and
+Merkle roots, `.pha` bindings, Rootprint lineage, deterministic replay, Memory
+Capsule integrity, witness receipts, and SLBIT packet bindings. Results expose
+identity, lineage, replay, attribution, freshness, dispute, disclosure,
+witnesses, and meaning as independently inspectable dimensions.
 
 ## Repository Map
 

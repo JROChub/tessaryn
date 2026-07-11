@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import type { DemoCell, DemoMoment, DemoWorld, SurfelPoint } from "./types";
 
 export type ScaleMode = "object" | "room" | "site";
@@ -19,6 +21,9 @@ export interface WorldDiagnostics {
   provenanceLinks: number;
   temporalManifolds: number;
   semanticConstellations: number;
+  activeMeaningFields: number;
+  assemblyPoints: number;
+  continuumLayers: number;
   scale: ScaleMode;
   chronofold: boolean;
 }
@@ -33,6 +38,7 @@ interface CellNode {
   assemblyQuaternion: THREE.Quaternion;
   halo: THREE.Mesh | null;
   haloMaterial: THREE.MeshBasicMaterial | null;
+  meaning: THREE.Group | null;
   currentOpacity: number;
   targetOpacity: number;
   condensed: boolean;
@@ -42,9 +48,12 @@ interface CellNode {
 }
 
 interface WeaveLink {
-  line: THREE.Line;
-  pulse: THREE.Mesh;
+  line: THREE.Line | null;
+  pulse: THREE.Mesh | null;
   phase: number;
+  bend: number;
+  segments: number;
+  vertexOffset: number;
   from: CellNode;
   to: CellNode;
 }
@@ -66,11 +75,13 @@ export class TessarynWorld {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(52, 1, 0.05, 160);
+  private readonly continuumRoot = new THREE.Group();
   private readonly fieldRoot = new THREE.Group();
   private readonly root = new THREE.Group();
   private readonly aggregateRoot = new THREE.Group();
   private readonly temporalRoot = new THREE.Group();
   private readonly importedRoot = new THREE.Group();
+  private readonly focusRoot = new THREE.Group();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
   private readonly nodes = new Map<string, CellNode>();
@@ -81,17 +92,22 @@ export class TessarynWorld {
   private readonly animatedShaders: THREE.ShaderMaterial[] = [];
   private readonly aggregateMaterials: THREE.Material[] = [];
   private readonly temporalMaterials: THREE.Material[] = [];
+  private readonly focusMaterials: THREE.MeshBasicMaterial[] = [];
   private readonly keys = new Set<string>();
   private readonly timer = new THREE.Timer();
   private readonly focus = new THREE.Vector3(0, 1.1, 0);
   private readonly targetFocus = new THREE.Vector3(0, 1.1, 0);
   private readonly selectedWorld = new THREE.Vector3();
+  private readonly weaveSample = new THREE.Vector3();
   private readonly targetBackground = new THREE.Color("#060b10");
-  private readonly sun = new THREE.DirectionalLight("#ffe1a1", 3.4);
-  private readonly ambient = new THREE.HemisphereLight("#b9dce0", "#15120f", 1.45);
+  private readonly sun = new THREE.DirectionalLight("#ffe1a1", 4.1);
+  private readonly ambient = new THREE.HemisphereLight("#b9dce0", "#15120f", 2.05);
   private readonly crystalLight = new THREE.PointLight("#73cdd0", 12, 34, 1.8);
   private readonly archiveLight = new THREE.PointLight("#e2b76d", 8, 28, 1.9);
   private readonly constrainedRenderer: boolean;
+  private environmentMap: THREE.WebGLRenderTarget | null = null;
+  private assemblyMaterial: THREE.ShaderMaterial | null = null;
+  private assemblyPointCount = 0;
   private pointerState: { x: number; y: number; moved: boolean } | null = null;
   private yaw = 0.12;
   private pitch = 0.44;
@@ -102,6 +118,8 @@ export class TessarynWorld {
   private chronofold = false;
   private evidence = true;
   private selected: CellNode | null = null;
+  private hovered: CellNode | null = null;
+  private focusOpacity = 0;
   private startedAt = performance.now();
   private visible = true;
   private animationFrame = 0;
@@ -115,6 +133,7 @@ export class TessarynWorld {
   private resizeObserver: ResizeObserver;
   private importedFrame: { focus: THREE.Vector3; radius: number } | null = null;
   private readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  private constrainedWeave: THREE.LineSegments | null = null;
 
   constructor(canvas: HTMLCanvasElement, world: DemoWorld, callbacks: WorldCallbacks) {
     this.canvas = canvas;
@@ -128,22 +147,32 @@ export class TessarynWorld {
     this.constrainedRenderer = this.detectConstrainedRenderer();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.toneMappingExposure = 1.14;
     this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.75 : innerWidth <= 680 ? 1 : 1.4),
+      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.55 : innerWidth <= 680 ? 1 : 1.4),
     );
     this.renderer.shadowMap.enabled = innerWidth > 680 && !this.constrainedRenderer;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.scene.background = new THREE.Color("#060b10");
-    this.scene.fog = new THREE.FogExp2("#060b10", 0.018);
+    this.scene.background = new THREE.Color("#03070a");
+    this.scene.fog = new THREE.FogExp2("#03070a", 0.014);
+    if (!this.constrainedRenderer) {
+      const environment = new RoomEnvironment();
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      this.environmentMap = pmrem.fromScene(environment, 0.035);
+      this.scene.environment = this.environmentMap.texture;
+      environment.dispose();
+      pmrem.dispose();
+    }
     this.crystalLight.position.set(-7, 4.5, 2);
     this.archiveLight.position.set(6, 2.8, -5);
     this.scene.add(
+      this.continuumRoot,
       this.fieldRoot,
       this.root,
       this.aggregateRoot,
       this.temporalRoot,
       this.importedRoot,
+      this.focusRoot,
       this.ambient,
       this.sun,
     );
@@ -157,6 +186,9 @@ export class TessarynWorld {
     this.sun.shadow.camera.top = 18;
     this.sun.shadow.camera.bottom = -18;
     this.buildWorld();
+    this.selected = this.nodes.get("archive-c") ?? this.findVisibleArchive();
+    this.highlightSelection();
+    this.setScale("object");
     const initialMoment = this.world.moments.find((candidate) => candidate.id === this.moment);
     if (initialMoment) this.applyEnvironment(initialMoment);
     this.bindInteractions();
@@ -189,15 +221,15 @@ export class TessarynWorld {
     if (scale === "object") {
       const node = this.selected ?? this.findVisibleArchive();
       if (node) this.targetFocus.copy(node.group.position);
-      this.targetDistance = 4.4;
+      this.targetDistance = innerWidth <= 680 ? 4.15 : 3.05;
       this.pitch = 0.28;
     } else if (scale === "room") {
       this.targetFocus.set(0, 1.1, 0);
-      this.targetDistance = 16;
-      this.pitch = 0.44;
+      this.targetDistance = 14.5;
+      this.pitch = 0.4;
     } else {
       this.targetFocus.set(0, 1.3, 0);
-      this.targetDistance = 28;
+      this.targetDistance = 25;
       this.pitch = 0.72;
     }
     this.updateCellTargets();
@@ -212,14 +244,16 @@ export class TessarynWorld {
 
   setEvidence(active: boolean): void {
     this.evidence = active;
+    if (this.constrainedWeave) this.constrainedWeave.visible = active;
     for (const link of this.weaveLinks) {
-      link.line.visible = active;
-      link.pulse.visible = active && !this.constrainedRenderer;
+      if (link.line) link.line.visible = active;
+      if (link.pulse) link.pulse.visible = active && !this.constrainedRenderer;
     }
     for (const node of this.nodes.values()) {
       const boundary = node.group.getObjectByName("cell-boundary");
       if (boundary) boundary.visible = active;
     }
+    this.updateMeaningFields();
     this.updateCellTargets();
   }
 
@@ -230,6 +264,7 @@ export class TessarynWorld {
     this.highlightSelection();
     this.callbacks.onCellSelected(node.cell);
     this.updateCellTargets();
+    this.updateMeaningFields();
     if (this.scale === "object") {
       this.targetFocus.copy(node.group.position);
     }
@@ -242,6 +277,7 @@ export class TessarynWorld {
     this.targetFocus.copy(this.importedFrame?.focus ?? new THREE.Vector3(0, 1.1, 0));
     this.setScale("room");
     this.highlightSelection();
+    this.updateMeaningFields();
   }
 
   loadSurfelObservation(cell: DemoCell, surfels: SurfelPoint[]): void {
@@ -367,6 +403,7 @@ export class TessarynWorld {
       assemblyQuaternion: group.quaternion.clone(),
       halo: null,
       haloMaterial: null,
+      meaning: null,
       currentOpacity: 1,
       targetOpacity: 1,
       condensed: true,
@@ -429,8 +466,12 @@ export class TessarynWorld {
       provenanceLinks: this.weaveLinks.length,
       temporalManifolds: this.world.moments.length,
       semanticConstellations: [...this.nodes.values()].filter((node) =>
-        Boolean(node.group.getObjectByName("slbit-constellation")),
+        Boolean(node.meaning),
       ).length,
+      activeMeaningFields: [...this.nodes.values()].filter((node) => node.meaning?.visible)
+        .length,
+      assemblyPoints: this.assemblyPointCount,
+      continuumLayers: this.continuumRoot.children.length,
       scale: this.scale,
       chronofold: this.chronofold,
     };
@@ -441,10 +482,32 @@ export class TessarynWorld {
     this.resizeObserver.disconnect();
     document.removeEventListener("visibilitychange", this.handleVisibility);
     this.timer.dispose();
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    this.scene.traverse((object) => {
+      const renderable = object as THREE.Mesh;
+      if (renderable.geometry) geometries.add(renderable.geometry);
+      if (!renderable.material) return;
+      const values = Array.isArray(renderable.material)
+        ? renderable.material
+        : [renderable.material];
+      values.forEach((material) => materials.add(material));
+    });
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+    this.textureCache.forEach((texture) => texture.dispose());
+    this.textureCache.clear();
+    this.environmentMap?.dispose();
+    this.environmentMap = null;
+    this.renderer.renderLists.dispose();
     this.renderer.dispose();
+    this.renderer.forceContextLoss();
   }
 
   private detectConstrainedRenderer(): boolean {
+    const requested = new URLSearchParams(location.search).get("visual");
+    if (requested === "full") return false;
+    if (requested === "constrained") return true;
     const context = this.renderer.getContext();
     const debug = context.getExtension("WEBGL_debug_renderer_info");
     const renderer = debug
@@ -467,28 +530,8 @@ export class TessarynWorld {
   }
 
   private buildWorld(): void {
+    this.createContinuumField();
     this.createAnchorField();
-    const floorMaterial = this.constrainedRenderer
-      ? new THREE.MeshBasicMaterial({
-          color: "#10191a",
-          transparent: true,
-          opacity: 0.78,
-        })
-      : new THREE.MeshStandardMaterial({
-          color: "#10191a",
-          roughness: 0.72,
-          metalness: 0.18,
-          transparent: true,
-          opacity: 0.78,
-        });
-    const plane = new THREE.Mesh(
-      new THREE.CircleGeometry(23, 12),
-      floorMaterial,
-    );
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.y = -0.205;
-    plane.receiveShadow = true;
-    this.root.add(plane);
 
     this.world.cells.forEach((cell, index) => {
       const group = this.createCellObject(cell);
@@ -510,6 +553,7 @@ export class TessarynWorld {
           ),
         );
       const assemblyHalo = group.getObjectByName("assembly-halo");
+      const meaning = group.getObjectByName("slbit-constellation");
       const node: CellNode = {
         cell,
         group,
@@ -523,6 +567,7 @@ export class TessarynWorld {
           group.userData.haloMaterial instanceof THREE.MeshBasicMaterial
             ? group.userData.haloMaterial
             : null,
+        meaning: meaning instanceof THREE.Group ? meaning : null,
         currentOpacity: 0,
         targetOpacity: 0,
         condensed: cell.visual.primitive === "none",
@@ -537,72 +582,310 @@ export class TessarynWorld {
       this.cellsById.set(cell.cell_id, node);
       this.root.add(group);
     });
+    this.createAssemblyField();
     this.createWeave();
     this.createUnknownBoundary();
     this.createAggregateField();
     this.createTemporalField();
+    this.createFocusField();
     this.updateCellTargets();
+  }
+
+  private createContinuumField(): void {
+    this.continuumRoot.name = "continuum-volume";
+    const shellMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        upper: { value: new THREE.Color("#102327") },
+        lower: { value: new THREE.Color("#020607") },
+      },
+      side: THREE.BackSide,
+      depthWrite: false,
+      vertexShader: [
+        "varying vec3 vPosition;",
+        "void main(){",
+        "vPosition=position;",
+        "gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);",
+        "}",
+      ].join("\n"),
+      fragmentShader: [
+        "uniform float time;",
+        "uniform vec3 upper;",
+        "uniform vec3 lower;",
+        "varying vec3 vPosition;",
+        "float hash(vec3 p){return fract(sin(dot(p,vec3(17.13,91.7,43.31)))*43758.5453);}",
+        "void main(){",
+        "vec3 n=normalize(vPosition);",
+        "float horizon=smoothstep(-0.42,0.72,n.y);",
+        "float strata=0.5+0.5*sin(n.y*31.0+n.x*5.0+n.z*7.0+time*0.018);",
+        "float grain=hash(floor(n*190.0));",
+        "vec3 color=mix(lower,upper,horizon);",
+        "color+=vec3(0.018,0.032,0.029)*strata*(0.25+0.75*horizon);",
+        "color+=vec3(0.012,0.017,0.015)*step(0.992,grain);",
+        "gl_FragColor=vec4(color,1.0);",
+        "}",
+      ].join("\n"),
+    });
+    this.animatedShaders.push(shellMaterial);
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(72, this.constrainedRenderer ? 20 : 36, 18),
+      shellMaterial,
+    );
+    shell.name = "continuum-shell";
+    this.continuumRoot.add(shell);
+
+    const groundMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        opacity: { value: 1 },
+        mineral: { value: new THREE.Color("#0b1d1c") },
+        vein: { value: new THREE.Color("#31534d") },
+      },
+      transparent: true,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+      vertexShader: [
+        "uniform float time;",
+        "varying float vRadius;",
+        "varying float vHeight;",
+        "varying vec2 vLocal;",
+        "void main(){",
+        "vec3 p=position;",
+        "vLocal=position.xy;",
+        "vRadius=length(position.xy);",
+        "float broad=sin(position.x*0.31)+cos(position.y*0.27);",
+        "float fine=sin((position.x+position.y)*0.84)*0.035;",
+        "p.z=broad*0.055+fine;",
+        "vHeight=p.z;",
+        "gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);",
+        "}",
+      ].join("\n"),
+      fragmentShader: [
+        "uniform vec3 mineral;",
+        "uniform vec3 vein;",
+        "uniform float opacity;",
+        "varying float vRadius;",
+        "varying float vHeight;",
+        "varying vec2 vLocal;",
+        "void main(){",
+        "if(vRadius>24.5) discard;",
+        "float contour=pow(0.5+0.5*sin(vRadius*2.7+vHeight*18.0),10.0);",
+        "float fracture=pow(0.5+0.5*sin(vLocal.x*0.43-vLocal.y*0.71),18.0);",
+        "float edge=1.0-smoothstep(22.0,24.5,vRadius);",
+        "vec3 color=mix(mineral,vein,contour*0.24+fracture*0.12);",
+        "gl_FragColor=vec4(color,(0.94*edge+0.06)*opacity);",
+        "}",
+      ].join("\n"),
+    });
+    this.animatedShaders.push(groundMaterial);
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 50, this.constrainedRenderer ? 28 : 64, this.constrainedRenderer ? 28 : 64),
+      groundMaterial,
+    );
+    ground.name = "constructed-ground";
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.24;
+    ground.receiveShadow = true;
+    this.continuumRoot.add(ground);
+
+    const seamCells = this.world.cells.filter(
+      (cell) => cell.visual.primitive !== "none" && cell.key !== "origin-floor",
+    );
+    const seamCount = this.constrainedRenderer ? 3 : 4;
+    for (let seamIndex = 0; seamIndex < seamCount; seamIndex += 1) {
+      const path = seamCells
+        .filter((_, index) => index % seamCount === seamIndex)
+        .map((cell, index) => {
+          const position = cell.visual.position_mm;
+          return new THREE.Vector3(
+            position[0] / 1000 + Math.sin(index * 1.7 + seamIndex) * 1.1,
+            -0.14 + seamIndex * 0.012,
+            position[2] / 1000 + Math.cos(index * 1.3 + seamIndex) * 1.35,
+          );
+        });
+      if (path.length < 3) continue;
+      const material = new THREE.MeshBasicMaterial({
+        color: seamIndex % 2 === 0 ? "#315d55" : "#76583e",
+        transparent: true,
+        opacity: this.constrainedRenderer ? 0.18 : 0.25,
+        depthWrite: false,
+      });
+      material.userData.baseOpacity = material.opacity;
+      const seam = new THREE.Mesh(
+        new THREE.TubeGeometry(
+          new THREE.CatmullRomCurve3(path, false, "centripetal"),
+          this.constrainedRenderer ? 36 : 72,
+          0.012 + seamIndex * 0.004,
+          4,
+          false,
+        ),
+        material,
+      );
+      seam.name = "cell-derived-stratum";
+      this.continuumRoot.add(seam);
+    }
+  }
+
+  private createAssemblyField(): void {
+    const visibleNodes = [...this.nodes.values()].filter(
+      (node) =>
+        node.cell.visual.primitive !== "none" &&
+        node.cell.key !== "origin-floor" &&
+        !node.cell.manifest.evidence.restricted,
+    );
+    const pointsPerCell = this.constrainedRenderer ? 14 : innerWidth <= 680 ? 22 : 38;
+    const total = visibleNodes.length * pointsPerCell;
+    if (total === 0) return;
+    const target = new Float32Array(total * 3);
+    const origin = new Float32Array(total * 3);
+    const delay = new Float32Array(total);
+    const color = new Float32Array(total * 3);
+    const size = new Float32Array(total);
+    let cursor = 0;
+    for (const node of visibleNodes) {
+      const random = seededRandom(node.cell.visual.seed ^ 0xa55e4b1);
+      const cellSize = node.cell.visual.size_mm.map((value) => value / 1000) as [
+        number,
+        number,
+        number,
+      ];
+      const parent = node.cell.manifest.parents
+        .map((parentId) => this.cellsById.get(parentId))
+        .find(Boolean);
+      const source = parent?.basePosition ?? new THREE.Vector3(0, 0.12, 0);
+      const pointColor = this.presentationColor(node.cell).lerp(new THREE.Color("#d8eee8"), 0.34);
+      for (let index = 0; index < pointsPerCell; index += 1) {
+        const axis = index % 3;
+        const local: [number, number, number] = [
+          (random() - 0.5) * cellSize[0],
+          (random() - 0.5) * cellSize[1],
+          (random() - 0.5) * cellSize[2],
+        ];
+        local[axis] = (random() > 0.5 ? 0.5 : -0.5) * (cellSize[axis] ?? 0);
+        const targetOffset = cursor * 3;
+        target[targetOffset] = node.basePosition.x + (local[0] ?? 0);
+        target[targetOffset + 1] = node.basePosition.y + (local[1] ?? 0);
+        target[targetOffset + 2] = node.basePosition.z + (local[2] ?? 0);
+        const spread = 1.2 + random() * 3.8;
+        origin[targetOffset] = source.x + (random() - 0.5) * spread;
+        origin[targetOffset + 1] = source.y + (random() - 0.2) * spread;
+        origin[targetOffset + 2] = source.z + (random() - 0.5) * spread;
+        delay[cursor] = node.condenseAt * 0.001 + random() * 0.52;
+        color[targetOffset] = pointColor.r;
+        color[targetOffset + 1] = pointColor.g;
+        color[targetOffset + 2] = pointColor.b;
+        size[cursor] = 1.7 + random() * 1.8;
+        cursor += 1;
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(target, 3));
+    geometry.setAttribute("aOrigin", new THREE.BufferAttribute(origin, 3));
+    geometry.setAttribute("aDelay", new THREE.BufferAttribute(delay, 1));
+    geometry.setAttribute("aColor", new THREE.BufferAttribute(color, 3));
+    geometry.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
+    this.assemblyMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        opacity: { value: 1 },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: [
+        "uniform float time;",
+        "attribute vec3 aOrigin;",
+        "attribute float aDelay;",
+        "attribute vec3 aColor;",
+        "attribute float aSize;",
+        "varying vec3 vColor;",
+        "varying float vSettled;",
+        "void main(){",
+        "float p=clamp((time-aDelay)/1.35,0.0,1.0);",
+        "float eased=1.0-pow(1.0-p,4.0);",
+        "float resonance=sin(p*3.14159265)*(1.0-p)*0.16;",
+        "vec3 direction=normalize(position-aOrigin+vec3(0.0001));",
+        "vec3 assembled=mix(aOrigin,position,eased)+direction*resonance;",
+        "vec4 mv=modelViewMatrix*vec4(assembled,1.0);",
+        "gl_Position=projectionMatrix*mv;",
+        "gl_PointSize=aSize*(0.82+0.58*sin(p*3.14159265))*(58.0/max(1.0,-mv.z));",
+        "vColor=aColor;",
+        "vSettled=p;",
+        "}",
+      ].join("\n"),
+      fragmentShader: [
+        "uniform float opacity;",
+        "varying vec3 vColor;",
+        "varying float vSettled;",
+        "void main(){",
+        "vec2 p=abs(gl_PointCoord-0.5);",
+        "float diamond=1.0-smoothstep(0.28,0.5,p.x+p.y);",
+        "if(diamond<=0.001) discard;",
+        "float active=1.0-smoothstep(0.72,1.0,vSettled);",
+        "float alpha=active*0.82*diamond*opacity;",
+        "gl_FragColor=vec4(vColor*(1.15+diamond*0.35),alpha);",
+        "}",
+      ].join("\n"),
+    });
+    const points = new THREE.Points(geometry, this.assemblyMaterial);
+    points.name = "cell-condensation-field";
+    points.frustumCulled = false;
+    this.continuumRoot.add(points);
+    this.assemblyPointCount = total;
   }
 
   private createAnchorField(): void {
     this.fieldRoot.name = "anchor-field";
-    const fieldMaterial = new THREE.MeshBasicMaterial({
-      color: "#5f999b",
-      transparent: true,
-      opacity: 0.035,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    for (const [inner, outer] of [
-      [4.4, 4.46],
-      [8.8, 8.88],
-      [14.2, 14.3],
-      [21.5, 21.64],
-    ] as const) {
-      const ring = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 12), fieldMaterial);
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = -0.19;
-      this.fieldRoot.add(ring);
-    }
-
-    const radialPositions: number[] = [];
-    for (let index = 0; index < 12; index += 1) {
-      const angle = (index / 12) * Math.PI * 2;
-      radialPositions.push(0, -0.185, 0);
-      radialPositions.push(Math.cos(angle) * 21.5, -0.185, Math.sin(angle) * 21.5);
-    }
-    const radialGeometry = new THREE.BufferGeometry();
-    radialGeometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(radialPositions, 3),
-    );
-    this.fieldRoot.add(
-      new THREE.LineSegments(
-        radialGeometry,
-        new THREE.LineBasicMaterial({
-          color: "#7da6a4",
-          transparent: true,
-          opacity: 0.055,
-          depthWrite: false,
-        }),
-      ),
-    );
-
     const anchorMaterial = this.constrainedRenderer
-      ? new THREE.MeshBasicMaterial({ color: "#a9ded7" })
-      : new THREE.MeshStandardMaterial({
-          color: "#d6ebe5",
-          emissive: "#4e9d9c",
-          emissiveIntensity: 0.7,
-          roughness: 0.16,
-          metalness: 0.28,
+      ? new THREE.MeshBasicMaterial({ color: "#79bdb4" })
+      : new THREE.MeshPhysicalMaterial({
+          color: "#8fd2c7",
+          emissive: "#1e5a54",
+          emissiveIntensity: 0.18,
+          roughness: 0.24,
+          metalness: 0.08,
+          clearcoat: 0.72,
+          clearcoatRoughness: 0.15,
         });
     const anchorCore = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.18, 0),
+      new THREE.OctahedronGeometry(0.2, 1),
       anchorMaterial,
     );
-    anchorCore.position.y = -0.02;
+    anchorCore.position.y = 0.04;
     this.fieldRoot.add(anchorCore);
+
+    const seed = Number.parseInt(this.world.anchor_id.slice(-8), 16) || 1;
+    const random = seededRandom(seed);
+    for (let index = 0; index < 3; index += 1) {
+      const geometry = new THREE.IcosahedronGeometry(0.42 + index * 0.19, 1);
+      const shell = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geometry, 24),
+        new THREE.LineBasicMaterial({
+          color: index === 1 ? "#d9bd79" : "#86c9c1",
+          transparent: true,
+          opacity: 0.12 - index * 0.022,
+          depthWrite: false,
+        }),
+      );
+      shell.rotation.set(random() * Math.PI, random() * Math.PI, random() * Math.PI);
+      shell.position.y = 0.04;
+      shell.userData.rotationRate = (0.018 + random() * 0.018) * (index % 2 ? -1 : 1);
+      this.fieldRoot.add(shell);
+    }
+
+    const identityLoop = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(0.62, 0.008, 96, 3, 2, 5),
+      new THREE.MeshBasicMaterial({
+        color: "#d7c483",
+        transparent: true,
+        opacity: 0.26,
+        depthWrite: false,
+      }),
+    );
+    identityLoop.position.y = 0.04;
+    identityLoop.rotation.x = 0.58;
+    identityLoop.userData.rotationRate = -0.012;
+    this.fieldRoot.add(identityLoop);
   }
 
   private createCellObject(cell: DemoCell): THREE.Group {
@@ -627,26 +910,82 @@ export class TessarynWorld {
     const material = this.materialFor(cell);
 
     switch (cell.visual.primitive) {
-      case "box":
+      case "box": {
+        if (cell.key === "origin-floor") {
+          const originPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(size[0], size[2]),
+            new THREE.MeshBasicMaterial({
+              color: "#000000",
+              transparent: true,
+              opacity: 0,
+              colorWrite: false,
+              depthWrite: false,
+              side: THREE.DoubleSide,
+            }),
+          );
+          originPlane.rotation.x = -Math.PI / 2;
+          group.add(originPlane);
+          this.registerInteractive(originPlane, cell);
+        } else {
+          this.addMesh(group, this.roundedBox(size), material, cell, true);
+        }
+        break;
+      }
       case "wall": {
-        this.addMesh(group, new THREE.BoxGeometry(...size), material, cell, true);
+        const random = seededRandom(cell.visual.seed ^ 0x44a11);
+        const shards = this.constrainedRenderer ? 7 : 11;
+        const shardMesh = new THREE.InstancedMesh(
+          this.roundedBox([1, 1, 1]),
+          material,
+          shards,
+        );
+        const matrix = new THREE.Matrix4();
+        const quaternion = new THREE.Quaternion();
+        const shardScale = new THREE.Vector3();
+        const shardPosition = new THREE.Vector3();
+        for (let index = 0; index < shards; index += 1) {
+          const width = (size[0] / shards) * (0.82 + random() * 0.34);
+          const height = size[1] * (0.72 + random() * 0.32);
+          shardPosition.set(
+            -size[0] / 2 + ((index + 0.5) * size[0]) / shards,
+            (height - size[1]) * 0.5,
+            (random() - 0.5) * size[2] * 0.22,
+          );
+          quaternion.setFromEuler(new THREE.Euler(0, 0, (random() - 0.5) * 0.055));
+          shardScale.set(width, height, size[2] * (0.72 + random() * 0.28));
+          matrix.compose(shardPosition, quaternion, shardScale);
+          shardMesh.setMatrixAt(index, matrix);
+        }
+        shardMesh.instanceMatrix.needsUpdate = true;
+        shardMesh.castShadow = true;
+        shardMesh.receiveShadow = true;
+        group.add(shardMesh);
+        this.registerInteractive(shardMesh, cell);
         break;
       }
       case "gallery": {
         const columnMaterial = material.clone();
+        const columns = new THREE.InstancedMesh(
+          new THREE.CylinderGeometry(0.17, 0.25, 1, 7, 4),
+          columnMaterial,
+          7,
+        );
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+        const scale = new THREE.Vector3(1, size[1], 1);
+        const quaternion = new THREE.Quaternion();
         for (let index = 0; index < 7; index += 1) {
-          const column = new THREE.Mesh(
-            new THREE.BoxGeometry(0.34, size[1], size[2]),
-            columnMaterial,
-          );
-          column.position.x = -size[0] / 2 + 0.7 + (index * (size[0] - 1.4)) / 6;
-          column.castShadow = true;
-          column.receiveShadow = true;
-          group.add(column);
-          this.registerInteractive(column, cell);
+          position.set(-size[0] / 2 + 0.7 + (index * (size[0] - 1.4)) / 6, 0, 0);
+          matrix.compose(position, quaternion, scale);
+          columns.setMatrixAt(index, matrix);
         }
+        columns.instanceMatrix.needsUpdate = true;
+        columns.castShadow = true;
+        columns.receiveShadow = true;
+        group.add(columns);
+        this.registerInteractive(columns, cell);
         const lintel = new THREE.Mesh(
-          new THREE.BoxGeometry(size[0], 0.48, size[2] * 1.25),
+          this.roundedBox([size[0], 0.48, size[2] * 1.25]),
           material,
         );
         lintel.position.y = size[1] / 2 - 0.25;
@@ -656,18 +995,30 @@ export class TessarynWorld {
         break;
       }
       case "terrace": {
+        const steps = new THREE.InstancedMesh(this.roundedBox([1, 1, 1]), material, 4);
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+        const quaternion = new THREE.Quaternion();
+        const stepScale = new THREE.Vector3();
         for (let index = 0; index < 4; index += 1) {
-          const step = new THREE.Mesh(
-            new THREE.BoxGeometry(size[0] - index * 0.55, size[1] / 4, size[2] - index * 0.75),
-            material,
+          position.set(
+            0,
+            -size[1] / 2 + (index + 0.5) * (size[1] / 4),
+            index * -0.25,
           );
-          step.position.y = -size[1] / 2 + (index + 0.5) * (size[1] / 4);
-          step.position.z = index * -0.25;
-          step.receiveShadow = true;
-          step.castShadow = true;
-          group.add(step);
-          this.registerInteractive(step, cell);
+          stepScale.set(
+            size[0] - index * 0.55,
+            size[1] / 4,
+            size[2] - index * 0.75,
+          );
+          matrix.compose(position, quaternion, stepScale);
+          steps.setMatrixAt(index, matrix);
         }
+        steps.instanceMatrix.needsUpdate = true;
+        steps.receiveShadow = true;
+        steps.castShadow = true;
+        group.add(steps);
+        this.registerInteractive(steps, cell);
         break;
       }
       case "water": {
@@ -682,41 +1033,119 @@ export class TessarynWorld {
       case "cylinder": {
         this.addMesh(
           group,
-          new THREE.CylinderGeometry(size[0] / 2, size[0] * 0.62, size[1], 18, 4),
+          new THREE.CylinderGeometry(size[0] / 2, size[0] * 0.62, size[1], 14, 8),
           material,
           cell,
           true,
         );
+        const helixPoints = Array.from({ length: 48 }, (_, index) => {
+          const t = index / 47;
+          const angle = t * Math.PI * 7 + cell.visual.seed * 0.01;
+          const radius = size[0] * (0.43 + Math.sin(t * Math.PI) * 0.08);
+          return new THREE.Vector3(
+            Math.cos(angle) * radius,
+            (t - 0.5) * size[1],
+            Math.sin(angle) * radius,
+          );
+        });
+        const helix = new THREE.Mesh(
+          new THREE.TubeGeometry(
+            new THREE.CatmullRomCurve3(helixPoints),
+            72,
+            0.012,
+            4,
+            false,
+          ),
+          new THREE.MeshBasicMaterial({
+            color: "#d7b66e",
+            transparent: true,
+            opacity: 0.34,
+            depthWrite: false,
+          }),
+        );
+        helix.name = "growth-current";
+        group.add(helix);
         break;
       }
       case "canopy": {
         const random = seededRandom(cell.visual.seed);
-        for (let index = 0; index < 9; index += 1) {
-          const crown = new THREE.Mesh(
-            new THREE.IcosahedronGeometry(size[0] * (0.18 + random() * 0.09), 1),
-            material,
+        const count = this.constrainedRenderer ? 72 : 150;
+        const leafGeometry = new THREE.OctahedronGeometry(size[0] * 0.034, 0);
+        const leafMaterial = this.constrainedRenderer
+          ? new THREE.MeshLambertMaterial({
+              color: "#ffffff",
+              vertexColors: true,
+            })
+          : new THREE.MeshPhysicalMaterial({
+              color: "#ffffff",
+              emissive: "#173f2d",
+              emissiveIntensity: 0.52,
+              roughness: 0.25,
+              metalness: 0.04,
+              clearcoat: 0.68,
+              clearcoatRoughness: 0.2,
+              vertexColors: true,
+            });
+        const foliage = new THREE.InstancedMesh(leafGeometry, leafMaterial, count);
+        const matrix = new THREE.Matrix4();
+        const quaternion = new THREE.Quaternion();
+        const leafScale = new THREE.Vector3();
+        const leafPosition = new THREE.Vector3();
+        for (let index = 0; index < count; index += 1) {
+          const lobe = index % 3;
+          const angle = random() * Math.PI * 2;
+          const radius = Math.sqrt(random()) * size[0] * 0.34;
+          const centerX = (lobe - 1) * size[0] * 0.18;
+          leafPosition.set(
+            centerX + Math.cos(angle) * radius,
+            (random() - 0.42) * size[1] * 0.48 + Math.sin(angle * 2) * 0.08,
+            Math.sin(angle) * radius * (0.72 + random() * 0.26),
           );
-          crown.position.set(
-            (random() - 0.5) * size[0] * 0.62,
-            (random() - 0.5) * size[1] * 0.38,
-            (random() - 0.5) * size[2] * 0.62,
+          quaternion.setFromEuler(
+            new THREE.Euler(random() * Math.PI, random() * Math.PI, random() * Math.PI),
           );
-          crown.scale.y = 0.7 + random() * 0.65;
-          crown.castShadow = true;
-          group.add(crown);
-          this.registerInteractive(crown, cell);
+          const scalar = 0.58 + random() * 1.22;
+          leafScale.set(scalar * 0.55, scalar * 1.5, scalar * 0.72);
+          matrix.compose(leafPosition, quaternion, leafScale);
+          foliage.setMatrixAt(index, matrix);
+          foliage.setColorAt(
+            index,
+            new THREE.Color(
+              index % 17 === 0 ? "#d2c66f" : index % 11 === 0 ? "#75c9bb" : "#6ea781",
+            ),
+          );
         }
+        foliage.instanceMatrix.needsUpdate = true;
+        if (foliage.instanceColor) foliage.instanceColor.needsUpdate = true;
+        foliage.castShadow = true;
+        foliage.receiveShadow = true;
+        group.add(foliage);
+        this.registerInteractive(foliage, cell);
         break;
       }
       case "grove": {
-        const bladeGeometry = new THREE.ConeGeometry(0.045, 0.55, 4);
-        const grove = new THREE.InstancedMesh(bladeGeometry, material, 130);
+        const bladeGeometry = new THREE.OctahedronGeometry(0.085, 0);
+        const groveMaterial = this.constrainedRenderer
+          ? new THREE.MeshLambertMaterial({
+              color: "#ffffff",
+              vertexColors: true,
+            })
+          : new THREE.MeshPhysicalMaterial({
+              color: "#ffffff",
+              emissive: "#123824",
+              emissiveIntensity: 0.48,
+              roughness: 0.28,
+              clearcoat: 0.55,
+              vertexColors: true,
+            });
+        const groveCount = this.constrainedRenderer ? 180 : 360;
+        const grove = new THREE.InstancedMesh(bladeGeometry, groveMaterial, groveCount);
         const random = seededRandom(cell.visual.seed);
         const matrix = new THREE.Matrix4();
         const rotation = new THREE.Quaternion();
         const scale = new THREE.Vector3();
         const translation = new THREE.Vector3();
-        for (let index = 0; index < 130; index += 1) {
+        for (let index = 0; index < groveCount; index += 1) {
           translation.set(
             (random() - 0.5) * size[0],
             -size[1] * 0.42 + random() * 0.18,
@@ -724,11 +1153,16 @@ export class TessarynWorld {
           );
           rotation.setFromEuler(new THREE.Euler(0, random() * Math.PI, (random() - 0.5) * 0.2));
           const bladeScale = 0.55 + random() * 1.1;
-          scale.set(bladeScale, bladeScale, bladeScale);
+          scale.set(bladeScale * 0.38, bladeScale * 2.3, bladeScale * 0.5);
           matrix.compose(translation, rotation, scale);
           grove.setMatrixAt(index, matrix);
+          grove.setColorAt(
+            index,
+            new THREE.Color(index % 19 === 0 ? "#d1c06f" : index % 13 === 0 ? "#6dbbb0" : "#5a946f"),
+          );
         }
         grove.instanceMatrix.needsUpdate = true;
+        if (grove.instanceColor) grove.instanceColor.needsUpdate = true;
         grove.castShadow = true;
         group.add(grove);
         this.registerInteractive(grove, cell);
@@ -762,29 +1196,95 @@ export class TessarynWorld {
         }
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        const lightPointMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            color: { value: new THREE.Color(cell.visual.color) },
+            opacity: { value: 1 },
+          },
+          transparent: true,
+          depthWrite: false,
+          vertexShader: [
+            "void main(){",
+            "gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);",
+            `gl_PointSize=${this.constrainedRenderer ? "1.2" : "1.7"};`,
+            "}",
+          ].join("\n"),
+          fragmentShader: [
+            "uniform vec3 color;",
+            "uniform float opacity;",
+            "void main(){",
+            "vec2 p=abs(gl_PointCoord-0.5);",
+            "float facet=1.0-smoothstep(0.32,0.5,p.x+p.y);",
+            "if(facet<=0.001) discard;",
+            "gl_FragColor=vec4(color,facet*0.34*opacity);",
+            "}",
+          ].join("\n"),
+        });
         const points = new THREE.Points(
           geometry,
-          new THREE.PointsMaterial({
-            color: cell.visual.color,
-            size: 0.035,
-            transparent: true,
-            opacity: 0.2,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-          }),
+          lightPointMaterial,
         );
         group.add(points);
+        const shaftGeometry = new THREE.CylinderGeometry(0.008, 0.035, 5.8, 6, 1, true);
+        const shaftMaterial = new THREE.MeshBasicMaterial({
+          color: "#d8c68e",
+          transparent: true,
+          opacity: this.constrainedRenderer ? 0.12 : 0.16,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        shaftMaterial.userData.baseOpacity = shaftMaterial.opacity;
+        const shaftCount = this.constrainedRenderer ? 12 : 24;
+        const shafts = new THREE.InstancedMesh(shaftGeometry, shaftMaterial, shaftCount);
+        const shaftMatrix = new THREE.Matrix4();
+        const shaftRotation = new THREE.Quaternion();
+        const shaftScale = new THREE.Vector3();
+        const shaftPosition = new THREE.Vector3();
+        for (let index = 0; index < shaftCount; index += 1) {
+          shaftPosition.set(
+            (random() - 0.5) * size[0] * 0.82,
+            -size[1] * 0.42,
+            (random() - 0.5) * size[2] * 0.82,
+          );
+          shaftRotation.setFromEuler(
+            new THREE.Euler((random() - 0.5) * 0.14, random() * Math.PI, (random() - 0.5) * 0.14),
+          );
+          const shaftWidth = 0.65 + random() * 1.5;
+          shaftScale.set(shaftWidth, 0.8 + random() * 0.42, shaftWidth);
+          shaftMatrix.compose(shaftPosition, shaftRotation, shaftScale);
+          shafts.setMatrixAt(index, shaftMatrix);
+        }
+        shafts.instanceMatrix.needsUpdate = true;
+        shafts.name = "light-architecture";
+        group.add(shafts);
         break;
       }
       case "archive-stone": {
         const stone = this.addMesh(
           group,
-          new THREE.DodecahedronGeometry(size[0] / 2, 1),
+          new THREE.IcosahedronGeometry(size[0] * 0.34, this.constrainedRenderer ? 1 : 2),
           material,
           cell,
           true,
         );
         stone.rotation.set(0.18, 0.42, -0.12);
+        stone.scale.set(0.82, 1.2, 0.82);
+        const innerMaterial = this.constrainedRenderer
+          ? new THREE.MeshBasicMaterial({ color: "#f2d589" })
+          : new THREE.MeshStandardMaterial({
+              color: "#d9ae52",
+              emissive: "#62400d",
+              emissiveIntensity: 0.28,
+              roughness: 0.16,
+              metalness: 0.26,
+            });
+        innerMaterial.userData.baseOpacity = innerMaterial.opacity;
+        const inner = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(size[0] * 0.13, 1),
+          innerMaterial,
+        );
+        inner.name = "memory-core";
+        group.add(inner);
         const frame = new THREE.LineSegments(
           new THREE.EdgesGeometry(stone.geometry, 18),
           new THREE.LineBasicMaterial({
@@ -793,38 +1293,56 @@ export class TessarynWorld {
             opacity: 0.64,
           }),
         );
-        frame.scale.setScalar(1.018);
+        frame.scale.copy(stone.scale).multiplyScalar(1.018);
         frame.name = "cell-boundary";
         group.add(frame);
+        this.createMemoryArchitecture(group, cell, size[0] * 0.52);
         break;
       }
       case "threshold": {
         const threshold = this.addMesh(
           group,
-          new THREE.BoxGeometry(...size),
+          new THREE.IcosahedronGeometry(1, this.constrainedRenderer ? 1 : 2),
           material,
           cell,
           true,
         );
-        threshold.rotation.x = -0.18;
+        threshold.scale.set(size[0] * 0.54, size[1] * 0.58, size[2] * 0.54);
+        threshold.rotation.set(-0.18, cell.key === "threshold-east" ? 0.16 : -0.16, 0.04);
+        const thresholdFrame = new THREE.LineSegments(
+          new THREE.EdgesGeometry(threshold.geometry, 20),
+          new THREE.LineBasicMaterial({
+            color: cell.visual.color,
+            transparent: true,
+            opacity: 0.48,
+            depthWrite: false,
+          }),
+        );
+        thresholdFrame.name = "cell-boundary";
+        thresholdFrame.scale.copy(threshold.scale).multiplyScalar(1.012);
+        thresholdFrame.rotation.copy(threshold.rotation);
+        group.add(thresholdFrame);
         break;
       }
       case "none": {
-        if (cell.manifest.evidence.semantic_only) {
-          this.createSemanticConstellation(group, cell);
-        }
         break;
       }
       default:
         break;
     }
-    if (cell.visual.primitive !== "none" && cell.visual.primitive !== "privacy") {
+    if (
+      cell.visual.primitive !== "none" &&
+      cell.visual.primitive !== "privacy" &&
+      cell.key !== "origin-floor"
+    ) {
       this.createCrystallineLattice(group, cell, size);
     }
     if (
       cell.visual.primitive !== "none" &&
       cell.visual.primitive !== "privacy" &&
-      cell.visual.primitive !== "archive-stone"
+      cell.visual.primitive !== "archive-stone" &&
+      cell.visual.primitive !== "threshold" &&
+      cell.key !== "origin-floor"
     ) {
       const helper = new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(...size)),
@@ -837,7 +1355,195 @@ export class TessarynWorld {
       helper.name = "cell-boundary";
       group.add(helper);
     }
+    if (!cell.manifest.evidence.restricted && cell.semantic_summary.trim()) {
+      this.createSemanticConstellation(
+        group,
+        cell,
+        !cell.manifest.evidence.semantic_only,
+        size,
+      );
+    }
     return group;
+  }
+
+  private roundedBox(size: [number, number, number]): RoundedBoxGeometry {
+    const radius = Math.min(Math.max(Math.min(...size) * 0.11, 0.018), 0.16);
+    return new RoundedBoxGeometry(
+      size[0],
+      size[1],
+      size[2],
+      this.constrainedRenderer ? 2 : 4,
+      radius,
+    );
+  }
+
+  private createMemoryArchitecture(
+    group: THREE.Group,
+    cell: DemoCell,
+    radius: number,
+  ): void {
+    const branchCount = this.constrainedRenderer ? 5 : 8;
+    const nodesPerBranch = this.constrainedRenderer ? 6 : 10;
+    const count = branchCount * nodesPerBranch;
+    const random = seededRandom(cell.visual.seed ^ 0x4d454d);
+    const nodeGeometry = new THREE.DodecahedronGeometry(radius * 0.038, 0);
+    const nodeMaterial = this.constrainedRenderer
+      ? new THREE.MeshLambertMaterial({ color: "#f2d28a" })
+      : new THREE.MeshStandardMaterial({
+          color: "#ffffff",
+          emissive: "#9b6e20",
+          emissiveIntensity: 0.54,
+          roughness: 0.18,
+          metalness: 0.22,
+          vertexColors: true,
+        });
+    const nodes = new THREE.InstancedMesh(nodeGeometry, nodeMaterial, count);
+    nodes.name = "memory-nodes";
+    const matrix = new THREE.Matrix4();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    const position = new THREE.Vector3();
+    const branchPoints: THREE.Vector3[][] = [];
+    let nodeIndex = 0;
+    for (let branch = 0; branch < branchCount; branch += 1) {
+      const points: THREE.Vector3[] = [];
+      const baseAngle = (branch / branchCount) * Math.PI * 2 + (random() - 0.5) * 0.12;
+      for (let step = 0; step < nodesPerBranch; step += 1) {
+        const t = step / Math.max(1, nodesPerBranch - 1);
+        const angle = baseAngle + t * (1.18 + (branch % 3) * 0.19);
+        const radial = radius * (0.1 + Math.pow(t, 0.78) * (0.78 + (branch % 2) * 0.13));
+        position.set(
+          Math.cos(angle) * radial,
+          radius * (-0.74 + t * 1.72 + Math.sin(t * Math.PI) * 0.34),
+          Math.sin(angle) * radial * (0.72 + (branch % 4) * 0.06),
+        );
+        points.push(position.clone());
+        const tangent = new THREE.Vector3(
+          -Math.sin(angle),
+          0.55 + t * 0.62,
+          Math.cos(angle),
+        ).normalize();
+        quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
+        const nodeScale = step === nodesPerBranch - 1 ? 1.65 : 0.68 + t * 0.62;
+        scale.set(nodeScale * 0.72, nodeScale * 1.18, nodeScale * 0.72);
+        matrix.compose(position, quaternion, scale);
+        nodes.setMatrixAt(nodeIndex, matrix);
+        if (!this.constrainedRenderer) {
+          nodes.setColorAt(
+            nodeIndex,
+            new THREE.Color(
+              step === nodesPerBranch - 1
+                ? "#f3dda0"
+                : (branch + step) % 7 === 0
+                  ? "#78cfc5"
+                  : (branch + step) % 5 === 0
+                    ? "#ad9dd0"
+                    : "#dfbd6c",
+            ),
+          );
+        }
+        nodeIndex += 1;
+      }
+      branchPoints.push(points);
+    }
+    nodes.instanceMatrix.needsUpdate = true;
+    if (nodes.instanceColor) nodes.instanceColor.needsUpdate = true;
+    group.add(nodes);
+
+    const segmentCount = branchCount * (nodesPerBranch - 1);
+    const branchMaterial = this.constrainedRenderer
+      ? new THREE.MeshLambertMaterial({ color: "#d7b765" })
+      : new THREE.MeshStandardMaterial({
+          color: "#ffffff",
+          emissive: "#725015",
+          emissiveIntensity: 0.3,
+          roughness: 0.2,
+          metalness: 0.42,
+          vertexColors: true,
+        });
+    const branches = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(radius * 0.012, radius * 0.021, 1, 6, 1),
+      branchMaterial,
+      segmentCount,
+    );
+    branches.name = "memory-lattice";
+    let segmentIndex = 0;
+    const start = new THREE.Vector3();
+    const end = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    for (let branch = 0; branch < branchPoints.length; branch += 1) {
+      const points = branchPoints[branch] ?? [];
+      for (let step = 0; step < points.length - 1; step += 1) {
+        start.copy(points[step] ?? new THREE.Vector3());
+        end.copy(points[step + 1] ?? start);
+        direction.subVectors(end, start);
+        const length = Math.max(0.001, direction.length());
+        position.addVectors(start, end).multiplyScalar(0.5);
+        quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+        scale.set(1, length, 1);
+        matrix.compose(position, quaternion, scale);
+        branches.setMatrixAt(segmentIndex, matrix);
+        if (!this.constrainedRenderer) {
+          branches.setColorAt(
+            segmentIndex,
+            new THREE.Color(
+              branch % 4 === 0 ? "#6fbfb7" : branch % 5 === 0 ? "#a795c8" : "#d5b45f",
+            ),
+          );
+        }
+        segmentIndex += 1;
+      }
+    }
+    branches.instanceMatrix.needsUpdate = true;
+    if (branches.instanceColor) branches.instanceColor.needsUpdate = true;
+    group.add(branches);
+
+    const shardCount = this.constrainedRenderer ? 18 : 32;
+    const shardGeometry = new THREE.TetrahedronGeometry(radius * 0.14, 1);
+    const shardMaterial = this.constrainedRenderer
+      ? new THREE.MeshLambertMaterial({
+          color: "#edcf82",
+        })
+      : new THREE.MeshPhysicalMaterial({
+          color: "#ffffff",
+          roughness: 0.12,
+          metalness: 0.12,
+          clearcoat: 1,
+          clearcoatRoughness: 0.06,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.72,
+          depthWrite: false,
+        });
+    const shards = new THREE.InstancedMesh(shardGeometry, shardMaterial, shardCount);
+    shards.name = "memory-shards";
+    for (let index = 0; index < shardCount; index += 1) {
+      const branch = index % branchCount;
+      const points = branchPoints[branch] ?? [];
+      const t = 0.42 + (Math.floor(index / branchCount) / Math.max(1, Math.ceil(shardCount / branchCount) - 1)) * 0.55;
+      const pointAt = THREE.MathUtils.clamp(Math.round(t * (points.length - 1)), 0, points.length - 1);
+      position.copy(points[pointAt] ?? new THREE.Vector3());
+      position.x += (random() - 0.5) * radius * 0.18;
+      position.y += (random() - 0.5) * radius * 0.14;
+      position.z += (random() - 0.5) * radius * 0.18;
+      const outward = position.clone().normalize();
+      quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), outward);
+      quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(outward, random() * Math.PI));
+      scale.set(0.34 + random() * 0.18, 1.02 + t * 0.56, 0.3 + random() * 0.16);
+      matrix.compose(position, quaternion, scale);
+      shards.setMatrixAt(index, matrix);
+      if (!this.constrainedRenderer) {
+        shards.setColorAt(
+          index,
+          new THREE.Color(
+            index % 6 === 0 ? "#74cfc5" : index % 5 === 0 ? "#ab9bd2" : "#e2bf69",
+          ),
+        );
+      }
+    }
+    shards.instanceMatrix.needsUpdate = true;
+    if (shards.instanceColor) shards.instanceColor.needsUpdate = true;
+    group.add(shards);
   }
 
   private createCrystallineLattice(
@@ -852,7 +1558,7 @@ export class TessarynWorld {
         ? "#dfbd73"
         : "#8fd8d2";
     const points: THREE.Vector3[] = [new THREE.Vector3()];
-    const count = this.constrainedRenderer ? 4 : innerWidth <= 680 ? 6 : 9;
+    const count = this.constrainedRenderer ? 6 : innerWidth <= 680 ? 10 : 16;
     for (let index = 0; index < count; index += 1) {
       points.push(
         new THREE.Vector3(
@@ -870,22 +1576,74 @@ export class TessarynWorld {
       if (!point || !next) continue;
       segments.push(0, 0, 0, point.x, point.y, point.z);
       segments.push(point.x, point.y, point.z, next.x, next.y, next.z);
+      if (index > 2 && index % 2 === 0) {
+        const cross = points[Math.max(1, index - 2)];
+        if (cross) {
+          segments.push(point.x, point.y, point.z, cross.x, cross.y, cross.z);
+        }
+      }
     }
-    const latticeGeometry = new THREE.BufferGeometry();
-    latticeGeometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(segments, 3),
-    );
-    const latticeMaterial = new THREE.LineBasicMaterial({
-      color: stateColor,
-      transparent: true,
-      opacity: cell.manifest.evidence.disputed ? 0.31 : 0.16,
-      depthWrite: false,
-    });
-    latticeMaterial.userData.baseOpacity = latticeMaterial.opacity;
-    const lattice = new THREE.LineSegments(latticeGeometry, latticeMaterial);
-    lattice.name = "cell-lattice";
-    group.add(lattice);
+    if (this.constrainedRenderer) {
+      const latticeGeometry = new THREE.BufferGeometry();
+      latticeGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(segments, 3),
+      );
+      const latticeMaterial = new THREE.LineBasicMaterial({
+        color: stateColor,
+        transparent: true,
+        opacity: cell.manifest.evidence.disputed ? 0.28 : 0.11,
+        depthWrite: false,
+      });
+      latticeMaterial.userData.baseOpacity = latticeMaterial.opacity;
+      const lattice = new THREE.LineSegments(latticeGeometry, latticeMaterial);
+      lattice.name = "cell-lattice";
+      group.add(lattice);
+    } else {
+      const segmentCount = Math.floor(segments.length / 6);
+      const veinMaterial = new THREE.MeshStandardMaterial({
+        color: stateColor,
+        emissive: stateColor,
+        emissiveIntensity: cell.manifest.evidence.disputed ? 0.48 : 0.22,
+        roughness: 0.22,
+        metalness: 0.34,
+        transparent: true,
+        opacity: cell.manifest.evidence.disputed ? 0.62 : 0.34,
+        depthWrite: false,
+      });
+      veinMaterial.userData.baseOpacity = veinMaterial.opacity;
+      const veins = new THREE.InstancedMesh(
+        new THREE.CylinderGeometry(0.008, 0.014, 1, 5, 1),
+        veinMaterial,
+        segmentCount,
+      );
+      const matrix = new THREE.Matrix4();
+      const midpoint = new THREE.Vector3();
+      const direction = new THREE.Vector3();
+      const start = new THREE.Vector3();
+      const end = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      for (let index = 0; index < segmentCount; index += 1) {
+        const offset = index * 6;
+        start.set(segments[offset] ?? 0, segments[offset + 1] ?? 0, segments[offset + 2] ?? 0);
+        end.set(
+          segments[offset + 3] ?? 0,
+          segments[offset + 4] ?? 0,
+          segments[offset + 5] ?? 0,
+        );
+        direction.subVectors(end, start);
+        const length = Math.max(0.001, direction.length());
+        midpoint.addVectors(start, end).multiplyScalar(0.5);
+        quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+        scale.set(1, length, 1);
+        matrix.compose(midpoint, quaternion, scale);
+        veins.setMatrixAt(index, matrix);
+      }
+      veins.instanceMatrix.needsUpdate = true;
+      veins.name = "cell-lattice";
+      group.add(veins);
+    }
 
     if (!this.constrainedRenderer) {
       const nodeGeometry = new THREE.OctahedronGeometry(0.035, 0);
@@ -929,39 +1687,76 @@ export class TessarynWorld {
     group.userData.haloMaterial = haloMaterial;
   }
 
-  private createSemanticConstellation(group: THREE.Group, cell: DemoCell): void {
+  private createSemanticConstellation(
+    group: THREE.Group,
+    cell: DemoCell,
+    ambient: boolean,
+    size: [number, number, number],
+  ): void {
     const summarySeed = [...cell.semantic_summary].reduce(
       (value, character) => Math.imul(value ^ character.charCodeAt(0), 16_777_619),
       cell.visual.seed ^ 0x51b17,
     );
     const random = seededRandom(summarySeed);
+    const constellationRoot = new THREE.Group();
+    constellationRoot.name = "slbit-constellation";
+    constellationRoot.userData.ambient = ambient;
+    constellationRoot.visible = !ambient;
+    const baseHeight = ambient ? Math.max(0.7, size[1] * 0.55 + 0.28) : 2.5;
+    constellationRoot.position.y = ambient ? baseHeight : 0;
     const points: THREE.Vector3[] = [];
-    const count = innerWidth <= 680 ? 8 : 13;
+    const count = ambient
+      ? this.constrainedRenderer
+        ? 6
+        : innerWidth <= 680
+          ? 7
+          : 9
+      : innerWidth <= 680
+        ? 10
+        : 15;
+    const fieldRadius = ambient
+      ? THREE.MathUtils.clamp(Math.hypot(size[0], size[2]) * 0.2, 0.42, 1.28)
+      : 2.2;
     for (let index = 0; index < count; index += 1) {
       const angle = (index / count) * Math.PI * 2 + (random() - 0.5) * 0.28;
-      const radius = 1.45 + random() * 1.15;
+      const radius = fieldRadius * (0.68 + random() * 0.42);
       points.push(
         new THREE.Vector3(
           Math.cos(angle) * radius,
-          2.5 + (random() - 0.5) * 1.45,
+          (random() - 0.5) * fieldRadius * 0.62,
           Math.sin(angle) * radius * 0.68,
         ),
       );
     }
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const pointsMaterial = new THREE.PointsMaterial({
-      color: "#b7d9d6",
-      size: innerWidth <= 680 ? 0.075 : 0.055,
-      transparent: true,
-      opacity: 0.58,
-      depthWrite: false,
-      sizeAttenuation: true,
+    const pointsMaterial = this.constrainedRenderer
+      ? new THREE.MeshBasicMaterial({ color: "#b7d9d6" })
+      : new THREE.MeshStandardMaterial({
+          color: "#b7d9d6",
+          emissive: "#426f72",
+          emissiveIntensity: 0.42,
+          roughness: 0.18,
+          metalness: 0.34,
+        });
+    const nodeSize = ambient ? 0.027 : innerWidth <= 680 ? 0.054 : 0.041;
+    const constellation = new THREE.InstancedMesh(
+      new THREE.DodecahedronGeometry(nodeSize, 0),
+      pointsMaterial,
+      points.length,
+    );
+    const nodeMatrix = new THREE.Matrix4();
+    const nodeQuaternion = new THREE.Quaternion();
+    const nodeScale = new THREE.Vector3();
+    points.forEach((point, index) => {
+      nodeQuaternion.setFromEuler(new THREE.Euler(index * 0.37, index * 0.61, index * 0.23));
+      const sizeMultiplier = index % 4 === 0 ? 1.55 : 0.78 + random() * 0.5;
+      nodeScale.setScalar(sizeMultiplier);
+      nodeMatrix.compose(point, nodeQuaternion, nodeScale);
+      constellation.setMatrixAt(index, nodeMatrix);
     });
-    pointsMaterial.userData.baseOpacity = pointsMaterial.opacity;
-    const constellation = new THREE.Points(geometry, pointsMaterial);
-    constellation.name = "slbit-constellation";
+    constellation.instanceMatrix.needsUpdate = true;
+    constellation.name = "slbit-nodes";
     this.registerInteractive(constellation, cell);
-    group.add(constellation);
+    constellationRoot.add(constellation);
 
     const connections: number[] = [];
     for (let index = 0; index < points.length; index += 1) {
@@ -970,7 +1765,7 @@ export class TessarynWorld {
       if (!point || !next) continue;
       connections.push(point.x, point.y, point.z, next.x, next.y, next.z);
       if (index % 3 === 0) {
-        connections.push(point.x, point.y, point.z, 0, 2.5, 0);
+        connections.push(point.x, point.y, point.z, 0, 0, 0);
       }
     }
     const connectionGeometry = new THREE.BufferGeometry();
@@ -981,11 +1776,12 @@ export class TessarynWorld {
     const connectionMaterial = new THREE.LineBasicMaterial({
       color: "#9a8ec3",
       transparent: true,
-      opacity: 0.18,
+      opacity: ambient ? 0.14 : 0.2,
       depthWrite: false,
     });
     connectionMaterial.userData.baseOpacity = connectionMaterial.opacity;
-    group.add(new THREE.LineSegments(connectionGeometry, connectionMaterial));
+    constellationRoot.add(new THREE.LineSegments(connectionGeometry, connectionMaterial));
+    group.add(constellationRoot);
   }
 
   private addMesh(
@@ -1011,7 +1807,7 @@ export class TessarynWorld {
   private presentationColor(cell: DemoCell): THREE.Color {
     const color = new THREE.Color(cell.visual.color);
     const material = cell.visual.material;
-    if (material.includes("archive")) return color.lerp(new THREE.Color("#dfb86f"), 0.58);
+    if (material.includes("archive")) return color.lerp(new THREE.Color("#76592f"), 0.68);
     if (material.includes("mineral")) return color.lerp(new THREE.Color("#244a4b"), 0.72);
     if (material.includes("limestone") || material.includes("lichen")) {
       return color.lerp(new THREE.Color("#6f918e"), 0.56);
@@ -1026,43 +1822,84 @@ export class TessarynWorld {
 
   private materialFor(
     cell: DemoCell,
-  ): THREE.MeshStandardMaterial | THREE.MeshBasicMaterial {
+  ): THREE.ShaderMaterial {
     const displayColor = this.presentationColor(cell);
-    const displayHex = "#" + displayColor.getHexString();
-    const texture = this.textureFor(cell.visual.material, displayHex, cell.visual.seed);
     const disputed = cell.manifest.evidence.disputed;
     const archive = cell.visual.material.includes("archive");
-    const baseColor = displayColor;
-    const common = {
-      color: displayColor,
-      map: texture,
-      emissive: baseColor
-        .clone()
-        .multiplyScalar(disputed ? 0.17 : archive ? 0.11 : 0.055),
-      emissiveIntensity: disputed ? 0.8 : 0.55,
+    const accent = archive
+      ? new THREE.Color("#f2d68b")
+      : disputed
+        ? new THREE.Color("#ef927a")
+        : displayColor.clone().lerp(new THREE.Color("#9ee0d6"), 0.5);
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        baseColor: { value: displayColor },
+        accentColor: { value: accent },
+        time: { value: 0 },
+        opacity: { value: disputed ? 0.78 : 1 },
+        selected: { value: 0 },
+        seed: { value: (cell.visual.seed % 10_007) / 10_007 },
+        detail: { value: this.constrainedRenderer ? 0.48 : archive ? 1.35 : 1 },
+      },
       transparent: true,
-      opacity: disputed ? 0.62 : 0.96,
       depthWrite: !disputed,
-    };
-    const material = this.constrainedRenderer
-      ? new THREE.MeshBasicMaterial({
-          color: displayColor,
-          map: texture,
-          transparent: true,
-          opacity: disputed ? 0.62 : 0.96,
-          depthWrite: !disputed,
-        })
-      : new THREE.MeshStandardMaterial({
-          ...common,
-          roughness: archive ? 0.24 : 0.38,
-          metalness: archive ? 0.34 : 0.14,
-        });
-    if (material instanceof THREE.MeshStandardMaterial) {
-      material.userData.baseEmissive = material.emissive.getHex();
-      material.userData.baseEmissiveIntensity = material.emissiveIntensity;
-    } else {
-      material.userData.baseColor = material.color.getHex();
-    }
+      vertexColors: true,
+      vertexShader: [
+        "varying vec3 vNormalView;",
+        "varying vec3 vViewDirection;",
+        "varying vec3 vLocal;",
+        "varying vec3 vInstanceTint;",
+        "void main(){",
+        "vec4 localPosition=vec4(position,1.0);",
+        "vec3 localNormal=normal;",
+        "vInstanceTint=vec3(1.0);",
+        "#ifdef USE_INSTANCING",
+        "localPosition=instanceMatrix*localPosition;",
+        "localNormal=mat3(instanceMatrix)*localNormal;",
+        "#endif",
+        "#ifdef USE_INSTANCING_COLOR",
+        "vInstanceTint=instanceColor;",
+        "#endif",
+        "vec4 viewPosition=modelViewMatrix*localPosition;",
+        "vNormalView=normalize(normalMatrix*localNormal);",
+        "vViewDirection=normalize(-viewPosition.xyz);",
+        "vLocal=localPosition.xyz;",
+        "gl_Position=projectionMatrix*viewPosition;",
+        "}",
+      ].join("\n"),
+      fragmentShader: [
+        "uniform vec3 baseColor;",
+        "uniform vec3 accentColor;",
+        "uniform float time;",
+        "uniform float opacity;",
+        "uniform float selected;",
+        "uniform float seed;",
+        "uniform float detail;",
+        "varying vec3 vNormalView;",
+        "varying vec3 vViewDirection;",
+        "varying vec3 vLocal;",
+        "varying vec3 vInstanceTint;",
+        "void main(){",
+        "vec3 n=normalize(vNormalView);",
+        "vec3 v=normalize(vViewDirection);",
+        "vec3 lightA=normalize(vec3(-0.42,0.74,0.52));",
+        "vec3 lightB=normalize(vec3(0.67,0.18,-0.72));",
+        "float diffuse=0.28+0.58*max(dot(n,lightA),0.0)+0.18*max(dot(n,lightB),0.0);",
+        "float rim=pow(1.0-max(dot(n,v),0.0),2.4);",
+        "float strata=0.5+0.5*sin(dot(vLocal,vec3(8.7,5.3,11.9))*detail+seed*37.0);",
+        "float cross=0.5+0.5*sin(dot(vLocal,vec3(-13.1,7.2,4.6))*detail-seed*19.0);",
+        "float vein=pow(max(strata,cross),18.0);",
+        "float facet=0.5+0.5*sin((n.x*2.9+n.y*4.7+n.z*7.1+seed)*9.0);",
+        "vec3 color=baseColor*vInstanceTint*(diffuse*(0.82+facet*0.18));",
+        "color=mix(color,accentColor,vein*(0.08+detail*0.06));",
+        "color+=accentColor*rim*(0.16+selected*0.3);",
+        "color+=accentColor*selected*(0.06+0.05*sin(time*0.35+seed*12.0));",
+        "gl_FragColor=vec4(color,opacity);",
+        "}",
+      ].join("\n"),
+    });
+    material.userData.cellMaterial = true;
+    this.animatedShaders.push(material);
     return material;
   }
 
@@ -1206,13 +2043,76 @@ export class TessarynWorld {
         if (parent) this.addWeaveLink(parent, node);
       }
     }
+    if (!this.constrainedRenderer || this.weaveLinks.length === 0) return;
+    const verticesPerLink = (this.weaveLinks[0]?.segments ?? 0) * 2;
+    const positions = new Float32Array(this.weaveLinks.length * verticesPerLink * 3);
+    const colors = new Float32Array(positions.length);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const positionAttribute = geometry.getAttribute("position") as THREE.BufferAttribute;
+    const colorAttribute = geometry.getAttribute("color") as THREE.BufferAttribute;
+    this.weaveLinks.forEach((link, linkIndex) => {
+      link.vertexOffset = linkIndex * verticesPerLink;
+      const color = new THREE.Color(
+        link.to.cell.manifest.evidence.disputed ? "#e1846f" : "#76c8c8",
+      );
+      for (let segment = 0; segment < link.segments; segment += 1) {
+        const first = this.weavePosition(
+          link.from.group.position,
+          link.to.group.position,
+          segment / link.segments,
+          link.bend,
+        );
+        const second = this.weavePosition(
+          link.from.group.position,
+          link.to.group.position,
+          (segment + 1) / link.segments,
+          link.bend,
+        );
+        const offset = link.vertexOffset + segment * 2;
+        positionAttribute.setXYZ(offset, first.x, first.y, first.z);
+        positionAttribute.setXYZ(offset + 1, second.x, second.y, second.z);
+        colorAttribute.setXYZ(offset, color.r, color.g, color.b);
+        colorAttribute.setXYZ(offset + 1, color.r, color.g, color.b);
+      }
+    });
+    positionAttribute.needsUpdate = true;
+    colorAttribute.needsUpdate = true;
+    this.constrainedWeave = new THREE.LineSegments(
+      geometry,
+      new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+      }),
+    );
+    this.constrainedWeave.name = "rootprint-current-field";
+    this.root.add(this.constrainedWeave);
   }
 
   private addWeaveLink(from: CellNode, to: CellNode): void {
-    const geometry = new THREE.BufferGeometry().setFromPoints([
-      from.group.position,
-      to.group.position,
-    ]);
+    const phase = (to.cell.visual.seed % 997) / 997;
+    const bend = ((to.cell.visual.seed % 211) / 211 - 0.5) * 1.7;
+    const segments = this.constrainedRenderer ? 8 : 22;
+    if (this.constrainedRenderer) {
+      this.weaveLinks.push({
+        line: null,
+        pulse: null,
+        phase,
+        bend,
+        segments,
+        vertexOffset: 0,
+        from,
+        to,
+      });
+      return;
+    }
+    const points = Array.from({ length: segments + 1 }, (_, index) =>
+      this.weavePosition(from.group.position, to.group.position, index / segments, bend),
+    );
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const disputed = to.cell.manifest.evidence.disputed;
     const line = new THREE.Line(
       geometry,
@@ -1243,10 +2143,84 @@ export class TessarynWorld {
     this.weaveLinks.push({
       line,
       pulse,
-      phase: (to.cell.visual.seed % 997) / 997,
+      phase,
+      bend,
+      segments,
+      vertexOffset: 0,
       from,
       to,
     });
+  }
+
+  private weavePosition(
+    from: THREE.Vector3,
+    to: THREE.Vector3,
+    t: number,
+    bend: number,
+    target = new THREE.Vector3(),
+  ): THREE.Vector3 {
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    const planar = Math.max(0.001, Math.hypot(dx, dz));
+    const midX = (from.x + to.x) * 0.5 + (-dz / planar) * bend;
+    const midY = (from.y + to.y) * 0.5 + 0.34 + planar * 0.045;
+    const midZ = (from.z + to.z) * 0.5 + (dx / planar) * bend;
+    const inverse = 1 - t;
+    return target.set(
+      inverse * inverse * from.x + 2 * inverse * t * midX + t * t * to.x,
+      inverse * inverse * from.y + 2 * inverse * t * midY + t * t * to.y,
+      inverse * inverse * from.z + 2 * inverse * t * midZ + t * t * to.z,
+    );
+  }
+
+  private createFocusField(): void {
+    this.focusRoot.name = "cell-resonance-focus";
+    this.focusRoot.visible = false;
+    const focusMaterial = new THREE.MeshBasicMaterial({
+      color: "#84cec5",
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    const braces = new THREE.InstancedMesh(
+      new THREE.TetrahedronGeometry(0.095, 0),
+      focusMaterial,
+      12,
+    );
+    const matrix = new THREE.Matrix4();
+    const position = new THREE.Vector3();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    for (let index = 0; index < 12; index += 1) {
+      const angle = (index / 12) * Math.PI * 2;
+      const elevation = index % 3 === 0 ? 0.48 : index % 3 === 1 ? 0 : -0.42;
+      position.set(Math.cos(angle) * 0.92, elevation, Math.sin(angle) * 0.92);
+      quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), position.clone().normalize());
+      scale.set(0.7, 2.1, 0.7);
+      matrix.compose(position, quaternion, scale);
+      braces.setMatrixAt(index, matrix);
+    }
+    braces.instanceMatrix.needsUpdate = true;
+    braces.userData.rotationRate = 0.035;
+    this.focusRoot.add(braces);
+    this.focusMaterials.push(focusMaterial);
+  }
+
+  private updateMeaningFields(): void {
+    for (const node of this.nodes.values()) {
+      if (!node.meaning) continue;
+      const ambient = Boolean(node.meaning.userData.ambient);
+      node.meaning.visible =
+        this.evidence && (!ambient || node === this.selected || node === this.hovered);
+    }
+  }
+
+  private setHovered(node: CellNode | null): void {
+    if (node === this.hovered) return;
+    this.hovered = node;
+    this.canvas.dataset.focus = node?.cell.key ?? "";
+    this.canvas.style.cursor = node ? "pointer" : "grab";
+    this.updateMeaningFields();
   }
 
   private createUnknownBoundary(): void {
@@ -1257,27 +2231,29 @@ export class TessarynWorld {
       new THREE.Vector3(4, 0, 10.1),
       new THREE.Vector3(9, 0, 8.6),
     ];
-    const material = new THREE.LineDashedMaterial({
-      color: "#c8c3ae",
-      transparent: true,
-      opacity: 0.32,
-      dashSize: 0.28,
-      gapSize: 0.34,
-    });
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
-    line.computeLineDistances();
-    this.root.add(line);
-    for (const point of points) {
-      const vertical = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
-          point,
-          point.clone().add(new THREE.Vector3(0, 1.2, 0)),
-        ]),
-        material,
-      );
-      vertical.computeLineDistances();
-      this.root.add(vertical);
+    const count = 24;
+    const fragments = new THREE.InstancedMesh(
+      new THREE.TetrahedronGeometry(0.19, 0),
+      new THREE.MeshBasicMaterial({ color: "#65736d", transparent: true, opacity: 0.36 }),
+      count,
+    );
+    const curve = new THREE.CatmullRomCurve3(points, false, "centripetal");
+    const matrix = new THREE.Matrix4();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    for (let index = 0; index < count; index += 1) {
+      const t = index / (count - 1);
+      const point = curve.getPoint(t);
+      point.y += 0.12 + Math.sin(index * 1.7) * 0.16;
+      quaternion.setFromEuler(new THREE.Euler(index * 0.31, index * 0.61, index * 0.19));
+      const width = 0.5 + (index % 5) * 0.13;
+      scale.set(width, 1.5 + (index % 4) * 0.55, width * 0.72);
+      matrix.compose(point, quaternion, scale);
+      fragments.setMatrixAt(index, matrix);
     }
+    fragments.instanceMatrix.needsUpdate = true;
+    fragments.name = "open-continuum-edge";
+    this.root.add(fragments);
   }
 
   private createAggregateField(): void {
@@ -1289,15 +2265,25 @@ export class TessarynWorld {
     if (visibleNodes.length === 0) return;
 
     const markerGeometry = new THREE.OctahedronGeometry(0.13, 0);
-    const markerMaterial = new THREE.MeshStandardMaterial({
-      color: "#d7d2bd",
-      roughness: 0.68,
-      metalness: 0.08,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-    });
+    const markerMaterial = this.constrainedRenderer
+      ? new THREE.MeshBasicMaterial({
+          color: "#d7d2bd",
+          vertexColors: true,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        })
+      : new THREE.MeshPhysicalMaterial({
+          color: "#d7d2bd",
+          roughness: 0.18,
+          metalness: 0.08,
+          clearcoat: 1,
+          clearcoatRoughness: 0.08,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        });
     markerMaterial.userData.baseOpacity = 0.92;
     const markers = new THREE.InstancedMesh(markerGeometry, markerMaterial, visibleNodes.length);
     const matrix = new THREE.Matrix4();
@@ -1309,7 +2295,11 @@ export class TessarynWorld {
         0.7,
         Math.sqrt(node.cell.visual.size_mm[0] * node.cell.visual.size_mm[2]) / 7_500,
       );
-      translation.set(node.basePosition.x, 0.24 + radius * 0.12, node.basePosition.z);
+      translation.set(
+        node.basePosition.x * 0.72,
+        0.62 + node.momentIndex * 1.2 + radius * 0.18,
+        node.basePosition.z * 0.72,
+      );
       scale.set(radius, 0.65 + radius * 0.12, radius);
       matrix.compose(translation, quaternion, scale);
       markers.setMatrixAt(index, matrix);
@@ -1328,11 +2318,15 @@ export class TessarynWorld {
     if (markers.instanceColor) markers.instanceColor.needsUpdate = true;
     this.aggregateRoot.add(markers);
 
-    const origin = this.nodes.get("origin-floor")?.basePosition ?? new THREE.Vector3();
+    const origin = new THREE.Vector3(0, 1.72, 0);
     const relationPositions: number[] = [];
     for (const node of visibleNodes) {
-      relationPositions.push(origin.x, 0.16, origin.z);
-      relationPositions.push(node.basePosition.x, 0.16, node.basePosition.z);
+      relationPositions.push(origin.x, origin.y, origin.z);
+      relationPositions.push(
+        node.basePosition.x * 0.72,
+        0.62 + node.momentIndex * 1.2,
+        node.basePosition.z * 0.72,
+      );
     }
     const relationGeometry = new THREE.BufferGeometry();
     relationGeometry.setAttribute(
@@ -1348,36 +2342,27 @@ export class TessarynWorld {
     relationMaterial.userData.baseOpacity = 0.22;
     this.aggregateRoot.add(new THREE.LineSegments(relationGeometry, relationMaterial));
 
-    const maximumRadius = Math.max(
-      ...visibleNodes.map((node) => Math.hypot(node.basePosition.x, node.basePosition.z)),
-      1,
+    const stemsMaterial = new THREE.MeshBasicMaterial({
+      color: "#557d75",
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    stemsMaterial.userData.baseOpacity = 0.22;
+    const stems = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.012, 0.035, 1, 5, 1),
+      stemsMaterial,
+      visibleNodes.length,
     );
-    for (const ratio of [0.38, 0.68, 1]) {
-      const points = new THREE.EllipseCurve(
-        0,
-        0,
-        maximumRadius * ratio,
-        maximumRadius * ratio * 0.82,
-        0,
-        Math.PI * 2,
-        false,
-        0.12,
-      )
-        .getPoints(96)
-        .map((point) => new THREE.Vector3(point.x, 0.1, point.y));
-      const material = new THREE.LineDashedMaterial({
-        color: ratio === 1 ? "#74c8c1" : "#d7d2bd",
-        transparent: true,
-        opacity: 0,
-        dashSize: 0.16,
-        gapSize: 0.26,
-        depthWrite: false,
-      });
-      material.userData.baseOpacity = ratio === 1 ? 0.48 : 0.17;
-      const loop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), material);
-      loop.computeLineDistances();
-      this.aggregateRoot.add(loop);
-    }
+    visibleNodes.forEach((node, index) => {
+      const height = 0.62 + node.momentIndex * 1.2;
+      translation.set(node.basePosition.x * 0.72, height * 0.5, node.basePosition.z * 0.72);
+      scale.set(1, height, 1);
+      matrix.compose(translation, quaternion, scale);
+      stems.setMatrixAt(index, matrix);
+    });
+    stems.instanceMatrix.needsUpdate = true;
+    this.aggregateRoot.add(stems);
 
     const currentKeys = [
       "west-terrace",
@@ -1389,7 +2374,10 @@ export class TessarynWorld {
     const currentPoints = currentKeys
       .map((key) => this.nodes.get(key)?.basePosition)
       .filter((point): point is THREE.Vector3 => Boolean(point))
-      .map((point) => new THREE.Vector3(point.x, 0.28, point.z));
+      .map(
+        (point, index) =>
+          new THREE.Vector3(point.x * 0.72, 0.9 + index * 0.34, point.z * 0.72),
+      );
     if (currentPoints.length > 2) {
       const path = new THREE.CatmullRomCurve3(currentPoints, false, "centripetal");
       const material = new THREE.MeshBasicMaterial({
@@ -1420,52 +2408,70 @@ export class TessarynWorld {
   private createTemporalField(): void {
     this.temporalRoot.name = "chronofold-field";
     this.world.moments.forEach((moment, index) => {
-      const height = (index - 1) * 3.8;
+      const height = (index - 1) * 2.8 + 1.2;
       const momentColor = new THREE.Color(moment.environment.sun).lerp(
         new THREE.Color(index === 1 ? "#72c9ca" : index === 0 ? "#9a8ec3" : "#e1bc72"),
         0.62,
       );
-      const ringMaterial = new THREE.MeshBasicMaterial({
+      const ribbonMaterial = new THREE.MeshBasicMaterial({
         color: momentColor,
         transparent: true,
         opacity: 0,
         depthWrite: false,
+        side: THREE.DoubleSide,
       });
-      ringMaterial.userData.baseOpacity = index === 1 ? 0.19 : 0.13;
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(10.2 + index * 0.55, 0.012, 3, 96),
-        ringMaterial,
-      );
-      ring.rotation.x = Math.PI / 2;
-      ring.rotation.z = index * 0.12 - 0.1;
-      ring.position.y = height;
-      this.temporalRoot.add(ring);
-      this.temporalMaterials.push(ringMaterial);
-
-      const phasePositions: number[] = [];
-      for (let segment = 0; segment < 12; segment += 1) {
-        const angle = (segment / 12) * Math.PI * 2 + index * 0.08;
-        phasePositions.push(0, height, 0);
-        phasePositions.push(
-          Math.cos(angle) * (10.2 + index * 0.55),
-          height,
-          Math.sin(angle) * (10.2 + index * 0.55),
-        );
+      ribbonMaterial.userData.baseOpacity = index === 1 ? 0.075 : 0.052;
+      const columns = this.constrainedRenderer ? 24 : 48;
+      const positions: number[] = [];
+      const indices: number[] = [];
+      const upperEdge: THREE.Vector3[] = [];
+      const lowerEdge: THREE.Vector3[] = [];
+      for (let column = 0; column <= columns; column += 1) {
+        const t = column / columns;
+        const x = (t - 0.5) * 24;
+        const z =
+          Math.sin(t * Math.PI * 2 + index * 0.82) * 1.1 +
+          Math.sin(t * Math.PI * 5 - index * 0.37) * 0.24 +
+          (index - 1) * 0.7;
+        const lower = height - 1.1 - Math.sin(t * Math.PI) * 0.25;
+        const upper = height + 1.1 + Math.sin(t * Math.PI) * 0.38;
+        positions.push(x, lower, z, x, upper, z + 0.12);
+        lowerEdge.push(new THREE.Vector3(x, lower, z));
+        upperEdge.push(new THREE.Vector3(x, upper, z + 0.12));
+        if (column < columns) {
+          const offset = column * 2;
+          indices.push(offset, offset + 1, offset + 2, offset + 1, offset + 3, offset + 2);
+        }
       }
-      const phaseGeometry = new THREE.BufferGeometry();
-      phaseGeometry.setAttribute(
+      const ribbonGeometry = new THREE.BufferGeometry();
+      ribbonGeometry.setAttribute(
         "position",
-        new THREE.Float32BufferAttribute(phasePositions, 3),
+        new THREE.Float32BufferAttribute(positions, 3),
       );
-      const phaseMaterial = new THREE.LineBasicMaterial({
+      ribbonGeometry.setIndex(indices);
+      ribbonGeometry.computeVertexNormals();
+      this.temporalRoot.add(new THREE.Mesh(ribbonGeometry, ribbonMaterial));
+      this.temporalMaterials.push(ribbonMaterial);
+
+      const edgeMaterial = new THREE.LineBasicMaterial({
         color: momentColor,
         transparent: true,
         opacity: 0,
         depthWrite: false,
       });
-      phaseMaterial.userData.baseOpacity = index === 1 ? 0.08 : 0.045;
-      this.temporalRoot.add(new THREE.LineSegments(phaseGeometry, phaseMaterial));
-      this.temporalMaterials.push(phaseMaterial);
+      edgeMaterial.userData.baseOpacity = index === 1 ? 0.29 : 0.19;
+      this.temporalRoot.add(
+        new THREE.Line(new THREE.BufferGeometry().setFromPoints(upperEdge), edgeMaterial),
+      );
+      this.temporalMaterials.push(edgeMaterial);
+      if (!this.constrainedRenderer) {
+        const lowerEdgeMaterial = edgeMaterial.clone();
+        lowerEdgeMaterial.userData.baseOpacity = edgeMaterial.userData.baseOpacity;
+        this.temporalRoot.add(
+          new THREE.Line(new THREE.BufferGeometry().setFromPoints(lowerEdge), lowerEdgeMaterial),
+        );
+        this.temporalMaterials.push(lowerEdgeMaterial);
+      }
     });
     this.temporalRoot.visible = false;
   }
@@ -1504,7 +2510,7 @@ export class TessarynWorld {
             ? node.cell.manifest.parents.includes(objectFocus.cell.cell_id) ||
               objectFocus.cell.manifest.parents.includes(node.cell.cell_id)
             : false);
-        scaleOpacity = semanticOnly ? 0.14 : node === objectFocus ? 1 : related ? 0.24 : 0.055;
+        scaleOpacity = semanticOnly ? 0.12 : node === objectFocus ? 1 : related ? 0.12 : 0.012;
       } else if (this.scale === "site") {
         scaleOpacity = semanticOnly
           ? 0.34
@@ -1524,26 +2530,49 @@ export class TessarynWorld {
           shared ||
           node.cell.manifest.evidence.disputed);
       node.group.traverse((object) => {
-        if (object.name === "cell-lattice" || object.name === "cell-boundary") {
-          object.visible = detailedEvidence;
+        if (object.name === "cell-lattice") {
+          object.visible =
+            detailedEvidence &&
+            (node === this.selected ||
+              node === this.hovered ||
+              node.cell.manifest.evidence.disputed);
         }
-        if (object.name === "slbit-constellation") object.visible = this.evidence;
+        if (object.name === "cell-boundary") {
+          object.visible =
+            detailedEvidence &&
+            (node === this.selected ||
+              node === this.hovered ||
+              node.cell.manifest.evidence.disputed);
+        }
       });
       if (this.chronofold && !shared) {
-        node.targetPosition.y += (node.momentIndex - 1) * 3.8;
+        node.targetPosition.y += (node.momentIndex - 1) * 2.8;
         if (node.cell.manifest.evidence.disputed) {
           node.targetPosition.x += node.cell.visual.branch === "east-hypothesis" ? 1.1 : -1.1;
         }
       }
     }
+    this.updateMeaningFields();
   }
 
   private applyEnvironment(moment: DemoMoment): void {
+    const momentIndex = Math.max(
+      0,
+      this.world.moments.findIndex((candidate) => candidate.id === moment.id),
+    );
     this.targetBackground
       .set(moment.environment.sky)
       .lerp(new THREE.Color("#04080d"), 0.88);
     this.sun.color.set(moment.environment.sun);
-    this.sun.intensity = moment.environment.sun_milli / 340;
+    this.sun.intensity = moment.environment.sun_milli / 270;
+    const azimuth = [-1.04, -0.18, 0.72][momentIndex] ?? 0.72;
+    const elevation = [0.34, 0.72, 0.58][momentIndex] ?? 0.58;
+    const radius = 17;
+    this.sun.position.set(
+      Math.cos(azimuth) * Math.cos(elevation) * radius,
+      Math.sin(elevation) * radius,
+      Math.sin(azimuth) * Math.cos(elevation) * radius,
+    );
     this.ambient.color
       .set(moment.environment.sky)
       .lerp(new THREE.Color("#a7d2d3"), 0.72);
@@ -1553,6 +2582,15 @@ export class TessarynWorld {
       this.targetBackground,
       moment.environment.fog_ppm / 1_400_000 + 0.014,
     );
+    const shell = this.continuumRoot.getObjectByName("continuum-shell");
+    if (shell instanceof THREE.Mesh && shell.material instanceof THREE.ShaderMaterial) {
+      shell.material.uniforms.upper!.value
+        .set(moment.environment.sky)
+        .lerp(new THREE.Color("#18342f"), 0.72);
+      shell.material.uniforms.lower!.value
+        .set(moment.environment.sky)
+        .lerp(new THREE.Color("#010304"), 0.94);
+    }
   }
 
   private collectMaterials(root: THREE.Object3D): THREE.Material[] {
@@ -1578,6 +2616,8 @@ export class TessarynWorld {
     for (const material of node.materials) {
       if (material instanceof THREE.ShaderMaterial && material.uniforms.opacity) {
         material.uniforms.opacity.value = opacity;
+        material.transparent = true;
+        material.depthWrite = opacity > 0.985;
       } else if ("opacity" in material) {
         material.transparent = true;
         material.opacity = opacity * Number(material.userData.baseOpacity ?? 1);
@@ -1593,17 +2633,19 @@ export class TessarynWorld {
         if (!(object instanceof THREE.Mesh)) return;
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         for (const material of materials) {
-          if (material instanceof THREE.MeshStandardMaterial) {
+          if (
+            material instanceof THREE.MeshStandardMaterial
+          ) {
+            material.userData.baseEmissive ??= material.emissive.getHex();
+            material.userData.baseEmissiveIntensity ??= material.emissiveIntensity;
             material.emissive.setHex(
               selected ? 0xb7c984 : Number(material.userData.baseEmissive ?? 0),
             );
             material.emissiveIntensity = selected
               ? 0.22
               : Number(material.userData.baseEmissiveIntensity ?? 1);
-          } else if (material instanceof THREE.MeshBasicMaterial) {
-            material.color.setHex(
-              selected ? 0xc5d98d : Number(material.userData.baseColor ?? 0xffffff),
-            );
+          } else if (material instanceof THREE.ShaderMaterial && material.uniforms.selected) {
+            material.uniforms.selected.value = selected ? 1 : 0;
           }
         }
       });
@@ -1646,10 +2688,14 @@ export class TessarynWorld {
   private bindInteractions(): void {
     this.canvas.addEventListener("pointerdown", (event) => {
       this.canvas.setPointerCapture(event.pointerId);
+      this.canvas.style.cursor = "grabbing";
       this.pointerState = { x: event.clientX, y: event.clientY, moved: false };
     });
     this.canvas.addEventListener("pointermove", (event) => {
-      if (!this.pointerState) return;
+      if (!this.pointerState) {
+        this.setHovered(this.nodeAt(event));
+        return;
+      }
       const dx = event.clientX - this.pointerState.x;
       const dy = event.clientY - this.pointerState.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) this.pointerState.moved = true;
@@ -1661,10 +2707,13 @@ export class TessarynWorld {
     this.canvas.addEventListener("pointerup", (event) => {
       if (this.pointerState && !this.pointerState.moved) this.pick(event);
       this.pointerState = null;
+      this.setHovered(this.nodeAt(event));
     });
     this.canvas.addEventListener("pointercancel", () => {
       this.pointerState = null;
+      this.setHovered(null);
     });
+    this.canvas.addEventListener("pointerleave", () => this.setHovered(null));
     this.canvas.addEventListener(
       "wheel",
       (event) => {
@@ -1684,6 +2733,11 @@ export class TessarynWorld {
   }
 
   private pick(event: PointerEvent): void {
+    const node = this.nodeAt(event);
+    if (node) this.selectCell(node.cell.key);
+  }
+
+  private nodeAt(event: PointerEvent): CellNode | null {
     const bounds = this.canvas.getBoundingClientRect();
     this.pointer.set(
       ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
@@ -1694,14 +2748,14 @@ export class TessarynWorld {
       .intersectObjects(this.interactive, false)
       .find((candidate) => candidate.object.visible);
     const key = hit?.object.userData.cellKey as string | undefined;
-    if (key) this.selectCell(key);
+    return key ? (this.nodes.get(key) ?? null) : null;
   }
 
   private resize(): void {
     const width = Math.max(1, this.canvas.clientWidth);
     const height = Math.max(1, this.canvas.clientHeight);
     this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.75 : width <= 680 ? 1 : 1.4),
+      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.55 : width <= 680 ? 1 : 1.4),
     );
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
@@ -1726,6 +2780,9 @@ export class TessarynWorld {
     }
     const elapsed = performance.now() - this.startedAt;
     const seconds = this.reducedMotion ? 0 : performance.now() * 0.001;
+    if (this.assemblyMaterial) {
+      this.assemblyMaterial.uniforms.time!.value = this.reducedMotion ? 100 : elapsed * 0.001;
+    }
     let condensed = 0;
     for (const node of this.nodes.values()) {
       if (!node.condensed && elapsed >= node.condenseAt) {
@@ -1761,10 +2818,46 @@ export class TessarynWorld {
           : envelope * node.currentOpacity * 0.62;
       }
       const constellation = node.group.getObjectByName("slbit-constellation");
-      if (constellation && !this.reducedMotion) {
-        constellation.rotation.y = seconds * 0.055;
-        constellation.rotation.z = Math.sin(seconds * 0.17) * 0.035;
+      if (constellation?.visible && !this.reducedMotion) {
+        const focused = node === this.hovered || node === this.selected;
+        constellation.rotation.y = seconds * (focused ? 0.12 : 0.038);
+        constellation.rotation.z = Math.sin(seconds * 0.17 + node.momentIndex) * 0.045;
       }
+      const memoryCore = node.group.getObjectByName("memory-core");
+      if (memoryCore && !this.reducedMotion) {
+        memoryCore.rotation.x = seconds * 0.18;
+        memoryCore.rotation.y = seconds * 0.24;
+      }
+      const memoryLattice = node.group.getObjectByName("memory-lattice");
+      const memoryNodes = node.group.getObjectByName("memory-nodes");
+      const memoryShards = node.group.getObjectByName("memory-shards");
+      if (!this.reducedMotion) {
+        node.group.children.forEach((child) => {
+          if (child.name !== "memory-weave") return;
+          const rate = Number(child.userData.rotationRate ?? 0.02);
+          child.rotation.x += delta * rate * 0.52;
+          child.rotation.y += delta * rate;
+        });
+        if (memoryLattice) memoryLattice.rotation.y = -seconds * 0.07;
+        if (memoryNodes) memoryNodes.rotation.y = seconds * 0.045;
+        if (memoryShards) {
+          memoryShards.rotation.x = Math.sin(seconds * 0.08) * 0.04;
+          memoryShards.rotation.y = -seconds * 0.025;
+        }
+      }
+      if (!this.reducedMotion) {
+        node.group.children.forEach((child, index) => {
+          if (child.name !== "memory-orbit") return;
+          child.rotation.z += delta * (0.08 + index * 0.025);
+          child.rotation.y += delta * (index % 2 === 0 ? 0.055 : -0.055);
+        });
+      }
+    }
+    if (!this.reducedMotion) {
+      this.fieldRoot.children.forEach((child) => {
+        const rate = Number(child.userData.rotationRate ?? 0);
+        if (rate !== 0) child.rotation.y += delta * rate;
+      });
     }
     this.aggregateOpacity = THREE.MathUtils.damp(
       this.aggregateOpacity,
@@ -1787,7 +2880,7 @@ export class TessarynWorld {
       delta,
     );
     this.temporalRoot.visible = this.temporalOpacity > 0.002;
-    if (!this.reducedMotion) this.temporalRoot.rotation.y = seconds * 0.012;
+    if (!this.reducedMotion) this.temporalRoot.rotation.y = Math.sin(seconds * 0.12) * 0.028;
     for (const material of this.temporalMaterials) {
       if ("opacity" in material) {
         material.transparent = true;
@@ -1808,10 +2901,6 @@ export class TessarynWorld {
       if (time) time.value = seconds;
     }
     for (const link of this.weaveLinks) {
-      const positions = link.line.geometry.attributes.position as THREE.BufferAttribute;
-      positions.setXYZ(0, link.from.group.position.x, link.from.group.position.y, link.from.group.position.z);
-      positions.setXYZ(1, link.to.group.position.x, link.to.group.position.y, link.to.group.position.z);
-      positions.needsUpdate = true;
       const currentDetail = [link.from, link.to].some(
         (node) =>
           node.cell.visual.moments.includes(this.moment) ||
@@ -1823,26 +2912,131 @@ export class TessarynWorld {
         link.from.currentOpacity > 0.03 &&
         link.to.currentOpacity > 0.03 &&
         (!this.constrainedRenderer || !this.chronofold || currentDetail);
+      if (this.constrainedRenderer && this.constrainedWeave) {
+        const positions = this.constrainedWeave.geometry.attributes.position as THREE.BufferAttribute;
+        if (!visible) {
+          for (let index = 0; index < link.segments; index += 1) {
+            const offset = link.vertexOffset + index * 2;
+            positions.setXYZ(
+              offset,
+              link.from.group.position.x,
+              link.from.group.position.y,
+              link.from.group.position.z,
+            );
+            positions.setXYZ(
+              offset + 1,
+              link.from.group.position.x,
+              link.from.group.position.y,
+              link.from.group.position.z,
+            );
+          }
+          continue;
+        }
+        for (let index = 0; index < link.segments; index += 1) {
+          const first = this.weavePosition(
+            link.from.group.position,
+            link.to.group.position,
+            index / link.segments,
+            link.bend,
+            this.weaveSample,
+          );
+          const offset = link.vertexOffset + index * 2;
+          positions.setXYZ(offset, first.x, first.y, first.z);
+          const second = this.weavePosition(
+            link.from.group.position,
+            link.to.group.position,
+            (index + 1) / link.segments,
+            link.bend,
+            this.weaveSample,
+          );
+          positions.setXYZ(offset + 1, second.x, second.y, second.z);
+        }
+        this.constrainedWeave.visible = this.evidence;
+        continue;
+      }
+      if (!link.line || !link.pulse) continue;
+      const positions = link.line.geometry.attributes.position as THREE.BufferAttribute;
+      for (let index = 0; index <= link.segments; index += 1) {
+        const point = this.weavePosition(
+          link.from.group.position,
+          link.to.group.position,
+          index / link.segments,
+          link.bend,
+          this.weaveSample,
+        );
+        positions.setXYZ(index, point.x, point.y, point.z);
+      }
+      positions.needsUpdate = true;
+      link.line.computeLineDistances();
       link.line.visible = visible;
-      link.pulse.visible = visible && !this.constrainedRenderer;
+      link.pulse.visible = visible;
       if (visible) {
-        const rate = link.to.cell.manifest.evidence.disputed ? 0.1 : 0.065;
+        const focused = [this.selected, this.hovered].some(
+          (node) => node === link.from || node === link.to,
+        );
+        const rate = (link.to.cell.manifest.evidence.disputed ? 0.1 : 0.065) *
+          (focused ? 1.9 : 1);
         const position = (seconds * rate + link.phase) % 1;
         if (!this.constrainedRenderer) {
-          link.pulse.position.lerpVectors(
+          this.weavePosition(
             link.from.group.position,
             link.to.group.position,
             position,
+            link.bend,
+            link.pulse.position,
           );
           const pulseScale = 0.74 + Math.sin((position + link.phase) * Math.PI) * 0.48;
-          link.pulse.scale.setScalar(pulseScale);
+          link.pulse.scale.setScalar(pulseScale * (focused ? 1.28 : 1));
+          const pulseMaterial = link.pulse.material;
+          if (pulseMaterial instanceof THREE.MeshBasicMaterial) {
+            pulseMaterial.opacity = focused ? 0.94 : 0.68;
+          }
         }
         const lineMaterial = link.line.material;
         if (lineMaterial instanceof THREE.LineDashedMaterial) {
           lineMaterial.opacity = link.to.cell.manifest.evidence.disputed
             ? 0.32 + Math.abs(Math.sin(seconds * 2.1 + link.phase * 8)) * 0.2
-            : 0.16;
+            : focused
+              ? 0.46
+              : 0.13;
         }
+      }
+    }
+    if (this.constrainedWeave) {
+      const positions = this.constrainedWeave.geometry.attributes.position as THREE.BufferAttribute;
+      positions.needsUpdate = true;
+    }
+    const focusNode = this.hovered ?? this.selected;
+    this.focusOpacity = THREE.MathUtils.damp(
+      this.focusOpacity,
+      focusNode ? 1 : 0,
+      8,
+      delta,
+    );
+    this.focusRoot.visible = this.focusOpacity > 0.002;
+    if (focusNode) {
+      this.focusRoot.position.lerp(focusNode.group.position, 1 - Math.exp(-delta * 9));
+      const extent = focusNode.cell.visual.size_mm;
+      const radius = THREE.MathUtils.clamp(
+        Math.hypot(extent[0], extent[1], extent[2]) / 4_800,
+        0.7,
+        2.8,
+      );
+      const currentScale = this.focusRoot.scale.x;
+      const nextScale = THREE.MathUtils.damp(currentScale, radius, 7, delta);
+      this.focusRoot.scale.setScalar(nextScale);
+      const focusColor = focusNode.cell.manifest.evidence.disputed
+        ? new THREE.Color("#e18a73")
+        : new THREE.Color("#8fd8cf");
+      this.focusMaterials.forEach((material, index) => {
+        material.color.lerp(focusColor, 1 - Math.exp(-delta * 6));
+        material.opacity = this.focusOpacity * (index === this.focusMaterials.length - 1 ? 0.72 : 0.3);
+      });
+      if (!this.reducedMotion) {
+        this.focusRoot.children.forEach((child, index) => {
+          const rate = Number(child.userData.rotationRate ?? 0.08 + index * 0.02);
+          child.rotation.z += delta * rate;
+        });
       }
     }
     this.updateMovement(delta);

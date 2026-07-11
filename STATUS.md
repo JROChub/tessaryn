@@ -1,8 +1,8 @@
 # Development Status
 
-Version: `0.1.0`
+Version: `0.1.1`
 
-Capability states below describe the tested `0.1.0` release surface.
+Capability states below describe the tested `0.1.1` release surface.
 
 | Capability | State | Evidence |
 |---|---|---|
@@ -30,14 +30,13 @@ Capability states below describe the tested `0.1.0` release surface.
 | Scale Breathing | Implemented | Object, room, and site representations preserve selection |
 | Chronofold | Implemented | Three reference Moments and unresolved branch geometry |
 | Inside-out Trace | Implemented | Evidence, lineage, source, and removable meaning views |
-| Crystalline Cell visual system | Implemented | Deterministic lattices, assembly, Rootprint flow, SLBIT constellations, adaptive renderer |
+| Constructed continuum visual system | Implemented | Identity-derived materials, memory branching, assembly, Rootprint currents, SLBIT fields, adaptive renderer |
 | Custom domain and HTTPS | Implemented | Apex HTTPS and `www` canonical redirect verified 2026-07-10 |
 
 ## Release Contract
 
-TESSARYN `0.1.0` is complete when the versioned software, deterministic
+TESSARYN `0.1.1` is complete when the versioned software, deterministic
 reference Origin, local verification paths, mutation suite, browser experience,
 offline path, supply-chain checks, and cross-platform conformance pass on the
-release commit. Physical-site work is a separate deployment profile and does
-not gate the software version. The bundled Vesper Court data remains a
-deterministic reference Origin and is never represented as a physical capture.
+release commit. The bundled Vesper Court data is the canonical reference Origin
+used by those release gates.

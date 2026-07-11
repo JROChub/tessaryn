@@ -1,15 +1,15 @@
 # TESSARYN Visual System
 
-Version: `1.0`  
-Release: `0.1.0`  
+Version: `1.0`
+Release: `0.1.1`
 Principle: The world is not loaded. It is constructed.
 
 ## Constitution
 
 TESSARYN renders a materialized Locus, not a map or a decorative scene. Every
-visible construction behavior must be derived from a Cell, Anchor, Moment,
-Rootprint relation, evidence state, policy boundary, or non-core semantic
-packet. Presentation never mutates identity.
+visible construction behavior is derived from a Cell, Anchor, Moment,
+Rootprint relation, verification state, policy state, or SLBIT packet.
+Presentation never mutates identity.
 
 The visual system is precise, unfamiliar, and restrained. It avoids map pins,
 panorama bubbles, neon grids, generic heads-up-display ornament, random proof
@@ -24,12 +24,20 @@ node field, and resolving halo derived from its committed presentation seed.
 Cells coalesce through one stable construction sequence and never pop into
 their final state.
 
-### Crystalline architecture
+### Identity-derived matter
 
-Observed and derived structures use physically based crystalline surfaces with
-deterministic facet textures and visible internal identity lattices. The
-renderer changes representation at object, room, and site scales without
-changing the selected Cell or canonical world state.
+Observed and derived structures use opaque mineral matter with deterministic
+facets, strata, view response, material veins, and restrained iridescence.
+Identity lattices live inside the matter and become visible on focus instead of
+covering the entire scene. The renderer changes representation at object,
+room, and site scales without changing the selected Cell or canonical state.
+
+### Branching memory architecture
+
+Archive Cells grow from a dark committed core into deterministic branching
+limbs, witness nodes, and crystalline memory petals. Their form is generated
+from the Cell presentation seed. It is not an atom, globe, particle effect, or
+decorative orbit.
 
 ### Rootprint flow
 
@@ -38,12 +46,12 @@ use regular phase and spacing. Disputed relations use a separate color,
 segmentation, and deterministic phase disruption. No unattached flow is
 rendered.
 
-### SLBIT constellation
+### Living SLBIT field
 
-Semantic-only Cells materialize as removable constellations. Their geometry is
-derived from the packet summary and Cell seed. They remain visually distinct
-from core geometry and disappear with the evidence Lens without altering any
-Cell identity.
+SLBIT packets materialize as focus-responsive constellations of solid meaning
+nodes and relations. Their geometry is derived from packet text and Cell seed.
+They reorganize around focus and disappear with the provenance control without
+altering Cell identity.
 
 ### Chronofold
 
@@ -68,7 +76,7 @@ channels:
 - freshness: temporal placement and Moment state;
 - dispute: split geometry and disrupted relation phase;
 - restriction: opaque policy boundary with absent protected geometry;
-- semantic-only: constellation form and explicit non-core labeling;
+- SLBIT: independently bound constellation form;
 - unknown: open spatial boundary.
 
 The local verification report remains the authority for validity. Pixels are
@@ -78,9 +86,21 @@ presentation.
 
 The base field uses near-black mineral tones. Cool crystal cyan identifies
 structural relations; warm archive gold identifies memory-bearing structures;
-coral identifies dispute or rejection; muted violet identifies semantic
-constellations. Ivory is reserved for controls and selected state. The palette
-is deliberately multi-family and avoids a single-hue interface.
+coral identifies dispute or rejection; violet identifies SLBIT relations;
+living green identifies material growth. Ivory is reserved for controls and
+selected state. The palette is deliberately multi-family.
+
+## Continuum Construction
+
+The continuum shell and ground are custom shaders. Ground seams are spline
+strata derived from Cell positions rather than map rings. Unknown extent is a
+broken field of solid fragments. Rootprint relations share one batched fallback
+field on constrained renderers and use curved, focus-responsive currents on
+full renderers.
+
+The selected Cell is surrounded by twelve solid response braces. No orbital
+selection ring, bloom pass, transmission layer, panorama, basemap, or globe is
+used.
 
 ## Motion
 
@@ -104,4 +124,5 @@ interaction path.
 
 The visual system ships only when desktop, portrait mobile, landscape mobile,
 offline, reduced-motion, import, mutation, nonblank-canvas, and control-boundary
-tests pass. A compelling frame cannot override a failed evidence boundary.
+tests pass. Visual quality and verification correctness are both release
+requirements.

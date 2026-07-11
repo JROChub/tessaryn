@@ -8,7 +8,7 @@ const packageUrl = new URL("../package-lock.json", import.meta.url);
 const packageManifestUrl = new URL("../package.json", import.meta.url);
 const workerUrl = new URL("../public/sw.js", import.meta.url);
 
-test("the bounded Origin declares its evidence state", async () => {
+test("the bounded Origin declares its local verification profile", async () => {
   const world = JSON.parse(await readFile(fixtureUrl, "utf8"));
   assert.equal(world.schema, "tessaryn/demo-world/v0");
   assert.equal(world.status, "reference-origin");
@@ -18,7 +18,7 @@ test("the bounded Origin declares its evidence state", async () => {
   assert.equal(world.cells.filter((cell) => cell.manifest.evidence.restricted).length, 1);
   assert.equal(world.origin_memory_capsule.header.producer.power_house_version, "0.3.24");
   assert.equal(world.origin_memory_capsule.header.producer.platform, null);
-  assert.match(world.evidence_boundary, /physical truth is not claimed/i);
+  assert.match(world.verification_profile, /Cell identity, PHA, Rootprint, replay/i);
 });
 
 test("the viewer has no remote script or map substrate dependency", async () => {

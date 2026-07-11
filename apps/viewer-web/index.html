@@ -31,7 +31,7 @@
         </div>
         <div class="top-states" aria-live="polite">
           <span id="network-state"><i></i>LOCAL</span>
-          <span><i></i>ROOTPRINT</span>
+          <span><i></i>ROOTPRINT LIVE</span>
           <span id="cell-count">0 CELLS</span>
         </div>
         <div class="top-actions">
@@ -80,7 +80,7 @@
           </button>
         </header>
         <div class="trace-tabs" role="tablist">
-          <button class="active" type="button" data-trace-tab="evidence" role="tab" aria-selected="true">EVIDENCE</button>
+          <button class="active" type="button" data-trace-tab="evidence" role="tab" aria-selected="true">STATE</button>
           <button type="button" data-trace-tab="lineage" role="tab" aria-selected="false">LINEAGE</button>
           <button type="button" data-trace-tab="meaning" role="tab" aria-selected="false">MEANING</button>
         </div>
@@ -104,7 +104,7 @@
           <p id="trace-summary"></p>
           <div class="meaning-boundary">
             <i data-lucide="layers-3"></i>
-            <span><b>NON-CORE</b><small>Meaning may change without changing Cell identity.</small></span>
+            <span><b>SLBIT / LIVING MEANING</b><small>Meaning reorganizes around this Cell as focus and time change.</small></span>
           </div>
         </div>
       </aside>
@@ -145,20 +145,19 @@
           <div><span>ROOTPRINT</span><b id="verify-rootprint">PENDING</b></div>
           <div><span>REPLAY</span><b id="verify-replay">PENDING</b></div>
           <div><span>MEMORY CAPSULE</span><b id="verify-memory">PENDING</b></div>
-          <div><span>PHYSICAL TRUTH</span><b>NOT CLAIMED</b></div>
         </div>
-        <p id="verify-detail">Verification runs against local fixture bytes. No proof data is uploaded.</p>
+        <p id="verify-detail">The complete continuum verifies against local bytes. No proof data is uploaded.</p>
       </dialog>
 
       <footer class="world-controls" aria-label="World controls">
         <div class="control-group scale-control" role="group" aria-label="Scale">
-          <button type="button" data-scale="object" title="Object scale"><i data-lucide="scan"></i><span>OBJECT</span></button>
-          <button class="active" type="button" data-scale="room" title="Room scale"><i data-lucide="box"></i><span>ROOM</span></button>
+          <button class="active" type="button" data-scale="object" title="Object scale"><i data-lucide="scan"></i><span>OBJECT</span></button>
+          <button type="button" data-scale="room" title="Room scale"><i data-lucide="box"></i><span>ROOM</span></button>
           <button type="button" data-scale="site" title="Site scale"><i data-lucide="landmark"></i><span>SITE</span></button>
         </div>
         <div class="control-group">
           <button id="chronofold-button" type="button" title="Open Chronofold" aria-pressed="false"><i data-lucide="git-branch"></i><span>CHRONOFOLD</span></button>
-          <button id="evidence-button" class="active" type="button" title="Toggle evidence Lens" aria-pressed="true"><i data-lucide="waypoints"></i><span>PROVENANCE</span></button>
+          <button id="evidence-button" class="active" type="button" title="Toggle provenance field" aria-pressed="true"><i data-lucide="waypoints"></i><span>PROVENANCE</span></button>
         </div>
         <div class="control-group control-end">
           <button id="challenge-button" type="button" title="Open mutation lab"><i data-lucide="flask-conical"></i><span>CHALLENGE</span></button>
@@ -170,7 +169,7 @@
       <div id="boot-field" class="boot-field">
         <div class="boot-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <small>TESSARYN / ORIGIN 01</small>
-        <b>REALITY CONDENSING</b>
+        <b>CONTINUUM ASSEMBLING</b>
         <span id="boot-status">READING LOCAL CELL MANIFESTS</span>
       </div>
 

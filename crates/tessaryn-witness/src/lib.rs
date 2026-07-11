@@ -116,7 +116,7 @@ pub struct WitnessSetReport {
     pub attestation_classes: BTreeMap<AttestationClass, u64>,
     /// Whether every receipt was current at verification time.
     pub all_current: bool,
-    /// Witness evidence remains non-core.
+    /// Witness evidence remains independently bound to its attestation.
     pub changes_core_validity: bool,
 }
 
@@ -294,7 +294,7 @@ pub enum WitnessError {
     /// Operating-system randomness was unavailable.
     #[error("operating-system randomness unavailable")]
     RandomnessUnavailable,
-    /// Statement fields or evidence boundary were invalid.
+    /// Statement fields or attestation scope were invalid.
     #[error("invalid witness statement")]
     InvalidStatement,
     /// Statement bytes no longer matched their identity.

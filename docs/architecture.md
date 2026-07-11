@@ -3,7 +3,7 @@
 TESSARYN is split into a small deterministic kernel and a native product
 surface. The kernel owns Cell schemas, canonical identity, Anchor transforms,
 local storage, Locus selection, and the Power House adapter. The viewer owns GPU
-buffers, presentation, interaction, and non-core semantic rendering.
+buffers, presentation, interaction, and independently bound semantic rendering.
 
 ## Data Flow
 

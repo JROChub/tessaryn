@@ -73,7 +73,7 @@ pub struct PortableLocusV0 {
     pub cells: Vec<CellTransferV0>,
     /// One independently verifiable Power House package per transferred Cell.
     pub proofs: Vec<CellProofBundle>,
-    /// Optional explicit non-core witness receipts bound to transferred identities.
+    /// Optional explicit witness receipts independently bound to transferred identities.
     pub witnesses: Vec<WitnessReceiptV0>,
 }
 

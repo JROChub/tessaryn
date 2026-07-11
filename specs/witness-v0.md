@@ -1,6 +1,6 @@
 # Witness Receipt v0
 
-`tessaryn/witness-statement/v0` carries a signed non-core attestation with one
+`tessaryn/witness-statement/v0` carries a signed, independently bound attestation with one
 explicit class:
 
 - `bytes_observed`

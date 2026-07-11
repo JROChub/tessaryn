@@ -150,6 +150,7 @@ async function boot(): Promise<void> {
       onCondensationComplete: finishCondensation,
       onScaleChanged: updateScaleButtons,
     });
+    window.addEventListener("pagehide", () => scene.destroy(), { once: true });
     window.__tessaryn = {
       world: worldData,
       verification: null,
@@ -286,8 +287,8 @@ function updateCondensation(progress: number, phase: string): void {
     runtimeMetrics.firstStructureMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   }
   elements.condensation.style.width = String(Math.round(progress * 100)) + "%";
-  elements.originPhase.textContent = "ORIGIN / " + phase;
   if (!condensationComplete) {
+    elements.originPhase.textContent = "ORIGIN / " + phase;
     elements.originStatus.textContent =
       progress < 1 ? "WORLD CELLS CONDENSING" : "MATERIALIZATION COMPLETE";
   }
@@ -299,9 +300,9 @@ function finishCondensation(): void {
   runtimeMetrics.materializedMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   document.body.dataset.materialized = "true";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
-  elements.originStatus.textContent = "VESPER COURT CONSTRUCTED LOCALLY";
+  elements.originStatus.textContent = "VESPER COURT / CONTINUUM STABLE";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
-  showToast("18 WORLD CELLS MATERIALIZED");
+  showToast("18 WORLD CELLS / CONTINUUM ASSEMBLED");
 }
 
 function openTrace(cell: DemoCell): void {
@@ -332,6 +333,7 @@ function closeTrace(): void {
   elements.traceDrawer.classList.remove("open");
   elements.traceDrawer.setAttribute("aria-hidden", "true");
   elements.traceDrawer.setAttribute("inert", "");
+  elements.worldLabel.hidden = true;
 }
 
 function populateEvidenceVector(cell: DemoCell): void {
@@ -353,7 +355,7 @@ function populateEvidenceVector(cell: DemoCell): void {
         : String(cell.manifest.temporal_extent.supersedes.length) + " CELL",
     ],
     ["DISPUTE", evidence.disputed ? "RETAINED" : "NONE"],
-    ["SEMANTIC", evidence.semantic_only ? "ONLY" : "NON-CORE"],
+    ["SLBIT", evidence.semantic_only ? "MEANING CELL" : "INDEPENDENTLY BOUND"],
   ];
   elements.evidenceVector.replaceChildren(
     ...rows.map(([label, value]) => {
@@ -465,7 +467,7 @@ async function showVerification(): Promise<void> {
     report.errors.length === 0 ? "LOCAL WORLD ACCEPTED" : "VERIFICATION CAUTION";
   elements.verifyDetail.textContent =
     report.errors.length === 0
-      ? worldData.evidence_boundary
+      ? `${String(report.cellsValid)} Cell identities, ${String(report.phaValid)} PHA bindings, Rootprint lineage, replay, and Memory Capsule verified locally.`
       : report.errors.join(" / ");
 }
 
@@ -621,7 +623,7 @@ function updateScaleButtons(scale: ScaleMode): void {
 function updateWorldLabel(): void {
   if (!scene) return;
   const projected = scene.selectedScreenPosition();
-  if (!projected || !projected.visible) {
+  if (!projected || !projected.visible || !elements.traceDrawer.classList.contains("open")) {
     elements.worldLabel.hidden = true;
   } else {
     elements.worldLabel.hidden = false;
@@ -634,8 +636,8 @@ function updateWorldLabel(): void {
 function evidenceLabel(cell: DemoCell): string {
   if (cell.manifest.evidence.restricted) return "RESTRICTED / GEOMETRY ABSENT";
   if (cell.manifest.evidence.disputed) return "DISPUTED / BRANCH RETAINED";
-  if (cell.manifest.evidence.semantic_only) return "SEMANTIC / NON-CORE";
-  return "IDENTITY VERIFIED / PHYSICAL TRUTH NOT CLAIMED";
+  if (cell.manifest.evidence.semantic_only) return "SLBIT / LIVING MEANING";
+  return "IDENTITY / ROOTPRINT ALIGNED";
 }
 
 function evidenceTemporalLabel(cell: DemoCell): string {

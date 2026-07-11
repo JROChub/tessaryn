@@ -141,7 +141,7 @@ export interface DemoWorld {
   status: "reference-origin";
   product: string;
   origin: string;
-  evidence_boundary: string;
+  verification_profile: string;
   anchor_id: Digest;
   moments: DemoMoment[];
   cells: DemoCell[];
