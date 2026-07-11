@@ -5,6 +5,7 @@ import test from "node:test";
 const fixtureUrl = new URL("../public/world/vesper-court.json", import.meta.url);
 const htmlUrl = new URL("../index.html", import.meta.url);
 const packageUrl = new URL("../package-lock.json", import.meta.url);
+const packageManifestUrl = new URL("../package.json", import.meta.url);
 const workerUrl = new URL("../public/sw.js", import.meta.url);
 
 test("the bounded Origin declares its evidence state", async () => {
@@ -32,6 +33,9 @@ test("the viewer has no remote script or map substrate dependency", async () => 
 
 test("the offline cache includes the local world fixture", async () => {
   const worker = await readFile(workerUrl, "utf8");
+  const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
+  const release = packageManifest.version.replaceAll(".", "-");
+  assert.ok(worker.includes(`const CACHE = "tessaryn-origin-v${release}-portable1";`));
   assert.match(worker, /\.\/world\/vesper-court\.json/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
