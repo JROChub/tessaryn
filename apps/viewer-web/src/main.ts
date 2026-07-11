@@ -1,6 +1,7 @@
 import {
   Box,
   Code2,
+  Database,
   Download,
   Fingerprint,
   FlaskConical,
@@ -20,13 +21,14 @@ import {
 } from "lucide";
 import "./style.css";
 import type {
+  DatasetProfileView,
   DemoCell,
   DemoMoment,
   DemoWorld,
   ReconstructionArtifactView,
   ReconstructionBrowserReport,
-  TemporalLocusArtifactView,
-  TemporalLocusBrowserReport,
+  ValidationLocusArtifactView,
+  ValidationLocusBrowserReport,
   VerificationReport,
 } from "./types";
 import { parseStrictIntegerJson } from "./strict-json";
@@ -34,7 +36,7 @@ import { runMutation } from "./verification";
 import {
   destroyVerificationWorker,
   verifyReconstructionOffThread,
-  verifyTemporalOffThread,
+  verifyValidationOffThread,
   verifyWorldOffThread,
 } from "./verification-client";
 import {
@@ -50,9 +52,9 @@ declare global {
       verification: VerificationReport | null;
       importedArtifact?: ReconstructionArtifactView;
       importedVerification?: ReconstructionBrowserReport;
-      temporalArtifact?: TemporalLocusArtifactView;
-      temporalVerification?: TemporalLocusBrowserReport;
-      verifyTemporalArtifact: typeof verifyTemporalOffThread;
+      validationArtifact?: ValidationLocusArtifactView;
+      validationVerification?: ValidationLocusBrowserReport;
+      verifyValidationArtifact: typeof verifyValidationOffThread;
       scene: TessarynWorld;
       metrics: RuntimeMetrics;
     };
@@ -119,7 +121,34 @@ const elements = {
   scaleBreath: byId<HTMLInputElement>("scale-breath"),
   bootStatus: byId<HTMLElement>("boot-status"),
   toast: byId<HTMLElement>("toast"),
+  sourcesButton: byId<HTMLButtonElement>("sources-button"),
+  sourcesDialog: byId<HTMLDialogElement>("sources-dialog"),
+  sourcesClose: byId<HTMLButtonElement>("sources-close"),
+  sourceName: byId<HTMLElement>("source-name"),
+  sourceClass: byId<HTMLElement>("source-class"),
+  sourceEnvironment: byId<HTMLElement>("source-environment"),
+  sourceSensor: byId<HTMLElement>("source-sensor"),
+  sourceGroundTruth: byId<HTMLElement>("source-ground-truth"),
+  sourceAssets: byId<HTMLElement>("source-assets"),
+  sourceProfileId: byId<HTMLElement>("source-profile-id"),
+  portfolioList: byId<HTMLElement>("portfolio-list"),
 };
+
+interface ValidationPortfolio {
+  schema: "tessaryn/validation-portfolio/v1";
+  entries: Array<{
+    id: string;
+    layer: string;
+    source_class: "synthetic_ground_truth" | "real_sensor";
+    release_year: number;
+    modalities: string[];
+    adapter: string;
+    state: string;
+    evidence_scope: string;
+    homepage: string;
+    usage: string;
+  }>;
+}
 
 let worldData: DemoWorld;
 let scene: TessarynWorld;
@@ -127,8 +156,8 @@ let selected: DemoCell;
 let latestVerification: VerificationReport | null = null;
 let importedArtifact: ReconstructionArtifactView | null = null;
 let importedVerification: ReconstructionBrowserReport | null = null;
-let temporalArtifact: TemporalLocusArtifactView | null = null;
-let temporalVerification: TemporalLocusBrowserReport | null = null;
+let validationArtifact: ValidationLocusArtifactView | null = null;
+let validationVerification: ValidationLocusBrowserReport | null = null;
 const temporalArtifactsByCell = new Map<string, ReconstructionArtifactView>();
 const temporalCellsByMoment = new Map<string, DemoCell>();
 let chronofoldOpen = false;
@@ -145,12 +174,14 @@ void boot();
 async function boot(): Promise<void> {
   try {
     elements.bootStatus.textContent = "READING LOCAL CELL MANIFESTS";
-    const [worldResponse, temporalResponse] = await Promise.all([
+    const [worldResponse, validationResponse, portfolioResponse] = await Promise.all([
       fetch("./world/vesper-court.json", { cache: "no-store" }),
-      fetch("./world/freiburg-desk-locus.json", { cache: "no-store" }),
+      fetch("./world/archviz-tiny-house-locus.json", { cache: "no-store" }),
+      fetch("./validation/portfolio.json", { cache: "no-store" }),
     ]);
     if (!worldResponse.ok) throw new Error("world fixture unavailable");
-    if (!temporalResponse.ok) throw new Error("real temporal Locus unavailable");
+    if (!validationResponse.ok) throw new Error("validation Locus unavailable");
+    if (!portfolioResponse.ok) throw new Error("validation portfolio unavailable");
     worldData = (await worldResponse.json()) as DemoWorld;
     if (
       worldData.schema !== "tessaryn/demo-world/v0" ||
@@ -158,24 +189,31 @@ async function boot(): Promise<void> {
     ) {
       throw new Error("unsupported world fixture");
     }
-    const parsedTemporal = parseStrictIntegerJson(await temporalResponse.text());
-    if (!isTemporalLocusArtifact(parsedTemporal)) {
-      throw new Error("unsupported temporal Locus artifact");
+    const parsedValidation = parseStrictIntegerJson(await validationResponse.text());
+    if (!isValidationLocusArtifact(parsedValidation)) {
+      throw new Error("unsupported validation Locus artifact");
     }
-    temporalArtifact = parsedTemporal;
-    elements.bootStatus.textContent = "VERIFYING REAL RGB-D CONTINUUM";
-    temporalVerification = await verifyTemporalOffThread(parsedTemporal);
-    if (temporalVerification.errors.length > 0 || !temporalVerification.alternate) {
-      throw new Error(temporalVerification.errors.join(" / ") || "temporal Locus rejected");
+    const parsedPortfolio = parseStrictIntegerJson(await portfolioResponse.text());
+    if (!isValidationPortfolio(parsedPortfolio)) {
+      throw new Error("unsupported validation portfolio");
     }
-    const observations = temporalObservations(temporalVerification);
+    validationArtifact = parsedValidation;
+    elements.bootStatus.textContent = "VERIFYING EXACT RGB-D GROUND TRUTH";
+    validationVerification = await verifyValidationOffThread(parsedValidation);
+    if (validationVerification.errors.length > 0 || !validationVerification.alternate) {
+      throw new Error(
+        validationVerification.errors.join(" / ") || "validation Locus rejected",
+      );
+    }
+    const observations = temporalObservations(validationVerification);
     selected =
       observations.find((observation) => observation.id === "moment-c")?.cell ??
       observations[0]?.cell ??
       fail("temporal Locus contains no observations");
-    populateTemporalMoments(temporalVerification);
-    elements.originName.textContent = parsedTemporal.origin;
-    elements.cellCount.textContent = String(temporalVerification.cellsValid) + " CELLS";
+    populateTemporalMoments(validationVerification);
+    populateValidationPortfolio(parsedValidation.source.profile, parsedPortfolio);
+    elements.originName.textContent = parsedValidation.origin;
+    elements.cellCount.textContent = String(validationVerification.cellsValid) + " CELLS";
     elements.anchorShort.textContent = shortDigest(selected.manifest.anchor_id, 8);
     elements.momentShort.textContent = "MOMENT C";
     elements.evidenceShort.textContent = "ASSEMBLING";
@@ -197,10 +235,10 @@ async function boot(): Promise<void> {
     );
     window.__tessaryn = {
       world: worldData,
-      verification: temporalVerificationReport(temporalVerification),
-      temporalArtifact: parsedTemporal,
-      temporalVerification,
-      verifyTemporalArtifact: verifyTemporalOffThread,
+      verification: validationVerificationReport(validationVerification),
+      validationArtifact: parsedValidation,
+      validationVerification,
+      verifyValidationArtifact: verifyValidationOffThread,
       scene,
       metrics: runtimeMetrics,
     };
@@ -209,6 +247,7 @@ async function boot(): Promise<void> {
       icons: {
         Box,
         Code2,
+        Database,
         Download,
         Fingerprint,
         FlaskConical,
@@ -230,7 +269,7 @@ async function boot(): Promise<void> {
     await delay(380);
     elements.app.dataset.ready = "true";
     document.body.dataset.ready = "true";
-    latestVerification = temporalVerificationReport(temporalVerification);
+    latestVerification = validationVerificationReport(validationVerification);
     window.__tessaryn.verification = latestVerification;
     runtimeMetrics.verificationMs = performance.now() - runtimeMetrics.bootStartedAtMs;
     elements.evidenceShort.textContent =
@@ -250,6 +289,10 @@ async function boot(): Promise<void> {
 
 function bindControls(): void {
   elements.verifyButton.addEventListener("click", () => void showVerification());
+  elements.sourcesButton.addEventListener("click", () => {
+    if (!elements.sourcesDialog.open) elements.sourcesDialog.showModal();
+  });
+  elements.sourcesClose.addEventListener("click", () => elements.sourcesDialog.close());
   elements.importButton.addEventListener("click", () => elements.importInput.click());
   elements.importInput.addEventListener("change", () => void importReconstruction());
   elements.verifyClose.addEventListener("click", () => elements.verificationDialog.close());
@@ -294,12 +337,52 @@ function bindControls(): void {
   elements.verificationDialog.addEventListener("click", (event) => {
     if (event.target === elements.verificationDialog) elements.verificationDialog.close();
   });
+  elements.sourcesDialog.addEventListener("click", (event) => {
+    if (event.target === elements.sourcesDialog) elements.sourcesDialog.close();
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     closeTrace();
     closeChallenge();
     if (elements.verificationDialog.open) elements.verificationDialog.close();
+    if (elements.sourcesDialog.open) elements.sourcesDialog.close();
   });
+}
+
+function populateValidationPortfolio(
+  profile: DatasetProfileView,
+  portfolio: ValidationPortfolio,
+): void {
+  elements.sourceName.textContent = profile.dataset;
+  elements.sourceClass.textContent = profile.source_class.replaceAll("_", " ").toUpperCase();
+  elements.sourceEnvironment.textContent = profile.environment;
+  elements.sourceSensor.textContent = `${String(profile.sensor.width)}x${String(profile.sensor.height)} RGB-D / ${String(profile.sensor.sample_rate_millihz / 1_000)} HZ`;
+  elements.sourceGroundTruth.textContent = `${profile.ground_truth.reference.toUpperCase()} / DEPTH + POSE`;
+  const assetBytes = profile.assets.reduce((total, asset) => total + asset.bytes, 0);
+  elements.sourceAssets.textContent = `${String(profile.assets.length)} / ${(assetBytes / 1_000_000).toFixed(1)} MB`;
+  elements.sourceProfileId.textContent = profile.id;
+  elements.portfolioList.replaceChildren();
+  for (const entry of portfolio.entries) {
+    const row = document.createElement("div");
+    row.className = "portfolio-row";
+    row.dataset.sourceClass = entry.source_class;
+    const identity = document.createElement("span");
+    const title = document.createElement("b");
+    const layer = document.createElement("small");
+    title.textContent = entry.id;
+    layer.textContent = `${entry.layer.replaceAll("_", " ").toUpperCase()} / ${String(entry.release_year)}`;
+    identity.append(title, layer);
+    const evidence = document.createElement("span");
+    const summary = document.createElement("p");
+    const modalities = document.createElement("small");
+    summary.textContent = entry.evidence_scope;
+    modalities.textContent = entry.modalities.join(" + ").toUpperCase();
+    evidence.append(summary, modalities);
+    const state = document.createElement("em");
+    state.textContent = entry.state.toUpperCase();
+    row.append(identity, evidence, state);
+    elements.portfolioList.append(row);
+  }
 }
 
 function populateMoments(moments: DemoMoment[]): void {
@@ -333,7 +416,7 @@ function populateMoments(moments: DemoMoment[]): void {
   });
 }
 
-function populateTemporalMoments(report: TemporalLocusBrowserReport): void {
+function populateTemporalMoments(report: ValidationLocusBrowserReport): void {
   elements.momentRail.replaceChildren();
   report.moments.forEach((moment, index) => {
     const button = document.createElement("button");
@@ -381,12 +464,12 @@ function finishCondensation(): void {
   runtimeMetrics.materializedMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   document.body.dataset.materialized = "true";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
-  elements.originStatus.textContent = temporalArtifact
-    ? "FREIBURG DESK / CONTINUUM STABLE"
+  elements.originStatus.textContent = validationArtifact
+    ? "ARCHVIZ TINY HOUSE / CONTINUUM STABLE"
     : "VESPER COURT / CONTINUUM STABLE";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
   showToast(
-    `${String(temporalVerification?.cellsValid ?? latestVerification?.cellsValid ?? worldData.cells.length)} WORLD CELLS / CONTINUUM ASSEMBLED`,
+    `${String(validationVerification?.cellsValid ?? latestVerification?.cellsValid ?? worldData.cells.length)} WORLD CELLS / CONTINUUM ASSEMBLED`,
   );
 }
 
@@ -546,19 +629,19 @@ async function showVerification(): Promise<void> {
     renderImportedVerification(report);
     return;
   }
-  if (temporalArtifact) {
-    if (temporalVerification) {
-      renderTemporalVerification(temporalVerification);
+  if (validationArtifact) {
+    if (validationVerification) {
+      renderValidationVerification(validationVerification);
       return;
     }
-    const report = await verifyTemporalOffThread(temporalArtifact);
-    temporalVerification = report;
-    latestVerification = temporalVerificationReport(report);
+    const report = await verifyValidationOffThread(validationArtifact);
+    validationVerification = report;
+    latestVerification = validationVerificationReport(report);
     if (window.__tessaryn) {
-      window.__tessaryn.temporalVerification = report;
+      window.__tessaryn.validationVerification = report;
       window.__tessaryn.verification = latestVerification;
     }
-    renderTemporalVerification(report);
+    renderValidationVerification(report);
     return;
   }
   const report = await verifyWorldOffThread(worldData);
@@ -579,14 +662,14 @@ async function showVerification(): Promise<void> {
       : report.errors.join(" / ");
 }
 
-function renderTemporalVerification(report: TemporalLocusBrowserReport): void {
+function renderValidationVerification(report: ValidationLocusBrowserReport): void {
   elements.verifyCells.textContent = `${String(report.cellsValid)} / 9 VALID`;
   elements.verifyPha.textContent = `${String(report.phaValid)} / 9 VALID`;
   elements.verifyRootprint.textContent = report.rootprintValid ? "VALID" : "INVALID";
   elements.verifyReplay.textContent = report.replayValid ? "VALID" : "INVALID";
   elements.verifyMemory.textContent = report.memoryValid ? "VALID" : "INVALID";
   elements.verifyTitle.textContent =
-    report.errors.length === 0 ? "REAL 4D LOCUS ACCEPTED" : "VERIFICATION CAUTION";
+    report.errors.length === 0 ? "GROUND-TRUTH LOCUS ACCEPTED" : "VERIFICATION CAUTION";
   const surfels = report.moments.reduce(
     (total, moment) => total + moment.verification.surfels.length,
     report.alternate?.verification.surfels.length ?? 0,
@@ -597,7 +680,7 @@ function renderTemporalVerification(report: TemporalLocusBrowserReport): void {
   );
   elements.verifyDetail.textContent =
     report.errors.length === 0
-      ? `${String(surfels)} sensor surfels and ${String(voxels)} SDF voxels verified across three Moments and one Rootprint branch.`
+      ? `${String(surfels)} source-bound surfels and ${String(voxels)} SDF voxels verified across three Moments and one Rootprint branch.`
       : report.errors.join(" / ");
 }
 
@@ -661,12 +744,35 @@ function isReconstructionArtifact(value: unknown): value is ReconstructionArtifa
   );
 }
 
-function isTemporalLocusArtifact(value: unknown): value is TemporalLocusArtifactView {
+function isValidationLocusArtifact(value: unknown): value is ValidationLocusArtifactView {
   return (
     typeof value === "object" &&
     value !== null &&
-    (value as { schema?: unknown }).schema === "tessaryn/temporal-locus-artifact/v0" &&
+    (value as { schema?: unknown }).schema === "tessaryn/validation-locus-artifact/v1" &&
     Array.isArray((value as { moments?: unknown }).moments)
+  );
+}
+
+function isValidationPortfolio(value: unknown): value is ValidationPortfolio {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    (value as { schema?: unknown }).schema !== "tessaryn/validation-portfolio/v1" ||
+    !Array.isArray((value as { entries?: unknown }).entries)
+  ) {
+    return false;
+  }
+  const entries = (value as { entries: unknown[] }).entries;
+  return (
+    entries.length >= 2 &&
+    entries.every(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        ["synthetic_ground_truth", "real_sensor"].includes(
+          String((entry as { source_class?: unknown }).source_class),
+        ),
+    )
   );
 }
 
@@ -716,26 +822,30 @@ function reconstructionCell(
   };
 }
 
-function temporalObservations(report: TemporalLocusBrowserReport): TemporalObservation[] {
-  if (!temporalArtifact) throw new Error("temporal artifact unavailable");
+function temporalObservations(report: ValidationLocusBrowserReport): TemporalObservation[] {
+  if (!validationArtifact) throw new Error("validation artifact unavailable");
+  const activeValidationArtifact = validationArtifact;
   temporalArtifactsByCell.clear();
   temporalCellsByMoment.clear();
   const values = [
     ...report.moments.map((moment) => ({ ...moment, alternate: false })),
     ...(report.alternate ? [{ ...report.alternate, alternate: true }] : []),
   ];
-  const sourceStates = [...temporalArtifact.moments, temporalArtifact.alternate];
+  const sourceStates = [
+    ...activeValidationArtifact.moments,
+    activeValidationArtifact.alternate,
+  ];
   return values.map((moment, index) => {
     const artifact = sourceStates[index]?.artifact;
     if (!artifact) throw new Error(`${moment.id}: temporal artifact binding unavailable`);
     const cell = reconstructionCell(artifact, {
-      key: `real-${moment.id}`,
+      key: `validation-${moment.id}`,
       label: `${moment.label} / VERIFIED SDF`,
       momentId: moment.id,
       layer: "sdf",
       alternate: moment.alternate,
     });
-    cell.semantic_summary = `${moment.label} from the TUM Freiburg1 desk RGB-D sequence. ${String(moment.verification.surfels.length)} color surfels and ${String(moment.verification.voxels)} sparse-SDF voxels assemble this state.`;
+    cell.semantic_summary = `${moment.label} from TartanAir V2 ArchViz Tiny House exact RGB-D ground truth. ${String(moment.verification.surfels.length)} color surfels and ${String(moment.verification.voxels)} sparse-SDF voxels assemble this state.`;
     temporalArtifactsByCell.set(cell.key, artifact);
     temporalCellsByMoment.set(moment.id, cell);
     return {
@@ -746,12 +856,13 @@ function temporalObservations(report: TemporalLocusBrowserReport): TemporalObser
       sdfVoxels: moment.verification.sdfVoxels,
       voxelSizeUm: moment.verification.voxelSizeUm,
       alternate: moment.alternate,
+      coordinateFrame: activeValidationArtifact.source.profile.sensor.coordinate_frame,
     };
   });
 }
 
-function temporalVerificationReport(
-  report: TemporalLocusBrowserReport,
+function validationVerificationReport(
+  report: ValidationLocusBrowserReport,
 ): VerificationReport {
   return {
     cellsValid: report.cellsValid,

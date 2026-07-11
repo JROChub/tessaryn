@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const fixtureUrl = new URL("../public/world/vesper-court.json", import.meta.url);
-const temporalFixtureUrl = new URL(
-  "../public/world/freiburg-desk-locus.json",
+const validationFixtureUrl = new URL(
+  "../public/world/archviz-tiny-house-locus.json",
   import.meta.url,
 );
 const htmlUrl = new URL("../index.html", import.meta.url);
@@ -25,13 +25,22 @@ test("the bounded Origin declares its local verification profile", async () => {
   assert.match(world.verification_profile, /Cell identity, PHA, Rootprint, replay/i);
 });
 
-test("the real temporal Origin binds exact RGB-D source selections", async () => {
-  const locus = JSON.parse(await readFile(temporalFixtureUrl, "utf8"));
-  assert.equal(locus.schema, "tessaryn/temporal-locus-artifact/v0");
-  assert.equal(locus.source.dataset, "TUM RGB-D Benchmark / freiburg1_desk");
-  assert.equal(
-    locus.source.archive_sha256,
-    "sha256:e983d6830916e66dc4a46a71368046b149b283de87769690e7aa4e0b9483530c",
+test("the validation Origin binds exact RGB-D ground truth and source class", async () => {
+  const locus = JSON.parse(await readFile(validationFixtureUrl, "utf8"));
+  assert.equal(locus.schema, "tessaryn/validation-locus-artifact/v1");
+  assert.equal(locus.source.profile.dataset, "TartanAir V2");
+  assert.equal(locus.source.profile.environment, "ArchVizTinyHouseDay");
+  assert.equal(locus.source.profile.source_class, "synthetic_ground_truth");
+  assert.equal(locus.source.profile.ground_truth.metric_depth, true);
+  assert.equal(locus.source.profile.ground_truth.camera_pose, true);
+  assert.equal(locus.source.profile.ground_truth.semantics, false);
+  assert.equal(locus.source.profile.ground_truth.optical_flow, false);
+  assert.deepEqual(
+    locus.source.profile.assets.map((asset) => asset.sha256),
+    [
+      "sha256:83e6e680297af35aa83d594ea3ed254bf71e9d9da7b26fee6d0ccb29f25ac104",
+      "sha256:9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da",
+    ],
   );
   assert.equal(locus.source.selected_frames, 48);
   assert.deepEqual(
@@ -41,6 +50,7 @@ test("the real temporal Origin binds exact RGB-D source selections", async () =>
   for (const selection of locus.source.selections) {
     assert.equal(selection.frame_ids.length, 12);
     assert.equal(selection.captured_at_unix_us.length, 12);
+    assert.equal(selection.source_indices.length, 12);
   }
   assert.equal(locus.moments.length, 3);
   assert.equal(locus.alternate.id, "alternate-c");
@@ -63,8 +73,8 @@ test("the offline cache includes the local world fixture", async () => {
   const worker = await readFile(workerUrl, "utf8");
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
-  assert.ok(worker.includes(`const CACHE = "tessaryn-origin-v${release}-real-locus1";`));
-  assert.match(worker, /\.\/world\/freiburg-desk-locus\.json/);
+  assert.ok(worker.includes(`const CACHE = "tessaryn-origin-v${release}-validation-locus1";`));
+  assert.match(worker, /\.\/world\/archviz-tiny-house-locus\.json/);
   assert.match(worker, /\.\/world\/vesper-court\.json/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);

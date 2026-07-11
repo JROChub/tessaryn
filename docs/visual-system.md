@@ -1,7 +1,7 @@
 # TESSARYN Visual System
 
 Version: `1.0`
-Release: `0.2.0`
+Release: `0.3.0`
 Principle: The world is not loaded. It is constructed.
 
 ## Constitution
@@ -32,11 +32,11 @@ Identity lattices live inside the matter and become visible on focus instead of
 covering the entire scene. The renderer changes representation at object,
 room, and site scales without changing the selected Cell or canonical state.
 
-The default Origin uses real RGB-D color surfels and near-surface sparse-SDF
-matter. A deterministic constrained profile selects evenly spaced verified
-samples for software renderers and mobile devices; the full profile retains the
-complete visible state. Both profiles verify the entire artifact before
-materialization.
+The default Origin uses TartanAir V2 exact-ground-truth RGB-D color surfels and
+near-surface sparse-SDF matter. A deterministic constrained profile selects
+evenly spaced verified samples for software renderers and mobile devices; the
+full profile retains the complete visible state. Both profiles verify the
+entire provenance-bound artifact before materialization.
 
 ### Branching memory architecture
 
@@ -61,11 +61,11 @@ altering Cell identity.
 
 ### Chronofold
 
-Three real captured Moments and one alternate Rootprint branch occupy explicit
-temporal manifolds. Exact near-surface SDF intersections remain in the shared
-center while temporal deltas separate by phase and the unresolved branch lifts
-away from the canonical sequence. Observation, derivation, and dispute states
-are not merged for visual convenience.
+Three simulator-ground-truth Moments and one alternate Rootprint branch occupy
+explicit temporal manifolds. Exact near-surface SDF intersections remain in
+the shared center while temporal deltas separate by phase and the unresolved
+branch lifts away from the canonical sequence. Observation, derivation, and
+dispute states are not merged for visual convenience.
 
 ### Continuous Scale Breathing
 

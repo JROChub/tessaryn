@@ -1,20 +1,31 @@
 # Third-Party Notices
 
-## TUM RGB-D Benchmark: `freiburg1_desk`
+## TartanAir V2: `ArchVizTinyHouseDay/Data_easy/P000`
 
-TESSARYN `0.2.0` includes a derived temporal Locus generated from the Technical
-University of Munich RGB-D Benchmark sequence `freiburg1_desk`.
+TESSARYN `0.3.0` includes a derived validation Locus generated from the
+TartanAir V2 `ArchVizTinyHouseDay` environment and `P000` easy trajectory.
 
-- Project: <https://cvg.cit.tum.de/data/datasets/rgbd-dataset>
-- Source archive: <https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_desk.tgz>
-- Archive SHA-256: `e983d6830916e66dc4a46a71368046b149b283de87769690e7aa4e0b9483530c`
+- Project: <https://tartanair.org/>
+- Dataset repository: <https://huggingface.co/datasets/theairlabcmu/tartanair2>
+- RGB archive SHA-256: `9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da`
+- Depth archive SHA-256: `83e6e680297af35aa83d594ea3ed254bf71e9d9da7b26fee6d0ccb29f25ac104`
 - License: [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
-- Citation: J. Sturm, N. Engelhard, F. Endres, W. Burgard, and D. Cremers,
-  "A Benchmark for the Evaluation of RGB-D SLAM Systems," IROS 2012.
+- Citation: W. Wang, Y. Hu, Y. Qiu, S. Shen, and Y. Shaoul, TartanAir V2
+  Dataset, Carnegie Mellon University, 2023.
 
-The repository does not redistribute the source RGB or depth PNG files. The
+The repository does not redistribute the source RGB or depth PNG archives. The
 bundled artifact contains deterministic surfel and sparse-SDF derivatives,
-source selection records, Power House bindings, Rootprint lineage, and local
-verification reports. The four states are ordered windows from one captured
-sequence; they are not represented as different days or independent capture
-operators.
+source profile and selection records, Power House bindings, Rootprint lineage,
+and local verification reports. TartanAir is synthetic simulator data. The
+artifact declares `synthetic_ground_truth` and is not represented as a physical
+sensor capture.
+
+## Optional Real-Sensor Adapters
+
+TESSARYN contains local layout-inspection adapters for EuRoC MAV, KITTI raw,
+and ScanNet v2. Their source data is not redistributed. Operators are
+responsible for obtaining those datasets and following their respective terms:
+
+- EuRoC MAV: <https://projects.asl.ethz.ch/datasets/euroc-mav/>
+- KITTI: <https://www.cvlibs.net/datasets/kitti/>
+- ScanNet: <https://www.scan-net.org/>

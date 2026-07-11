@@ -1,8 +1,8 @@
 # Development Status
 
-Version: `0.2.0`
+Version: `0.3.0`
 
-Capability states below describe the tested `0.2.0` release surface.
+Capability states below describe the tested `0.3.0` release surface.
 
 | Capability | State | Evidence |
 |---|---|---|
@@ -17,9 +17,12 @@ Capability states below describe the tested `0.2.0` release surface.
 | Per-pixel privacy masks | Implemented | Identity-bound and applied before normals, deprojection, surfels, and SDF |
 | Deterministic sparse SDF reconstruction | Implemented | Canonical codec, bounded fusion, report replay, mutation tests |
 | Public reconstruction reports without raw frames | Implemented | Independent report, Cell, chunk, PHA, lineage, and Capsule verification |
-| Real temporal RGB-D Origin | Implemented | 48 TUM source frames, 174,972 surfels, 131,808 SDF voxels, 4 observation states |
-| Explicit source-selection manifest | Implemented | Ordered frame IDs/timestamps, archive digest, mutation rejection, byte-identical reproduction workflow |
+| High-fidelity validation Origin | Implemented | 48 TartanAir V2 640x640 RGB-D frames, 212,565 surfels, 224,867 SDF voxels, 4 trajectory states |
+| Provenance-bound dataset profile | Implemented | Source class, release, sensor model, ground truth, archive digests and sizes are identity-bearing |
+| Explicit source-selection manifest | Implemented | Ordered frame IDs, source indices, synthetic timestamps, profile binding, mutation rejection, byte-identical reproduction workflow |
 | Source Aggregate Cell | Implemented | Source manifest has its own PHA, replay, Memory Capsule, SLBIT packet, and top Rootprint branch |
+| Real-sensor validation adapters | Implemented | EuRoC, KITTI raw, and ScanNet layout, synchronization, bounded hashing, and receipt tests |
+| Multilayer validation portfolio | Implemented | Shipped source-aware viewer distinguishes showcase ground truth from real-sensor stress adapters |
 | Bounded Locus compiler | Implemented | Deterministic 10,000-Cell test |
 | Power House bridge | Implemented | `.pha`, Rootprint, replay, Memory Capsule tests |
 | Browser-local verifier and capture import | Implemented | Fixture and reconstruction-artifact verification, rendering, mutation rejection |
@@ -31,15 +34,15 @@ Capability states below describe the tested `0.2.0` release surface.
 | Exact-layer mutation lab | Implemented | Cell, PHA core, binary, parser, and semantic rejection paths |
 | Condensation | Implemented | Progressive structural materialization with distinct state copy |
 | Scale Breathing | Implemented | Continuous object-to-site depth preserves the selected spatial anchor |
-| Chronofold | Implemented | Three real captured Moments, shared SDF structure, and unresolved branch geometry |
+| Chronofold | Implemented | Three exact-ground-truth Moments, shared SDF structure, and unresolved branch geometry |
 | Inside-out Trace | Implemented | Evidence, lineage, source, and removable meaning views |
 | Constructed continuum visual system | Implemented | Identity-derived materials, memory branching, assembly, Rootprint currents, SLBIT fields, adaptive renderer |
 | Custom domain and HTTPS | Implemented | Apex HTTPS and `www` canonical redirect verified 2026-07-10 |
 
 ## Release Contract
 
-TESSARYN `0.2.0` is complete when the versioned software, deterministic
-reference vectors, real temporal Origin, local verification paths, mutation suite, browser experience,
+TESSARYN `0.3.0` is complete when the versioned software, deterministic
+reference vectors, validation Origin, local verification paths, mutation suite, browser experience,
 offline path, supply-chain checks, and cross-platform conformance pass on the
-release commit. The TUM temporal Locus is the default visible Origin; Vesper
-Court and the minimal reconstruction remain deterministic protocol vectors.
+release commit. The TartanAir V2 validation Locus is the default visible Origin;
+Vesper Court and the minimal reconstruction remain deterministic protocol vectors.

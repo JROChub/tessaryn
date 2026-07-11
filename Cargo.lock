@@ -31,6 +31,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
+dependencies = [
+ "derive_arbitrary",
+]
+
+[[package]]
 name = "ark-bn254"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -73,7 +82,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "derivative",
- "hashbrown",
+ "hashbrown 0.13.2",
  "itertools",
  "num-traits",
  "rayon",
@@ -163,7 +172,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "derivative",
- "hashbrown",
+ "hashbrown 0.13.2",
  "rayon",
 ]
 
@@ -296,6 +305,12 @@ checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
 ]
+
+[[package]]
+name = "bumpalo"
+version = "3.20.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "cfg-if"
@@ -447,6 +462,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e567bd82dcff979e4b03460c307b3cdc9e96fde3d73bed1496d2bc75d9dd62a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -455,6 +481,17 @@ dependencies = [
  "block-buffer",
  "crypto-common",
  "subtle",
+]
+
+[[package]]
+name = "displaydoc"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ac70aa55017e108007fbaf5aa0f54b021c98f92ff8af59d42eda9da96e3dd4f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
 ]
 
 [[package]]
@@ -486,6 +523,12 @@ name = "either"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
+
+[[package]]
+name = "equivalent"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "errno"
@@ -577,6 +620,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+
+[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -598,6 +647,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest",
+]
+
+[[package]]
+name = "indexmap"
+version = "2.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+dependencies = [
+ "equivalent",
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
@@ -644,6 +703,12 @@ name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+
+[[package]]
+name = "log"
+version = "0.4.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "memchr"
@@ -1096,7 +1161,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-anchor"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "tessaryn-schema",
@@ -1105,7 +1170,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-canonical"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hex",
  "proptest",
@@ -1118,12 +1183,14 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
+ "hex",
  "png",
  "power_house",
  "serde",
  "serde_json",
+ "sha2",
  "tessaryn-canonical",
  "tessaryn-forge",
  "tessaryn-powerhouse",
@@ -1131,11 +1198,12 @@ dependencies = [
  "tessaryn-schema",
  "tessaryn-sync",
  "thiserror",
+ "zip",
 ]
 
 [[package]]
 name = "tessaryn-forge"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1147,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-powerhouse"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hex",
  "power_house",
@@ -1161,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-privacy"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "chacha20poly1305",
  "getrandom 0.3.4",
@@ -1179,7 +1247,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-reconstruct"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hex",
  "serde",
@@ -1194,7 +1262,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-schema"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "thiserror",
@@ -1202,7 +1270,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-store"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "tessaryn-canonical",
  "tessaryn-schema",
@@ -1211,7 +1279,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-sync"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ed25519-dalek",
  "getrandom 0.3.4",
@@ -1232,7 +1300,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-transport"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "serde",
@@ -1241,7 +1309,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-weave"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hex",
  "serde",
@@ -1254,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-witness"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ed25519-dalek",
  "getrandom 0.3.4",
@@ -1461,7 +1529,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "zip"
+version = "2.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fabe6324e908f85a1c52063ce7aa26b68dcb7eb6dbc83a2d148403c9bc3eba50"
+dependencies = [
+ "arbitrary",
+ "crc32fast",
+ "crossbeam-utils",
+ "displaydoc",
+ "flate2",
+ "indexmap",
+ "memchr",
+ "thiserror",
+ "zopfli",
+]
+
+[[package]]
 name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[package]]
+name = "zopfli"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f05cd8797d63865425ff89b5c4a48804f35ba0ce8d125800027ad6017d2b5249"
+dependencies = [
+ "bumpalo",
+ "crc32fast",
+ "log",
+ "simd-adler32",
+]

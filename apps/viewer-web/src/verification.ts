@@ -8,8 +8,8 @@ import type {
   RejectionResult,
   Rootprint,
   RootprintBranch,
-  TemporalLocusArtifactView,
-  TemporalLocusBrowserReport,
+  ValidationLocusArtifactView,
+  ValidationLocusBrowserReport,
   VerificationReport,
 } from "./types";
 
@@ -26,14 +26,53 @@ const SIDECAR_DOMAIN = encoder.encode("power-house:observatory-sidecar:v1\0");
 const SEMANTIC_DOMAIN = encoder.encode("PHM-SEMANTIC-PACKET-v1\0");
 const SURFEL_MAGIC = encoder.encode("TESSARYN-SURFEL-v0\0");
 const SDF_MAGIC = encoder.encode("TESSARYN-SDF-v0\0");
-const TUM_DATASET = "TUM RGB-D Benchmark / freiburg1_desk";
-const TUM_HOME = "https://cvg.cit.tum.de/data/datasets/rgbd-dataset";
-const TUM_SEQUENCE =
-  "https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_desk.tgz";
-const TUM_ARCHIVE =
-  "sha256:e983d6830916e66dc4a46a71368046b149b283de87769690e7aa4e0b9483530c";
-const TUM_CITATION =
-  "J. Sturm, N. Engelhard, F. Endres, W. Burgard, and D. Cremers, A Benchmark for the Evaluation of RGB-D SLAM Systems, IROS 2012";
+const TARTANAIR_PROFILE = {
+  assets: [
+    {
+      bytes: 186_046_186,
+      role: "depth",
+      sha256:
+        "sha256:83e6e680297af35aa83d594ea3ed254bf71e9d9da7b26fee6d0ccb29f25ac104",
+      url: "https://huggingface.co/datasets/theairlabcmu/tartanair2/resolve/0d2d145e973832742a2aaa04b7d2ebffc8d82817/ArchVizTinyHouseDay/Data_easy/depth_lcam_front.zip",
+    },
+    {
+      bytes: 517_844_269,
+      role: "rgb",
+      sha256:
+        "sha256:9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da",
+      url: "https://huggingface.co/datasets/theairlabcmu/tartanair2/resolve/0d2d145e973832742a2aaa04b7d2ebffc8d82817/ArchVizTinyHouseDay/Data_easy/image_lcam_front.zip",
+    },
+  ],
+  citation:
+    "W. Wang, Y. Hu, Y. Qiu, S. Shen, and Y. Shaoul, TartanAir V2 Dataset, Carnegie Mellon University, 2023",
+  dataset: "TartanAir V2",
+  environment: "ArchVizTinyHouseDay",
+  ground_truth: {
+    camera_pose: true,
+    metric_depth: true,
+    optical_flow: false,
+    reference: "simulator-exact",
+    semantics: false,
+  },
+  homepage: "https://tartanair.org/",
+  id: "tartanair-v2/archviz-tiny-house-day/easy/p000",
+  license: "CC-BY-4.0",
+  modalities: ["camera_pose", "metric_depth", "rgb"],
+  release: "v2-2023",
+  schema: "tessaryn/dataset-profile/v1",
+  sensor: {
+    coordinate_frame: "ned/opencv-camera",
+    cx_q20: 335_544_320,
+    cy_q20: 335_544_320,
+    fx_q20: 335_544_320,
+    fy_q20: 335_544_320,
+    height: 640,
+    sample_rate_millihz: 10_000,
+    width: 640,
+  },
+  sequence: "Data_easy/P000/lcam_front",
+  source_class: "synthetic_ground_truth",
+} as const;
 
 export async function calculateCellId(manifest: CellManifest): Promise<string> {
   const canonical = canonicalizeManifest(manifest);
@@ -287,10 +326,10 @@ export async function verifyReconstructionArtifact(
   return result;
 }
 
-export async function verifyTemporalLocusArtifact(
-  artifact: TemporalLocusArtifactView,
-): Promise<TemporalLocusBrowserReport> {
-  const result: TemporalLocusBrowserReport = {
+export async function verifyValidationLocusArtifact(
+  artifact: ValidationLocusArtifactView,
+): Promise<ValidationLocusBrowserReport> {
+  const result: ValidationLocusBrowserReport = {
     cellsValid: 0,
     phaValid: 0,
     rootprintValid: false,
@@ -304,17 +343,12 @@ export async function verifyTemporalLocusArtifact(
   try {
     assertIntegerJson(artifact);
     if (
-      artifact.schema !== "tessaryn/temporal-locus-artifact/v0" ||
+      artifact.schema !== "tessaryn/validation-locus-artifact/v1" ||
       artifact.moments.length !== 3 ||
-      artifact.source.license !== "CC-BY-4.0" ||
-      artifact.source.dataset !== TUM_DATASET ||
-      artifact.source.homepage !== TUM_HOME ||
-      artifact.source.sequence_url !== TUM_SEQUENCE ||
-      artifact.source.archive_sha256 !== TUM_ARCHIVE ||
-      artifact.source.citation !== TUM_CITATION ||
+      canonicalStringify(artifact.source.profile) !== canonicalStringify(TARTANAIR_PROFILE) ||
       artifact.source.selected_frames <= 0
     ) {
-      throw new Error("invalid temporal Locus envelope");
+      throw new Error("invalid validation Locus envelope");
     }
     const expectedMomentIds = ["moment-a", "moment-b", "moment-c"];
     if (
@@ -328,7 +362,7 @@ export async function verifyTemporalLocusArtifact(
             (artifact.moments[index]?.captured_at_unix_us ?? Number.MAX_SAFE_INTEGER),
         )
     ) {
-      throw new Error("temporal Moment ordering mismatch");
+      throw new Error("validation Moment ordering mismatch");
     }
 
     const temporalStates = [...artifact.moments, artifact.alternate];
@@ -346,7 +380,14 @@ export async function verifyTemporalLocusArtifact(
           selection.id !== expectedSelectionIds[index] ||
           selection.frame_ids.length < 3 ||
           selection.frame_ids.length !== selection.captured_at_unix_us.length ||
+          selection.frame_ids.length !== selection.source_indices.length ||
           selection.frame_ids.some((digest) => !/^sha256:[0-9a-f]{64}$/u.test(digest)) ||
+          selection.source_indices.some(
+            (sourceIndex, sourcePosition) =>
+              !Number.isSafeInteger(sourceIndex) ||
+              sourceIndex < 0 ||
+              sourceIndex * 100_000 !== selection.captured_at_unix_us[sourcePosition],
+          ) ||
           selection.captured_at_unix_us.some(
             (timestamp, timestampIndex) =>
               timestampIndex > 0 &&
@@ -356,38 +397,29 @@ export async function verifyTemporalLocusArtifact(
         );
       })
     ) {
-      throw new Error("temporal source selection mismatch");
+      throw new Error("validation source selection mismatch");
     }
     const selectionProjection = {
-      citation: artifact.source.citation,
-      dataset: artifact.source.dataset,
-      homepage: artifact.source.homepage,
-      license: artifact.source.license,
+      profile: artifact.source.profile,
       selected: artifact.source.selections,
-      sequence: artifact.source.sequence_url,
     };
     const calculatedSelection = await hashDomain(
       CHUNK_DOMAIN,
       encoder.encode(canonicalStringify(selectionProjection)),
     );
     if (calculatedSelection !== artifact.source.selection_manifest) {
-      throw new Error("temporal selection manifest mismatch");
+      throw new Error("validation selection manifest mismatch");
     }
 
     const sourceProjection = {
-      archive_sha256: artifact.source.archive_sha256,
-      citation: artifact.source.citation,
-      dataset: artifact.source.dataset,
-      homepage: artifact.source.homepage,
-      license: artifact.source.license,
       moments: [...artifact.moments, artifact.alternate].map((moment) => ({
         capture_commitment: moment.artifact.report.capture_commitment,
         id: moment.id,
         observation_cell: moment.artifact.report.observation.cell_id,
         sdf_cell: moment.artifact.report.sdf_cell_id,
       })),
+      profile: artifact.source.profile,
       selection_manifest: artifact.source.selection_manifest,
-      sequence_url: artifact.source.sequence_url,
     };
     const sourceBytes = encoder.encode(canonicalStringify(sourceProjection));
     const calculatedSource = await hashDomain(
@@ -395,7 +427,7 @@ export async function verifyTemporalLocusArtifact(
       sourceBytes,
     );
     if (calculatedSource !== artifact.source.source_manifest) {
-      throw new Error("temporal source manifest mismatch");
+      throw new Error("validation source manifest mismatch");
     }
     const sourceRoot = await hashDomain(MERKLE_LEAF_DOMAIN, digestBytes(calculatedSource));
     const sourceProof = artifact.source_proof;
@@ -408,8 +440,9 @@ export async function verifyTemporalLocusArtifact(
       sourceProof.manifest.class !== "aggregate" ||
       sourceProof.manifest.channels.length !== 1 ||
       sourceChannel?.role !== "reconstruction/report" ||
-      sourceChannel.codec !== "tessaryn/temporal-source-manifest" ||
-      sourceChannel.codec_version !== "0" ||
+      sourceChannel.codec !== "tessaryn/validation-source-manifest" ||
+      sourceChannel.codec_version !== "1" ||
+      sourceChannel.license !== artifact.source.profile.license ||
       sourceChannel.chunk_root !== sourceRoot ||
       sourceChannel.uncompressed_bytes !== sourceBytes.length ||
       sourceProof.manifest.chunk_merkle_root !== sourceRoot ||
@@ -420,11 +453,11 @@ export async function verifyTemporalLocusArtifact(
       sourceProof.pha.embedded_proof.public_inputs.cell_manifest_digest !==
         sourceProof.cell_id
     ) {
-      throw new Error("temporal source Cell or PHA binding mismatch");
+      throw new Error("validation source Cell or PHA binding mismatch");
     }
     const sourceReplay = await verifyRootprint(sourceProof.rootprint);
     if (sourceReplay !== sourceProof.replay_fingerprint) {
-      throw new Error("temporal source Cell replay mismatch");
+      throw new Error("validation source Cell replay mismatch");
     }
     const sourceMemoryValid = await verifyMemoryCapsule(sourceProof.memory_capsule);
     if (
@@ -436,7 +469,7 @@ export async function verifyTemporalLocusArtifact(
       artifact.source_proof_report.memory_capsule_valid !== true ||
       artifact.source_proof_report.physical_truth_claimed !== false
     ) {
-      throw new Error("temporal source Cell verification report mismatch");
+      throw new Error("validation source Cell verification report mismatch");
     }
     result.cellsValid += 1;
     result.phaValid += 1;
@@ -480,7 +513,7 @@ export async function verifyTemporalLocusArtifact(
     const replay = await verifyRootprint(artifact.lineage.rootprint);
     result.rootprintValid = true;
     result.replayValid = replay === artifact.lineage.replay_fingerprint;
-    if (!result.replayValid) throw new Error("temporal Rootprint replay mismatch");
+    if (!result.replayValid) throw new Error("validation Rootprint replay mismatch");
     const sourceBranchId = artifact.lineage.branches.source;
     const sourceBranch = sourceBranchId
       ? artifact.lineage.rootprint.branches[sourceBranchId]
@@ -494,7 +527,7 @@ export async function verifyTemporalLocusArtifact(
       canonicalStringify([...sourceBranch.parents].sort(compareUtf8)) !==
         canonicalStringify(expectedSourceBranches)
     ) {
-      throw new Error("temporal source branch merge mismatch");
+      throw new Error("validation source branch merge mismatch");
     }
 
     const bindings = [
@@ -516,7 +549,7 @@ export async function verifyTemporalLocusArtifact(
         !branch ||
         branch.artifact.embedded_proof.public_inputs.cell_manifest_digest !== cellId
       ) {
-        throw new Error(`${label}: temporal lineage binding mismatch`);
+        throw new Error(`${label}: validation lineage binding mismatch`);
       }
     }
   } catch (error) {

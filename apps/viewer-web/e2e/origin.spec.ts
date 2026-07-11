@@ -64,6 +64,7 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   expect(metrics?.materializedMs).toBeGreaterThan(metrics?.firstStructureMs ?? 0);
   expect(metrics?.verificationMs).toBeGreaterThan(0);
 
+  await page.waitForTimeout(1_200);
   const screenshot = await page.locator("#world-canvas").screenshot();
   const image = PNG.sync.read(screenshot);
   const colors = new Set<string>();
@@ -100,18 +101,18 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   expect(diagnostics?.temporalManifolds).toBe(4);
   expect(diagnostics?.semanticConstellations).toBe(4);
   expect(diagnostics?.activeMeaningFields).toBeGreaterThan(0);
-  expect(diagnostics?.assemblyPoints).toBe(174_972);
+  expect(diagnostics?.assemblyPoints).toBe(212_565);
   expect(diagnostics?.continuumLayers).toBeGreaterThanOrEqual(8);
   expect(diagnostics?.temporalObservations).toBe(4);
-  expect(diagnostics?.sdfVoxels).toBe(131_808);
+  expect(diagnostics?.sdfVoxels).toBe(224_867);
   expect(diagnostics?.drawCalls).toBeLessThan(140);
   expect(diagnostics?.materializationMs).toBeLessThan(12_000);
 
   await page.locator("#verify-button").click();
-  await expect(page.locator("#verify-title")).toHaveText("REAL 4D LOCUS ACCEPTED");
+  await expect(page.locator("#verify-title")).toHaveText("GROUND-TRUTH LOCUS ACCEPTED");
   await expect(page.locator("#verify-cells")).toHaveText("9 / 9 VALID");
   await expect(page.locator("#verify-pha")).toHaveText("9 / 9 VALID");
-  await expect(page.locator("#verify-detail")).toContainText("174972 sensor surfels");
+  await expect(page.locator("#verify-detail")).toContainText("212565 source-bound surfels");
   await page.locator("#verify-close").click();
 
   await page.locator("#scale-breath").fill("860");
@@ -124,12 +125,14 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   await expect(page.locator("#chronofold-button")).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().chronofold)).toBe(true);
 
-  await page.evaluate(() => window.__tessaryn?.scene.selectCell("real-moment-c"));
+  await page.evaluate(() => window.__tessaryn?.scene.selectCell("validation-moment-c"));
   await expect(page.locator("#trace-title")).toHaveText(
-    "PRESENT OBSERVATION / VERIFIED SDF",
+    "RESOLVED RETURN / VERIFIED SDF",
   );
   await page.locator('[data-trace-tab="meaning"]').click();
-  await expect(page.locator("#trace-summary")).toContainText("TUM Freiburg1 desk RGB-D");
+  await expect(page.locator("#trace-summary")).toContainText(
+    "TartanAir V2 ArchViz Tiny House exact RGB-D ground truth",
+  );
 
   await page.locator("#evidence-button").click();
   await expect(page.locator("#evidence-button")).toHaveAttribute("aria-pressed", "false");
@@ -228,15 +231,60 @@ test("browser verifier rejects a substituted source-lineage parent", async ({ pa
   await openOrigin(page);
   const report = await page.evaluate(async () => {
     const runtime = window.__tessaryn;
-    if (!runtime?.temporalArtifact) throw new Error("temporal artifact unavailable");
-    const mutated = structuredClone(runtime.temporalArtifact);
+    if (!runtime?.validationArtifact) throw new Error("validation artifact unavailable");
+    const mutated = structuredClone(runtime.validationArtifact);
     mutated.source_proof.manifest.parents[0] =
       "sha256:0000000000000000000000000000000000000000000000000000000000000000";
-    return runtime.verifyTemporalArtifact(mutated);
+    return runtime.verifyValidationArtifact(mutated);
   });
   expect(report.cellsValid).toBe(0);
-  expect(report.errors).toContain("temporal source Cell or PHA binding mismatch");
+  expect(report.errors).toContain("validation source Cell or PHA binding mismatch");
   expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
+});
+
+test("browser verifier rejects synthetic evidence relabelled as a real sensor", async ({
+  page,
+}) => {
+  await openOrigin(page);
+  const report = await page.evaluate(async () => {
+    const runtime = window.__tessaryn;
+    if (!runtime?.validationArtifact) throw new Error("validation artifact unavailable");
+    const mutated = structuredClone(runtime.validationArtifact);
+    mutated.source.profile.source_class = "real_sensor";
+    return runtime.verifyValidationArtifact(mutated);
+  });
+  expect(report.cellsValid).toBe(0);
+  expect(report.errors).toContain("invalid validation Locus envelope");
+  expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
+});
+
+test("dataset portfolio exposes the active source and every validation layer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openOrigin(page);
+  await page.locator("#sources-button").click();
+  await expect(page.locator("#sources-dialog")).toBeVisible();
+  await expect(page.locator("#source-name")).toHaveText("TartanAir V2");
+  await expect(page.locator("#source-class")).toHaveText("SYNTHETIC GROUND TRUTH");
+  await expect(page.locator("#source-environment")).toHaveText("ArchVizTinyHouseDay");
+  await expect(page.locator("#portfolio-list .portfolio-row")).toHaveCount(4);
+  expectInsideViewport(await bounds(page, "#sources-dialog"));
+  expectInsideViewport(await bounds(page, "#sources-close"));
+  await page.locator("#sources-close").click();
+  await expect(page.locator("#sources-dialog")).not.toBeVisible();
+});
+
+test("mobile dataset portfolio remains scrollable and dismissible", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openOrigin(page);
+  await page.locator("#sources-button").click();
+  await expect(page.locator("#sources-dialog")).toBeVisible();
+  expectInsideViewport(await bounds(page, "#sources-dialog"));
+  expectInsideViewport(await bounds(page, "#sources-close"));
+  await expect(page.locator("#portfolio-list .portfolio-row")).toHaveCount(4);
+  await page.locator("#sources-close").click();
+  await expect(page.locator("#sources-dialog")).not.toBeVisible();
 });
 
 test("mobile import keeps verification and close controls reachable", async ({ page }) => {
@@ -277,7 +325,7 @@ for (const [name, viewport] of [
       expect(intersects).toBe(false);
     }
 
-    await page.evaluate(() => window.__tessaryn?.scene.selectCell("real-moment-c"));
+    await page.evaluate(() => window.__tessaryn?.scene.selectCell("validation-moment-c"));
     expectInsideViewport(await bounds(page, "#trace-drawer"));
     const traceClose = await bounds(page, "#trace-close");
     expectInsideViewport(traceClose);

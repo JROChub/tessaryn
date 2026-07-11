@@ -9,17 +9,20 @@ rust-version.workspace = true
 description = "TESSARYN Cell capture, reconstruction, inspection, and conformance tooling"
 
 [dependencies]
+hex.workspace = true
 png = "0.18"
 power_house.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tessaryn-canonical = { version = "=0.2.0", path = "../../crates/tessaryn-canonical" }
-tessaryn-forge = { version = "=0.2.0", path = "../../crates/tessaryn-forge" }
-tessaryn-powerhouse = { version = "=0.2.0", path = "../../crates/tessaryn-powerhouse" }
-tessaryn-reconstruct = { version = "=0.2.0", path = "../../crates/tessaryn-reconstruct" }
-tessaryn-schema = { version = "=0.2.0", path = "../../crates/tessaryn-schema" }
-tessaryn-sync = { version = "=0.2.0", path = "../../crates/tessaryn-sync" }
+sha2.workspace = true
+tessaryn-canonical = { version = "=0.3.0", path = "../../crates/tessaryn-canonical" }
+tessaryn-forge = { version = "=0.3.0", path = "../../crates/tessaryn-forge" }
+tessaryn-powerhouse = { version = "=0.3.0", path = "../../crates/tessaryn-powerhouse" }
+tessaryn-reconstruct = { version = "=0.3.0", path = "../../crates/tessaryn-reconstruct" }
+tessaryn-schema = { version = "=0.3.0", path = "../../crates/tessaryn-schema" }
+tessaryn-sync = { version = "=0.3.0", path = "../../crates/tessaryn-sync" }
 thiserror.workspace = true
+zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
 
 [lib]
 name = "tessaryn_cli"

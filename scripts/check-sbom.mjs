@@ -28,7 +28,7 @@ async function buildManifest() {
     schema: "tessaryn/sbom-manifest/v0",
     generators: {
       rust: "cargo-cyclonedx 0.5.9",
-      browser: "npm 11.5.2",
+      browser: "@cyclonedx/cyclonedx-npm 6.0.0",
     },
     inputs: {
       "Cargo.lock": await sha256("Cargo.lock"),

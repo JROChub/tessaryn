@@ -8,11 +8,12 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.2.0`. It contains the tested World Cell kernel,
+This repository is `0.3.0`. It contains the tested World Cell kernel,
 capture-to-Cell reconstruction, authenticated private Locus exchange, signed
 witness receipts, Power House packaging, a browser-local verifier, and the
-real TUM Freiburg desk temporal Origin. Vesper Court remains a deterministic
-protocol vector. See [STATUS.md](STATUS.md) for the software release contract.
+TartanAir V2 ArchViz Tiny House validation Origin. Vesper Court remains a
+deterministic protocol vector. See [STATUS.md](STATUS.md) for the software
+release contract.
 
 The release implements:
 
@@ -29,13 +30,17 @@ The release implements:
 - signed witness receipts with explicit attestation classes and independence
   groups that never acquire core proof authority;
 - Power House `.pha`, Rootprint, replay, Memory Capsule, and SLBIT bindings;
-- a reproducible real RGB-D Origin with 48 source-bound frames, 174,972
-  verified surfels, and 131,808 verified sparse-SDF voxels;
-- three branch-aware captured Moments and one unresolved reconstruction branch;
+- a reproducible 640x640 RGB-D Origin with 48 archive-bound frames, 212,565
+  verified surfels, and 224,867 verified sparse-SDF voxels;
+- a provenance-bound dataset profile that keeps synthetic ground truth and
+  real sensor evidence cryptographically distinct;
+- three branch-aware trajectory Moments and one alternate reconstruction branch;
+- real-sensor layout adapters for EuRoC stereo/IMU, KITTI stereo/LiDAR/OXTS,
+  and ScanNet RGB-D sources, each producing a content-bound inspection receipt;
 - a restricted region whose protected geometry is absent;
 - strict local browser import, verification, rendering, and exact-layer
   mutation rejection for portable reconstruction artifacts;
-- worker-isolated verification of real temporal artifacts with explicit source
+- worker-isolated verification of temporal artifacts with explicit source
   selection manifests and exact mutation rejection;
 - full-bleed native Three.js construction, Condensation, continuous Scale Breathing,
   Chronofold, provenance Lens, and inside-out Cell Trace inspection;
@@ -50,8 +55,8 @@ The release implements:
 cargo run -p tessaryn-cli -- generate-demo
 cargo run -p tessaryn-cli -- verify-demo
 cargo run -p tessaryn-cli -- challenge-demo
-cargo run -p tessaryn-cli -- verify-temporal-locus \
-  apps/viewer-web/public/world/freiburg-desk-locus.json
+cargo run -p tessaryn-cli -- verify-validation-locus \
+  apps/viewer-web/public/world/archviz-tiny-house-locus.json
 cd apps/viewer-web
 npm ci
 npm run dev
@@ -79,16 +84,27 @@ cargo run -p tessaryn-cli -- \
 
 The browser `OPEN` control imports the same artifact without uploading it.
 
-## Reproduce The Real Origin
+## Reproduce The Validation Origin
 
-The committed real Origin is derived from the official TUM RGB-D Benchmark
-`freiburg1_desk` sequence under CC BY 4.0. Exact source, citation, frame
-selection, and reproduction details are in
-[docs/real-origin.md](docs/real-origin.md) and
+The committed visual Origin is derived from the official TartanAir V2
+`ArchVizTinyHouseDay/Data_easy/P000/lcam_front` sequence under CC BY 4.0. Its
+profile binds source class, exact RGB and depth archive digests and byte counts,
+640x640 calibration, simulator depth and pose ground truth, ordered frame
+selection, reconstruction Cells, and Rootprint lineage. Details are in
+[docs/validation-portfolio.md](docs/validation-portfolio.md) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ```bash
-./scripts/reproduce-real-origin.sh
+./scripts/reproduce-validation-origin.sh
+```
+
+Real sensor datasets remain local under their own terms. Their adapters verify
+layout, synchronization, and every source file before issuing a receipt:
+
+```bash
+cargo run -p tessaryn-cli -- inspect-dataset euroc /data/MH_01_easy receipt.json
+cargo run -p tessaryn-cli -- inspect-dataset kitti /data/2011_09_26_drive receipt.json
+cargo run -p tessaryn-cli -- inspect-dataset scannet /data/scene0000_00 receipt.json
 ```
 
 ## Verify The Kernel

@@ -35,6 +35,9 @@
           <span id="cell-count">0 CELLS</span>
         </div>
         <div class="top-actions">
+          <button id="sources-button" class="icon-command secondary" type="button" title="Open validation sources">
+            <i data-lucide="database"></i><span>SOURCES</span>
+          </button>
           <button id="import-button" class="icon-command secondary" type="button" title="Open local reconstruction artifact">
             <i data-lucide="upload"></i><span>OPEN</span>
           </button>
@@ -147,6 +150,30 @@
           <div><span>MEMORY CAPSULE</span><b id="verify-memory">PENDING</b></div>
         </div>
         <p id="verify-detail">The complete continuum verifies against local bytes. No proof data is uploaded.</p>
+      </dialog>
+
+      <dialog id="sources-dialog" class="sources-dialog">
+        <header>
+          <div><small>PROVENANCE-BOUND VALIDATION</small><b>DATASET PORTFOLIO</b></div>
+          <button id="sources-close" class="icon-button" type="button" title="Close dataset portfolio">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+        <section class="active-source">
+          <div class="source-heading">
+            <span><small>ACTIVE ORIGIN</small><b id="source-name">--</b></span>
+            <em id="source-class">--</em>
+          </div>
+          <dl>
+            <div><dt>ENVIRONMENT</dt><dd id="source-environment">--</dd></div>
+            <div><dt>SENSOR</dt><dd id="source-sensor">--</dd></div>
+            <div><dt>GROUND TRUTH</dt><dd id="source-ground-truth">--</dd></div>
+            <div><dt>ARCHIVES</dt><dd id="source-assets">--</dd></div>
+          </dl>
+          <code id="source-profile-id">--</code>
+        </section>
+        <div class="portfolio-heading"><small>MULTILAYER VALIDATION ARRAY</small><span>SHOWCASE + SENSOR STRESS</span></div>
+        <div id="portfolio-list" class="portfolio-list"></div>
       </dialog>
 
       <footer class="world-controls" aria-label="World controls">

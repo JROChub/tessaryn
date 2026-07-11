@@ -263,13 +263,45 @@ export interface ReconstructionBrowserReport {
   errors: string[];
 }
 
-export interface TemporalSourceView {
+export interface DatasetProfileView {
+  schema: "tessaryn/dataset-profile/v1";
+  id: string;
   dataset: string;
-  sequence_url: string;
+  release: string;
+  environment: string;
+  sequence: string;
+  source_class: "synthetic_ground_truth" | "real_sensor";
   homepage: string;
   license: string;
   citation: string;
-  archive_sha256: Digest;
+  modalities: string[];
+  sensor: {
+    width: number;
+    height: number;
+    sample_rate_millihz: number;
+    fx_q20: number;
+    fy_q20: number;
+    cx_q20: number;
+    cy_q20: number;
+    coordinate_frame: string;
+  };
+  ground_truth: {
+    metric_depth: boolean;
+    camera_pose: boolean;
+    semantics: boolean;
+    optical_flow: boolean;
+    reference: string;
+  };
+  assets: Array<{
+    role: string;
+    url: string;
+    sha256: Digest;
+    bytes: number;
+  }>;
+}
+
+export interface ValidationSourceView {
+  profile: DatasetProfileView;
   selection_manifest: Digest;
   source_manifest: Digest;
   selected_frames: number;
@@ -277,24 +309,25 @@ export interface TemporalSourceView {
     id: string;
     frame_ids: Digest[];
     captured_at_unix_us: number[];
+    source_indices: number[];
   }>;
 }
 
-export interface TemporalReconstructionMomentView {
+export interface ValidationReconstructionMomentView {
   id: string;
   label: string;
   captured_at_unix_us: number;
   artifact: ReconstructionArtifactView;
 }
 
-export interface TemporalLocusArtifactView {
-  schema: "tessaryn/temporal-locus-artifact/v0";
+export interface ValidationLocusArtifactView {
+  schema: "tessaryn/validation-locus-artifact/v1";
   origin: string;
-  source: TemporalSourceView;
+  source: ValidationSourceView;
   source_proof: CellProofBundleView;
   source_proof_report: Record<string, boolean | number>;
-  moments: TemporalReconstructionMomentView[];
-  alternate: TemporalReconstructionMomentView;
+  moments: ValidationReconstructionMomentView[];
+  alternate: ValidationReconstructionMomentView;
   lineage: {
     rootprint: Rootprint;
     branches: Record<string, Digest>;
@@ -303,21 +336,21 @@ export interface TemporalLocusArtifactView {
   lineage_report: Record<string, boolean | number>;
 }
 
-export interface VerifiedTemporalMoment {
+export interface VerifiedValidationMoment {
   id: string;
   label: string;
   capturedAtUnixUs: number;
   verification: ReconstructionBrowserReport;
 }
 
-export interface TemporalLocusBrowserReport {
+export interface ValidationLocusBrowserReport {
   cellsValid: number;
   phaValid: number;
   rootprintValid: boolean;
   replayValid: boolean;
   memoryValid: boolean;
-  moments: VerifiedTemporalMoment[];
-  alternate: VerifiedTemporalMoment | null;
+  moments: VerifiedValidationMoment[];
+  alternate: VerifiedValidationMoment | null;
   sourceManifest: Digest;
   errors: string[];
 }

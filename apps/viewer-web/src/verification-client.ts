@@ -2,17 +2,17 @@ import type {
   DemoWorld,
   ReconstructionArtifactView,
   ReconstructionBrowserReport,
-  TemporalLocusArtifactView,
-  TemporalLocusBrowserReport,
+  ValidationLocusArtifactView,
+  ValidationLocusBrowserReport,
   VerificationReport,
 } from "./types";
 import {
   verifyReconstructionArtifact,
-  verifyTemporalLocusArtifact,
+  verifyValidationLocusArtifact,
   verifyWorld,
 } from "./verification";
 
-type VerificationKind = "world" | "reconstruction" | "temporal";
+type VerificationKind = "world" | "reconstruction" | "validation";
 type Pending = {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -34,11 +34,11 @@ export function verifyReconstructionOffThread(
   );
 }
 
-export function verifyTemporalOffThread(
-  artifact: TemporalLocusArtifactView,
-): Promise<TemporalLocusBrowserReport> {
-  return request<TemporalLocusBrowserReport>("temporal", artifact, () =>
-    verifyTemporalLocusArtifact(artifact),
+export function verifyValidationOffThread(
+  artifact: ValidationLocusArtifactView,
+): Promise<ValidationLocusBrowserReport> {
+  return request<ValidationLocusBrowserReport>("validation", artifact, () =>
+    verifyValidationLocusArtifact(artifact),
   );
 }
 
@@ -53,7 +53,7 @@ export function destroyVerificationWorker(): void {
 
 function request<T>(
   kind: VerificationKind,
-  payload: DemoWorld | ReconstructionArtifactView | TemporalLocusArtifactView,
+  payload: DemoWorld | ReconstructionArtifactView | ValidationLocusArtifactView,
   fallback: () => Promise<T>,
 ): Promise<T> {
   if (typeof Worker === "undefined") return fallback();

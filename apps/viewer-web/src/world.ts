@@ -45,6 +45,7 @@ export interface TemporalObservation {
   sdfVoxels: SdfVoxelPoint[];
   voxelSizeUm: number;
   alternate: boolean;
+  coordinateFrame: string;
 }
 
 interface CellNode {
@@ -524,22 +525,19 @@ export class TessarynWorld {
     this.weaveLinks.length = 0;
     this.constrainedWeave = null;
 
-    const bounds = new THREE.Box3();
-    const point = new THREE.Vector3();
-    for (const observation of observations) {
-      for (const surfel of observation.surfels) {
-        point.set(
-          surfel.positionUm[0] / 1_000_000,
-          surfel.positionUm[2] / 1_000_000,
-          -surfel.positionUm[1] / 1_000_000,
-        );
-        bounds.expandByPoint(point);
-      }
+    const coordinateFrame = observations[0]?.coordinateFrame;
+    if (
+      !coordinateFrame ||
+      observations.some((observation) => observation.coordinateFrame !== coordinateFrame)
+    ) {
+      throw new Error("temporal Locus coordinate frames disagree");
     }
-    if (bounds.isEmpty()) throw new Error("temporal Locus has no finite geometry");
-    const sourceCenter = bounds.getCenter(new THREE.Vector3());
-    const localBounds = bounds.clone().translate(sourceCenter.clone().multiplyScalar(-1));
-    const size = localBounds.getSize(new THREE.Vector3());
+    const framingObservation =
+      observations.find((observation) => observation.id === "moment-c") ?? observations[0];
+    if (!framingObservation) throw new Error("temporal Locus has no framing observation");
+    const frame = robustSurfelFrame(framingObservation.surfels, coordinateFrame);
+    const sourceCenter = frame.center;
+    const size = frame.size;
     const radius = Math.max(0.8, size.length() * 0.5);
     const focus = new THREE.Vector3(0, 1.15, 0);
     const momentColors = ["#8fd8cf", "#d9ba76", "#e7e0cf", "#db806d"];
@@ -575,22 +573,17 @@ export class TessarynWorld {
       const colors = new Float32Array(renderedSurfels.length * 3);
       let radiusSum = 0;
       renderedSurfels.forEach((surfel, index) => {
+        const position = transformSourcePoint(surfel.positionUm, coordinateFrame);
         positions.set(
           [
-            surfel.positionUm[0] / 1_000_000 - sourceCenter.x,
-            surfel.positionUm[2] / 1_000_000 - sourceCenter.y,
-            -surfel.positionUm[1] / 1_000_000 - sourceCenter.z,
+            position.x - sourceCenter.x,
+            position.y - sourceCenter.y,
+            position.z - sourceCenter.z,
           ],
           index * 3,
         );
-        normals.set(
-          [
-            surfel.normalQ15[0] / 32_767,
-            surfel.normalQ15[2] / 32_767,
-            -surfel.normalQ15[1] / 32_767,
-          ],
-          index * 3,
-        );
+        const normal = transformSourceNormal(surfel.normalQ15, coordinateFrame);
+        normals.set([normal.x, normal.y, normal.z], index * 3);
         colors.set(
           [surfel.color[0] / 255, surfel.color[1] / 255, surfel.color[2] / 255],
           index * 3,
@@ -702,12 +695,19 @@ export class TessarynWorld {
       for (let index = 0; index < voxelSource.length; index += stride) {
         const voxel = voxelSource[index];
         if (!voxel) continue;
-        const x = (voxel.coordinate[0] + 0.5) * voxelMeters - sourceCenter.x;
-        const y = (voxel.coordinate[2] + 0.5) * voxelMeters - sourceCenter.y;
-        const z = -(voxel.coordinate[1] + 0.5) * voxelMeters - sourceCenter.z;
+        const sourcePosition: [number, number, number] = [
+          (voxel.coordinate[0] + 0.5) * observation.voxelSizeUm,
+          (voxel.coordinate[1] + 0.5) * observation.voxelSizeUm,
+          (voxel.coordinate[2] + 0.5) * observation.voxelSizeUm,
+        ];
+        const transformed = transformSourcePoint(sourcePosition, coordinateFrame);
         const confidence = THREE.MathUtils.clamp(Math.log2(voxel.weight + 1) / 18, 0.55, 1);
         matrix.makeScale(confidence, confidence, confidence);
-        matrix.setPosition(x, y, z);
+        matrix.setPosition(
+          transformed.x - sourceCenter.x,
+          transformed.y - sourceCenter.y,
+          transformed.z - sourceCenter.z,
+        );
         sdfMatter.setMatrixAt(instanceIndex, matrix);
         const distance = THREE.MathUtils.clamp(
           Math.abs(voxel.signedDistanceUm) / Math.max(1, observation.voxelSizeUm),
@@ -816,10 +816,18 @@ export class TessarynWorld {
       sharedMatter.name = "shared-temporal-structure";
       const matrix = new THREE.Matrix4();
       stableVoxels.forEach((voxel, index) => {
+        const transformed = transformSourcePoint(
+          [
+            (voxel.coordinate[0] + 0.5) * sharedReference.voxelSizeUm,
+            (voxel.coordinate[1] + 0.5) * sharedReference.voxelSizeUm,
+            (voxel.coordinate[2] + 0.5) * sharedReference.voxelSizeUm,
+          ],
+          coordinateFrame,
+        );
         matrix.makeTranslation(
-          (voxel.coordinate[0] + 0.5) * voxelMeters - sourceCenter.x,
-          (voxel.coordinate[2] + 0.5) * voxelMeters - sourceCenter.y,
-          -(voxel.coordinate[1] + 0.5) * voxelMeters - sourceCenter.z,
+          transformed.x - sourceCenter.x,
+          transformed.y - sourceCenter.y,
+          transformed.z - sourceCenter.z,
         );
         sharedMatter.setMatrixAt(index, matrix);
       });
@@ -3784,6 +3792,64 @@ export class TessarynWorld {
     this.targetFocus.x = THREE.MathUtils.clamp(this.targetFocus.x, -10, 10);
     this.targetFocus.z = THREE.MathUtils.clamp(this.targetFocus.z, -10, 10);
   }
+}
+
+function robustSurfelFrame(
+  surfels: SurfelPoint[],
+  coordinateFrame: string,
+): { center: THREE.Vector3; size: THREE.Vector3 } {
+  const axes = [[], [], []] as [number[], number[], number[]];
+  for (const surfel of surfels) {
+    const point = transformSourcePoint(surfel.positionUm, coordinateFrame);
+    axes[0].push(point.x);
+    axes[1].push(point.y);
+    axes[2].push(point.z);
+  }
+  if (axes.some((axis) => axis.length === 0)) {
+    throw new Error("temporal Locus has no finite geometry");
+  }
+  const minimum = new THREE.Vector3();
+  const maximum = new THREE.Vector3();
+  axes.forEach((axis, index) => {
+    axis.sort((left, right) => left - right);
+    const low = axis[Math.floor((axis.length - 1) * 0.01)];
+    const high = axis[Math.ceil((axis.length - 1) * 0.99)];
+    if (low === undefined || high === undefined || !Number.isFinite(low + high)) {
+      throw new Error("temporal Locus framing values are invalid");
+    }
+    minimum.setComponent(index, low);
+    maximum.setComponent(index, high);
+  });
+  const center = minimum.clone().add(maximum).multiplyScalar(0.5);
+  const size = maximum.clone().sub(minimum);
+  for (let axis = 0; axis < 3; axis += 1) {
+    size.setComponent(axis, Math.max(0.1, size.getComponent(axis)));
+  }
+  return { center, size };
+}
+
+function transformSourcePoint(
+  positionUm: [number, number, number],
+  coordinateFrame: string,
+): THREE.Vector3 {
+  const x = positionUm[0] / 1_000_000;
+  const y = positionUm[1] / 1_000_000;
+  const z = positionUm[2] / 1_000_000;
+  return coordinateFrame === "ned/opencv-camera"
+    ? new THREE.Vector3(x, -z, y)
+    : new THREE.Vector3(x, y, z);
+}
+
+function transformSourceNormal(
+  normalQ15: [number, number, number],
+  coordinateFrame: string,
+): THREE.Vector3 {
+  const x = normalQ15[0] / 32_767;
+  const y = normalQ15[1] / 32_767;
+  const z = normalQ15[2] / 32_767;
+  return coordinateFrame === "ned/opencv-camera"
+    ? new THREE.Vector3(x, -z, y)
+    : new THREE.Vector3(x, y, z);
 }
 
 function seededRandom(seed: number): () => number {

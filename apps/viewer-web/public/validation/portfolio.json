@@ -1,0 +1,69 @@
+{
+  "schema": "tessaryn/validation-portfolio/v1",
+  "entries": [
+    {
+      "id": "tartanair-v2/archviz-tiny-house-day/easy/p000",
+      "layer": "showcase_and_exact_ground_truth",
+      "source_class": "synthetic_ground_truth",
+      "release_year": 2023,
+      "modalities": [
+        "camera_pose",
+        "metric_depth",
+        "rgb"
+      ],
+      "adapter": "tartanair-v2-rgbd-v1",
+      "state": "release",
+      "evidence_scope": "photorealistic RGB-D reconstruction with exact simulator depth and pose",
+      "homepage": "https://tartanair.org/",
+      "usage": "public_origin"
+    },
+    {
+      "id": "euroc-mav/v1",
+      "layer": "real_sensor_stress",
+      "source_class": "real_sensor",
+      "release_year": 2016,
+      "modalities": [
+        "ground_truth_pose",
+        "imu",
+        "stereo"
+      ],
+      "adapter": "euroc-stereo-imu-layout-v1",
+      "state": "adapter",
+      "evidence_scope": "stereo and visual-inertial synchronization, calibration, and trajectory stress",
+      "homepage": "https://projects.asl.ethz.ch/datasets/euroc-mav/",
+      "usage": "local_noncommercial_evaluation"
+    },
+    {
+      "id": "kitti/raw",
+      "layer": "real_sensor_stress",
+      "source_class": "real_sensor",
+      "release_year": 2012,
+      "modalities": [
+        "lidar",
+        "oxts",
+        "stereo"
+      ],
+      "adapter": "kitti-stereo-lidar-layout-v1",
+      "state": "adapter",
+      "evidence_scope": "outdoor stereo, LiDAR, and vehicle-motion synchronization stress",
+      "homepage": "https://www.cvlibs.net/datasets/kitti/",
+      "usage": "local_noncommercial_evaluation"
+    },
+    {
+      "id": "scannet/v2",
+      "layer": "real_sensor_indoor",
+      "source_class": "real_sensor",
+      "release_year": 2017,
+      "modalities": [
+        "camera_pose",
+        "metric_depth",
+        "rgb"
+      ],
+      "adapter": "scannet-rgbd-layout-v1",
+      "state": "adapter",
+      "evidence_scope": "indoor RGB-D reconstruction under physical sensor noise",
+      "homepage": "https://www.scan-net.org/",
+      "usage": "terms_gated_local_evaluation"
+    }
+  ]
+}

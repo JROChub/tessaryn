@@ -3,7 +3,7 @@
 The TESSARYN Origin is a static, same-origin application built from
 `apps/viewer-web`. GitHub Actions runs its contract tests and production build
 before GitHub Pages can deploy it. The browser fetches only versioned application
-assets, the real temporal Origin, and the bundled protocol fixture. A service worker retains those
+assets, the provenance-bound validation Origin, and the bundled protocol fixture. A service worker retains those
 assets for offline reconstruction after the first successful load.
 
 ## Published Origin

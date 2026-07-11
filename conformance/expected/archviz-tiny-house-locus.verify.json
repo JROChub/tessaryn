@@ -1,0 +1,13 @@
+{
+  "alternate_branch_valid": true,
+  "cells_valid": 9,
+  "dataset_profile": "tartanair-v2/archviz-tiny-house-day/easy/p000",
+  "moments_valid": 3,
+  "rootprint_valid": true,
+  "schema": "tessaryn/validation-locus-artifact/v1",
+  "selected_frames": 48,
+  "source_class": "synthetic_ground_truth",
+  "source_manifest": "sha256:4ed78e417755d67937c620011ac84bb2162abd4df73f83f6c980a310ea7442f5",
+  "surfels_valid": 212565,
+  "voxels_valid": 224867
+}
