@@ -1,0 +1,20 @@
+[package]
+name = "tessaryn-powerhouse"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Narrow Power House provenance adapter for TESSARYN Cells"
+
+[dependencies]
+power_house.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+hex.workspace = true
+tessaryn-canonical = { path = "../tessaryn-canonical" }
+tessaryn-schema = { path = "../tessaryn-schema" }
+thiserror.workspace = true
+
