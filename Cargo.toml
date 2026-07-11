@@ -4,6 +4,7 @@ members = [
   "crates/tessaryn-canonical",
   "crates/tessaryn-anchor",
   "crates/tessaryn-store",
+  "crates/tessaryn-forge",
 ]
 resolver = "2"
 

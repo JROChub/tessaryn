@@ -185,6 +185,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tessaryn-forge"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tessaryn-canonical",
+ "tessaryn-schema",
+ "thiserror",
+]
+
+[[package]]
 name = "tessaryn-schema"
 version = "0.1.0-alpha.1"
 dependencies = [
