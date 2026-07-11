@@ -2,6 +2,7 @@
 members = [
   "crates/tessaryn-schema",
   "crates/tessaryn-canonical",
+  "crates/tessaryn-anchor",
 ]
 resolver = "2"
 

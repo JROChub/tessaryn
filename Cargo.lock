@@ -164,6 +164,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tessaryn-anchor"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "serde",
+ "tessaryn-schema",
+ "thiserror",
+]
+
+[[package]]
 name = "tessaryn-canonical"
 version = "0.1.0-alpha.1"
 dependencies = [
