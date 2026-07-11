@@ -8,6 +8,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: sha2
+        update-types:
+          - "version-update:semver-major"
   - package-ecosystem: npm
     directory: /apps/viewer-web
     schedule:
