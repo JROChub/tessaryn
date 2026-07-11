@@ -1,0 +1,17 @@
+{
+  "total": 10,
+  "expected_rejections": 10,
+  "mismatches": 0,
+  "layers": [
+    "capsule",
+    "header",
+    "core",
+    "core",
+    "rootprint",
+    "replay",
+    "sidecar",
+    "semantic",
+    "semantic",
+    "semantic"
+  ]
+}

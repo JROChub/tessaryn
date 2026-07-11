@@ -1,0 +1,16 @@
+{
+  "cells_valid": 18,
+  "pha_valid": 18,
+  "moments": 3,
+  "disputed_cells": 2,
+  "restricted_cells": 1,
+  "rootprint_valid": true,
+  "replay_valid": true,
+  "memory_capsule_valid": true,
+  "physical_truth_claimed": false,
+  "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
+  "first_cell_id": "sha256:b230683d9194600a7fa567cc62c433c07d1ad6e0d9ab322511c61effc9869755",
+  "rootprint_root": "sha256:a3f89c07f1fdb56b1bad1c88085b441accbbb5fab023ca608593c30b5aa6389c",
+  "replay_fingerprint": "sha256:9939ba5564f91d13aeb8e256f55db05a152e2954b0074a36ad073d0cb84eaf44",
+  "capsule_digest": "sha256:888cd4ee66a2ec784bd7d54726797d98b24a11d34828e05b91526855cae0a016"
+}

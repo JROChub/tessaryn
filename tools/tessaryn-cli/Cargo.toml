@@ -1,0 +1,26 @@
+[package]
+name = "tessaryn-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "TESSARYN Cell inspection, conformance, and synthetic-world tooling"
+
+[dependencies]
+power_house.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tessaryn-canonical = { path = "../../crates/tessaryn-canonical" }
+tessaryn-powerhouse = { path = "../../crates/tessaryn-powerhouse" }
+tessaryn-schema = { path = "../../crates/tessaryn-schema" }
+thiserror.workspace = true
+
+[lib]
+name = "tessaryn_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tessaryn"
+path = "src/main.rs"

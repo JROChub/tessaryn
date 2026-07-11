@@ -677,6 +677,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tessaryn-cli"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "power_house",
+ "serde",
+ "serde_json",
+ "tessaryn-canonical",
+ "tessaryn-powerhouse",
+ "tessaryn-schema",
+ "thiserror",
+]
+
+[[package]]
 name = "tessaryn-forge"
 version = "0.1.0-alpha.1"
 dependencies = [
