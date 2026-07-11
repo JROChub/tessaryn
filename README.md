@@ -87,6 +87,15 @@ semantic status separately. It never compresses them into one truth score.
 - `apps/viewer-web`: local-first native 4D viewer.
 - `specs`: experimental protocol contracts.
 - `conformance`: canonical vectors and expected reports.
+- `sbom`: normalized CycloneDX 1.5 inventories bound to both lockfiles.
+
+## Supply Chain
+
+`cargo deny` enforces licenses, sources, wildcard policy, and the documented
+advisory boundary. Nine normalized CycloneDX inventories cover every Rust crate
+and the browser application. `node scripts/check-sbom.mjs` rejects stale
+lockfile bindings, modified inventories, non-CycloneDX documents, timestamps,
+and leaked workstation paths.
 
 ## Public Origin
 

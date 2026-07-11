@@ -35,6 +35,7 @@ jobs:
       - run: cargo run --locked -q -p tessaryn-cli -- challenge-demo apps/viewer-web/public/world/vesper-court.json > /tmp/vesper-court.challenge.json
       - run: diff -u conformance/expected/vesper-court.challenge.json /tmp/vesper-court.challenge.json
       - run: ./scripts/check-no-map-substrate.sh
+      - run: node scripts/check-sbom.mjs
 
   reproducibility:
     strategy:
