@@ -1,0 +1,15 @@
+[package]
+name = "tessaryn-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Local content-addressed Cell and chunk store for TESSARYN"
+
+[dependencies]
+tessaryn-canonical = { path = "../tessaryn-canonical" }
+tessaryn-schema = { path = "../tessaryn-schema" }
+thiserror.workspace = true
+

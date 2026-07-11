@@ -193,6 +193,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tessaryn-store"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "tessaryn-canonical",
+ "tessaryn-schema",
+ "thiserror",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
