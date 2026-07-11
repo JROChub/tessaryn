@@ -42,6 +42,11 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   page,
 }) => {
   test.slow();
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
+  });
   await page.setViewportSize({ width: 1440, height: 900 });
   await openOrigin(page);
   const report = await page.evaluate(() => window.__tessaryn?.verification);
@@ -79,6 +84,7 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   }
   expect(colors.size).toBeGreaterThan(100);
   expect(nonblack / samples).toBeGreaterThan(0.35);
+  expect(browserErrors).toEqual([]);
 });
 
 test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to world state", async ({
