@@ -1,0 +1,18 @@
+[package]
+name = "tessaryn-canonical"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Strict canonicalization, Cell identity, and chunk Merkle binding for TESSARYN"
+
+[dependencies]
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tessaryn-schema = { path = "../tessaryn-schema" }
+thiserror.workspace = true
+

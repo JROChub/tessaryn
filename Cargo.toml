@@ -1,0 +1,27 @@
+[workspace]
+members = [
+  "crates/tessaryn-schema",
+  "crates/tessaryn-canonical",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-alpha.1"
+edition = "2021"
+license = "AGPL-3.0-only"
+authors = ["MFENX LLC"]
+repository = "https://github.com/JROChub/tessaryn"
+rust-version = "1.82"
+
+[workspace.dependencies]
+hex = "0.4"
+power_house = { version = "0.3.24", default-features = false, features = ["memory"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
