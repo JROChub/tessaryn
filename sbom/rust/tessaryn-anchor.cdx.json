@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-anchor#0.1.0-alpha.2",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-anchor#0.1.0-rc.1",
       "author": "MFENX LLC",
       "name": "tessaryn-anchor",
-      "version": "0.1.0-alpha.2",
+      "version": "0.1.0-rc.1",
       "description": "Deterministic fixed-point Anchor Graph for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-anchor@0.1.0-alpha.2?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-anchor@0.1.0-rc.1?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,10 +39,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-anchor#0.1.0-alpha.2 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-anchor#0.1.0-rc.1 bin-target-0",
           "name": "tessaryn_anchor",
-          "version": "0.1.0-alpha.2",
-          "purl": "pkg:cargo/tessaryn-anchor@0.1.0-alpha.2?download_url=file://.#src/lib.rs"
+          "version": "0.1.0-rc.1",
+          "purl": "pkg:cargo/tessaryn-anchor@0.1.0-rc.1?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -56,10 +56,10 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.1.0-alpha.2",
+      "version": "0.1.0-rc.1",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -67,7 +67,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.1.0-alpha.2?download_url=file://../tessaryn-schema",
+      "purl": "pkg:cargo/tessaryn-schema@0.1.0-rc.1?download_url=file://../tessaryn-schema",
       "externalReferences": [
         {
           "type": "vcs",
@@ -365,15 +365,15 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-anchor#0.1.0-alpha.2",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-anchor#0.1.0-rc.1",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"

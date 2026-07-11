@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.2",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-rc.1",
       "author": "MFENX LLC",
       "name": "tessaryn-canonical",
-      "version": "0.1.0-alpha.2",
+      "version": "0.1.0-rc.1",
       "description": "Strict canonicalization, Cell identity, and chunk Merkle binding for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-canonical@0.1.0-alpha.2?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-canonical@0.1.0-rc.1?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,10 +39,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.2 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-rc.1 bin-target-0",
           "name": "tessaryn_canonical",
-          "version": "0.1.0-alpha.2",
-          "purl": "pkg:cargo/tessaryn-canonical@0.1.0-alpha.2?download_url=file://.#src/lib.rs"
+          "version": "0.1.0-rc.1",
+          "purl": "pkg:cargo/tessaryn-canonical@0.1.0-rc.1?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -56,10 +56,10 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.1.0-alpha.2",
+      "version": "0.1.0-rc.1",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -67,7 +67,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.1.0-alpha.2?download_url=file://../tessaryn-schema",
+      "purl": "pkg:cargo/tessaryn-schema@0.1.0-rc.1?download_url=file://../tessaryn-schema",
       "externalReferences": [
         {
           "type": "vcs",
@@ -259,6 +259,37 @@
     },
     {
       "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17",
+      "author": "The Rand Project Developers",
+      "name": "getrandom",
+      "version": "0.2.17",
+      "description": "A small cross-platform library for retrieving random data from system source",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/getrandom@0.2.17",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/getrandom"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-random/getrandom"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
       "author": "KokaKiwi <kokakiwi@kokakiwi.net>",
       "name": "hex",
@@ -440,6 +471,41 @@
         {
           "type": "vcs",
           "url": "https://github.com/dtolnay/quote"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.6.4",
+      "author": "The Rand Project Developers, The Rust Project Developers",
+      "name": "rand_core",
+      "version": "0.6.4",
+      "description": "Core random number generator traits and tools for implementation. ",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/rand_core@0.6.4",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/rand_core"
+        },
+        {
+          "type": "website",
+          "url": "https://rust-random.github.io/book"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-random/rand"
         }
       ]
     },
@@ -828,6 +894,37 @@
     },
     {
       "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#wasi@0.11.1+wasi-snapshot-preview1",
+      "author": "The Cranelift Project Developers",
+      "name": "wasi",
+      "version": "0.11.1+wasi-snapshot-preview1",
+      "description": "Experimental WASI API bindings for Rust",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/wasi"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/bytecodealliance/wasi"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.21",
       "author": "David Tolnay <dtolnay@gmail.com>",
       "name": "zmij",
@@ -860,18 +957,18 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.2",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-rc.1",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
@@ -896,6 +993,7 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#crypto-common@0.1.7",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#generic-array@0.14.7",
+        "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.6.4",
         "registry+https://github.com/rust-lang/crates.io-index#typenum@1.20.1"
       ]
     },
@@ -912,6 +1010,14 @@
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#typenum@1.20.1",
         "registry+https://github.com/rust-lang/crates.io-index#version_check@0.9.5"
+      ]
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
+        "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186",
+        "registry+https://github.com/rust-lang/crates.io-index#wasi@0.11.1+wasi-snapshot-preview1"
       ]
     },
     {
@@ -936,6 +1042,12 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106"
+      ]
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.6.4",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17"
       ]
     },
     {
@@ -1010,6 +1122,9 @@
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#version_check@0.9.5"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#wasi@0.11.1+wasi-snapshot-preview1"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.21"

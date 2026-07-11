@@ -95,10 +95,18 @@ pub fn chunk_merkle_root(chunks: &[Digest]) -> Digest {
 
 /// Parses strict integer-only JSON while rejecting duplicate keys.
 pub fn parse_strict_json(bytes: &[u8]) -> Result<Value, CanonicalError> {
-    if bytes.len() > MAX_MANIFEST_BYTES {
+    parse_strict_json_bounded(bytes, MAX_MANIFEST_BYTES)
+}
+
+/// Parses strict integer-only JSON under a caller-selected byte ceiling.
+pub fn parse_strict_json_bounded(
+    bytes: &[u8],
+    maximum_bytes: usize,
+) -> Result<Value, CanonicalError> {
+    if bytes.len() > maximum_bytes {
         return Err(CanonicalError::ResourceLimit {
             found: bytes.len(),
-            maximum: MAX_MANIFEST_BYTES,
+            maximum: maximum_bytes,
         });
     }
     let text = std::str::from_utf8(bytes).map_err(CanonicalError::Utf8)?;
@@ -272,6 +280,7 @@ impl<'de> Visitor<'de> for StrictValueVisitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
     use tessaryn_schema::{
         CellClass, ChannelDescriptor, Criticality, EvidenceDeclaration, SpatialExtent,
         TemporalExtent, TemporalStateKind, CELL_SCHEMA_V0,
@@ -279,6 +288,10 @@ mod tests {
 
     fn digest(byte: &str) -> Digest {
         Digest::new(format!("sha256:{}", byte.repeat(64))).unwrap()
+    }
+
+    fn byte_digest(value: u8) -> Digest {
+        Digest::new(format!("sha256:{}", format!("{value:02x}").repeat(32))).unwrap()
     }
 
     fn manifest() -> CellManifestV0 {
@@ -382,5 +395,39 @@ mod tests {
             chunk_merkle_root(&left),
             chunk_merkle_root(&[chunk_id(b"alpha!")])
         );
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(128))]
+
+        #[test]
+        fn parent_permutations_have_one_canonical_identity(values in prop::collection::vec(any::<u8>(), 0..64)) {
+            let mut left = manifest();
+            left.parents = values.iter().copied().map(byte_digest).collect();
+            let mut right = left.clone();
+            right.parents.reverse();
+            prop_assert_eq!(cell_id(&left).unwrap(), cell_id(&right).unwrap());
+        }
+
+        #[test]
+        fn every_admitted_coordinate_mutation_changes_identity(
+            coordinate in -1_000_000_i64..1_000_000_i64,
+            delta in 1_i64..10_000_i64,
+        ) {
+            let mut left = manifest();
+            left.spatial_extent.min_um[0] = coordinate;
+            left.spatial_extent.max_um[0] = coordinate + delta;
+            let mut right = left.clone();
+            right.spatial_extent.max_um[0] += 1;
+            prop_assert_ne!(cell_id(&left).unwrap(), cell_id(&right).unwrap());
+        }
+
+        #[test]
+        fn chunk_merkle_root_is_permutation_invariant(values in prop::collection::vec(any::<u8>(), 0..128)) {
+            let left = values.iter().map(|value| chunk_id(&[*value])).collect::<Vec<_>>();
+            let mut right = left.clone();
+            right.reverse();
+            prop_assert_eq!(chunk_merkle_root(&left), chunk_merkle_root(&right));
+        }
     }
 }

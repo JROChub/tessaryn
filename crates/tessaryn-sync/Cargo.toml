@@ -1,0 +1,26 @@
+[package]
+name = "tessaryn-sync"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Signed encrypted peer synchronization for TESSARYN Loci"
+
+[dependencies]
+ed25519-dalek.workspace = true
+getrandom.workspace = true
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tessaryn-canonical = { version = "=0.1.0-rc.1", path = "../tessaryn-canonical" }
+tessaryn-privacy = { version = "=0.1.0-rc.1", path = "../tessaryn-privacy" }
+tessaryn-powerhouse = { version = "=0.1.0-rc.1", path = "../tessaryn-powerhouse" }
+tessaryn-schema = { version = "=0.1.0-rc.1", path = "../tessaryn-schema" }
+tessaryn-store = { version = "=0.1.0-rc.1", path = "../tessaryn-store" }
+tessaryn-transport = { version = "=0.1.0-rc.1", path = "../tessaryn-transport" }
+tessaryn-witness = { version = "=0.1.0-rc.1", path = "../tessaryn-witness" }
+thiserror.workspace = true
+zeroize.workspace = true

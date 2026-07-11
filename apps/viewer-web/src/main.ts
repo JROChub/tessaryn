@@ -13,13 +13,22 @@ import {
   RotateCcw,
   Scan,
   ShieldCheck,
+  Upload,
   Waypoints,
   X,
   createIcons,
 } from "lucide";
 import "./style.css";
-import type { DemoCell, DemoMoment, DemoWorld, VerificationReport } from "./types";
-import { runMutation, verifyWorld } from "./verification";
+import type {
+  DemoCell,
+  DemoMoment,
+  DemoWorld,
+  ReconstructionArtifactView,
+  ReconstructionBrowserReport,
+  VerificationReport,
+} from "./types";
+import { parseStrictIntegerJson } from "./strict-json";
+import { runMutation, verifyReconstructionArtifact, verifyWorld } from "./verification";
 import { TessarynWorld, type ScaleMode } from "./world";
 
 declare global {
@@ -27,11 +36,20 @@ declare global {
     __tessaryn?: {
       world: DemoWorld;
       verification: VerificationReport | null;
+      importedArtifact?: ReconstructionArtifactView;
+      importedVerification?: ReconstructionBrowserReport;
       scene: TessarynWorld;
+      metrics: RuntimeMetrics;
     };
   }
 }
 
+interface RuntimeMetrics {
+  bootStartedAtMs: number;
+  firstStructureMs?: number;
+  materializedMs?: number;
+  verificationMs?: number;
+}
 const elements = {
   app: byId<HTMLDivElement>("app"),
   canvas: byId<HTMLCanvasElement>("world-canvas"),
@@ -74,6 +92,8 @@ const elements = {
   verifyMemory: byId<HTMLElement>("verify-memory"),
   verifyDetail: byId<HTMLElement>("verify-detail"),
   verifyButton: byId<HTMLButtonElement>("verify-button"),
+  importButton: byId<HTMLButtonElement>("import-button"),
+  importInput: byId<HTMLInputElement>("import-input"),
   verifyClose: byId<HTMLButtonElement>("verify-close"),
   fullscreenButton: byId<HTMLButtonElement>("fullscreen-button"),
   chronofoldButton: byId<HTMLButtonElement>("chronofold-button"),
@@ -89,10 +109,16 @@ let worldData: DemoWorld;
 let scene: TessarynWorld;
 let selected: DemoCell;
 let latestVerification: VerificationReport | null = null;
+let importedArtifact: ReconstructionArtifactView | null = null;
+let importedVerification: ReconstructionBrowserReport | null = null;
 let chronofoldOpen = false;
 let evidenceVisible = true;
 let condensationComplete = false;
 let toastTimer = 0;
+const MAX_IMPORT_BYTES = 128 * 1024 * 1024;
+const runtimeMetrics: RuntimeMetrics = {
+  bootStartedAtMs: performance.now(),
+};
 
 void boot();
 
@@ -104,7 +130,7 @@ async function boot(): Promise<void> {
     worldData = (await response.json()) as DemoWorld;
     if (
       worldData.schema !== "tessaryn/demo-world/v0" ||
-      worldData.status !== "experimental-synthetic"
+      worldData.status !== "reference-origin"
     ) {
       throw new Error("unsupported world fixture");
     }
@@ -124,7 +150,12 @@ async function boot(): Promise<void> {
       onCondensationComplete: finishCondensation,
       onScaleChanged: updateScaleButtons,
     });
-    window.__tessaryn = { world: worldData, verification: null, scene };
+    window.__tessaryn = {
+      world: worldData,
+      verification: null,
+      scene,
+      metrics: runtimeMetrics,
+    };
     bindControls();
     createIcons({
       icons: {
@@ -142,6 +173,7 @@ async function boot(): Promise<void> {
         RotateCcw,
         Scan,
         ShieldCheck,
+        Upload,
         Waypoints,
         X,
       },
@@ -152,6 +184,7 @@ async function boot(): Promise<void> {
     document.body.dataset.ready = "true";
     latestVerification = await verifyWorld(worldData);
     window.__tessaryn.verification = latestVerification;
+    runtimeMetrics.verificationMs = performance.now() - runtimeMetrics.bootStartedAtMs;
     elements.evidenceShort.textContent =
       latestVerification.errors.length === 0 ? "LOCALLY VERIFIED" : "CAUTION";
     registerServiceWorker();
@@ -169,6 +202,8 @@ async function boot(): Promise<void> {
 
 function bindControls(): void {
   elements.verifyButton.addEventListener("click", () => void showVerification());
+  elements.importButton.addEventListener("click", () => elements.importInput.click());
+  elements.importInput.addEventListener("change", () => void importReconstruction());
   elements.verifyClose.addEventListener("click", () => elements.verificationDialog.close());
   elements.fullscreenButton.addEventListener("click", () => void toggleFullscreen());
   elements.traceClose.addEventListener("click", closeTrace);
@@ -247,6 +282,9 @@ function populateMoments(moments: DemoMoment[]): void {
 }
 
 function updateCondensation(progress: number, phase: string): void {
+  if (progress > 0 && runtimeMetrics.firstStructureMs === undefined) {
+    runtimeMetrics.firstStructureMs = performance.now() - runtimeMetrics.bootStartedAtMs;
+  }
   elements.condensation.style.width = String(Math.round(progress * 100)) + "%";
   elements.originPhase.textContent = "ORIGIN / " + phase;
   if (!condensationComplete) {
@@ -258,6 +296,7 @@ function updateCondensation(progress: number, phase: string): void {
 function finishCondensation(): void {
   if (condensationComplete) return;
   condensationComplete = true;
+  runtimeMetrics.materializedMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   document.body.dataset.materialized = "true";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
   elements.originStatus.textContent = "VESPER COURT CONSTRUCTED LOCALLY";
@@ -377,7 +416,8 @@ function closeChallenge(): void {
 
 async function executeMutation(mutation: string): Promise<void> {
   try {
-    const result = await runMutation(worldData, selected, mutation);
+    const semanticCapsule = importedArtifact?.observation_proof.memory_capsule;
+    const result = await runMutation(worldData, selected, mutation, semanticCapsule);
     const values = elements.rejectionTrace.querySelectorAll("dd");
     elements.rejectionTrace.querySelector("small")!.textContent = result.id.toUpperCase();
     elements.rejectionTrace.querySelector("b")!.textContent = result.code;
@@ -405,6 +445,12 @@ async function showVerification(): Promise<void> {
   ]) {
     element.textContent = "PENDING";
   }
+  if (importedArtifact) {
+    const report = await verifyReconstructionArtifact(importedArtifact);
+    importedVerification = report;
+    renderImportedVerification(report);
+    return;
+  }
   const report = await verifyWorld(worldData);
   latestVerification = report;
   if (window.__tessaryn) window.__tessaryn.verification = report;
@@ -423,12 +469,134 @@ async function showVerification(): Promise<void> {
       : report.errors.join(" / ");
 }
 
+async function importReconstruction(): Promise<void> {
+  const file = elements.importInput.files?.[0];
+  elements.importInput.value = "";
+  if (!file) return;
+  if (file.size > MAX_IMPORT_BYTES) {
+    showToast("ARTIFACT EXCEEDS 128 MIB BROWSER PROFILE");
+    return;
+  }
+  elements.importButton.disabled = true;
+  elements.importButton.querySelector("span")!.textContent = "READING";
+  try {
+    const parsed = parseStrictIntegerJson(await file.text());
+    if (!isReconstructionArtifact(parsed)) {
+      throw new Error("unsupported reconstruction artifact");
+    }
+    const verification = await verifyReconstructionArtifact(parsed);
+    if (verification.errors.length > 0) {
+      throw new Error(verification.errors.join(" / "));
+    }
+    const cell = reconstructionCell(parsed);
+    importedArtifact = parsed;
+    importedVerification = verification;
+    if (window.__tessaryn) {
+      window.__tessaryn.importedArtifact = parsed;
+      window.__tessaryn.importedVerification = verification;
+    }
+    elements.app.dataset.source = "imported";
+    selected = cell;
+    scene.loadSurfelObservation(cell, verification.surfels);
+    elements.originName.textContent = "LOCAL RGB-D LOCUS";
+    elements.cellCount.textContent = "2 CELLS";
+    elements.anchorShort.textContent = shortDigest(cell.manifest.anchor_id, 8);
+    elements.momentShort.textContent = "CAPTURE";
+    elements.evidenceShort.textContent = "FULLY REVERIFIED";
+    elements.originPhase.textContent = "ORIGIN / IMPORTED CAPTURE";
+    elements.originStatus.textContent = "SURFEL + SDF LOCUS MATERIALIZED";
+    elements.condensation.style.width = "100%";
+    elements.chronofoldButton.disabled = true;
+    elements.chronofoldButton.classList.remove("active");
+    populateImportedMoment(cell);
+    showToast(`${String(verification.surfels.length)} SURFELS VERIFIED LOCALLY`);
+    await showVerification();
+  } catch (error) {
+    console.error(error);
+    showToast(error instanceof Error ? error.message.toUpperCase() : "IMPORT REJECTED");
+  } finally {
+    elements.importButton.disabled = false;
+    elements.importButton.querySelector("span")!.textContent = "OPEN";
+  }
+}
+
+function isReconstructionArtifact(value: unknown): value is ReconstructionArtifactView {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { schema?: unknown }).schema === "tessaryn/reconstruction-artifact/v0" &&
+    typeof (value as { report?: unknown }).report === "object"
+  );
+}
+
+function reconstructionCell(artifact: ReconstructionArtifactView): DemoCell {
+  const proof = artifact.observation_proof;
+  const packet = proof.memory_capsule.semantics?.packets?.[0]?.packet as
+    | { summary?: unknown }
+    | undefined;
+  return {
+    key: "imported-rgbd-observation",
+    label: "IMPORTED RGB-D OBSERVATION",
+    cell_id: artifact.report.observation.cell_id,
+    manifest: artifact.report.observation.manifest,
+    channel_payload: {},
+    visual: {
+      primitive: "surfel",
+      position_mm: [0, 1_000, 0],
+      size_mm: [1_000, 1_000, 1_000],
+      rotation_mdeg: [0, 0, 0],
+      color: "#74c8c1",
+      material: "captured-surfel-field",
+      seed: 0,
+      moments: worldData.moments.map((moment) => moment.id),
+    },
+    semantic_summary:
+      typeof packet?.summary === "string"
+        ? packet.summary
+        : "Privacy-filtered RGB-D observation with a locally verified Cell identity.",
+    proof: {
+      pha: proof.pha,
+      rootprint_id: proof.rootprint.root_branch,
+      replay_fingerprint: proof.replay_fingerprint,
+    },
+  };
+}
+
+function populateImportedMoment(cell: DemoCell): void {
+  elements.momentRail.replaceChildren();
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "active";
+  button.setAttribute("aria-pressed", "true");
+  const label = document.createElement("b");
+  const state = document.createElement("small");
+  label.textContent = "01 / CAPTURE INTERVAL";
+  state.textContent = `${String(cell.manifest.temporal_extent.start_unix_us)} - ${String(cell.manifest.temporal_extent.end_unix_us)}`;
+  button.append(label, state);
+  elements.momentRail.append(button);
+}
+
+function renderImportedVerification(report: ReconstructionBrowserReport): void {
+  elements.verifyCells.textContent = `${String(report.cellsValid)} / 2 VALID`;
+  elements.verifyPha.textContent = `${String(report.phaValid)} / 2 VALID`;
+  elements.verifyRootprint.textContent = report.rootprintValid ? "VALID" : "INVALID";
+  elements.verifyReplay.textContent = report.replayValid ? "VALID" : "INVALID";
+  elements.verifyMemory.textContent = report.memoryValid ? "VALID" : "INVALID";
+  elements.verifyTitle.textContent =
+    report.errors.length === 0 ? "LOCAL CAPTURE ACCEPTED" : "VERIFICATION CAUTION";
+  elements.verifyDetail.textContent =
+    report.errors.length === 0
+      ? `${String(report.surfels.length)} surfels and ${String(report.voxels)} SDF voxels verified. Raw frames are absent. Physical sensor honesty is not proven.`
+      : report.errors.join(" / ");
+}
+
 function exportCapsule(): void {
-  const bytes = JSON.stringify(worldData.origin_memory_capsule, null, 2) + "\n";
+  const capsule = importedArtifact?.sdf_proof.memory_capsule ?? worldData.origin_memory_capsule;
+  const bytes = JSON.stringify(capsule, null, 2) + "\n";
   const blob = new Blob([bytes], { type: "application/vnd.powerhouse.memory+json" });
   const anchor = document.createElement("a");
   anchor.href = URL.createObjectURL(blob);
-  anchor.download = "vesper-court-origin.phm";
+  anchor.download = importedArtifact ? "tessaryn-imported-sdf.phm" : "vesper-court-origin.phm";
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(anchor.href), 1_000);
   showToast("MEMORY CAPSULE EXPORTED");

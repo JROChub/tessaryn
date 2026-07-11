@@ -37,8 +37,11 @@ pub struct CaptureSession {
     pub session_id: Digest,
     /// Local Anchor receiving the samples.
     pub anchor_id: Digest,
-    /// Capture timestamp.
+    /// Inclusive capture interval start.
     pub captured_at_unix_us: i64,
+    /// Inclusive capture interval end; omitted for an instantaneous observation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_until_unix_us: Option<i64>,
     /// Stable clock source.
     pub clock_source: String,
     /// Capture producer identifier.
@@ -89,6 +92,7 @@ pub struct ForgeReport {
     /// Address of the shareable surfel chunk.
     pub public_chunk_id: Digest,
     /// Exact shareable surfel bytes.
+    #[serde(with = "tessaryn_transport::bytes_base64")]
     pub public_chunk: Vec<u8>,
     /// Number of retained samples.
     pub accepted_samples: u64,
@@ -100,6 +104,21 @@ pub struct ForgeReport {
     pub publication_allowed: bool,
     /// Content address of the Forge report projection.
     pub report_id: Digest,
+}
+
+/// Independent verification result for one public Forge report.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ForgeVerificationReport {
+    /// Surfel chunk identity and bounded decoding matched.
+    pub chunk_valid: bool,
+    /// Cell manifest identity and Merkle root matched.
+    pub cell_valid: bool,
+    /// Forge report projection identity matched.
+    pub report_valid: bool,
+    /// Raw capture samples were absent.
+    pub raw_absent: bool,
+    /// Number of verified public surfels.
+    pub verified_samples: u64,
 }
 
 /// Builds one observation Cell from authorized integer surfel records.
@@ -139,9 +158,13 @@ pub fn forge_surfel_cell(
     let chunk_root = chunk_merkle_root(std::slice::from_ref(&public_chunk_id));
     let (min_um, max_um) = sample_bounds(&accepted)?;
 
+    let captured_until_unix_us = session
+        .captured_until_unix_us
+        .unwrap_or(session.captured_at_unix_us);
     let source_record_bytes = serde_json::to_vec(&serde_json::json!({
         "anchor_id": &session.anchor_id,
         "captured_at_unix_us": session.captured_at_unix_us,
+        "captured_until_unix_us": captured_until_unix_us,
         "producer": &session.producer,
         "public_chunk_id": &public_chunk_id,
         "session_id": &session.session_id,
@@ -166,10 +189,10 @@ pub fn forge_surfel_cell(
         },
         temporal_extent: TemporalExtent {
             start_unix_us: session.captured_at_unix_us,
-            end_unix_us: session.captured_at_unix_us,
+            end_unix_us: captured_until_unix_us,
             uncertainty_us: 1_000,
             clock_source: session.clock_source,
-            published_at_unix_us: session.captured_at_unix_us,
+            published_at_unix_us: captured_until_unix_us,
             valid_from_unix_us: session.captured_at_unix_us,
             valid_until_unix_us: None,
             supersedes: Vec::new(),
@@ -212,15 +235,14 @@ pub fn forge_surfel_cell(
         chunk_merkle_root: chunk_root,
     };
     let cell_id = cell_id(&manifest)?;
-    let report_projection = serde_json::to_vec(&serde_json::json!({
-        "accepted_samples": accepted.len(),
-        "cell_id": &cell_id,
-        "excluded_samples": excluded_samples,
-        "public_chunk_id": &public_chunk_id,
-        "publication_allowed": policy.publication_allowed,
-        "raw_embedded": false,
-    }))?;
-    let report_id = chunk_id(&report_projection);
+    let report_id = forge_report_id(
+        accepted.len() as u64,
+        excluded_samples,
+        &cell_id,
+        &public_chunk_id,
+        policy.publication_allowed,
+        false,
+    )?;
     Ok(ForgeReport {
         manifest,
         cell_id,
@@ -232,6 +254,61 @@ pub fn forge_surfel_cell(
         publication_allowed: policy.publication_allowed,
         report_id,
     })
+}
+
+/// Re-verifies every public, independently checkable Forge output.
+pub fn verify_forge_report(report: &ForgeReport) -> Result<ForgeVerificationReport, ForgeError> {
+    if report.raw_embedded {
+        return Err(ForgeError::RawCaptureDisclosure);
+    }
+    let samples = decode_surfel_chunk(&report.public_chunk)?;
+    let public_chunk_id = chunk_id(&report.public_chunk);
+    let chunk_root = chunk_merkle_root(std::slice::from_ref(&public_chunk_id));
+    if public_chunk_id != report.public_chunk_id || samples.len() as u64 != report.accepted_samples
+    {
+        return Err(ForgeError::PublicChunkMismatch);
+    }
+    if chunk_root != report.manifest.chunk_merkle_root
+        || cell_id(&report.manifest)? != report.cell_id
+    {
+        return Err(ForgeError::CellMismatch);
+    }
+    let expected_report_id = forge_report_id(
+        report.accepted_samples,
+        report.excluded_samples,
+        &report.cell_id,
+        &report.public_chunk_id,
+        report.publication_allowed,
+        false,
+    )?;
+    if expected_report_id != report.report_id {
+        return Err(ForgeError::ReportMismatch);
+    }
+    Ok(ForgeVerificationReport {
+        chunk_valid: true,
+        cell_valid: true,
+        report_valid: true,
+        raw_absent: true,
+        verified_samples: samples.len() as u64,
+    })
+}
+
+fn forge_report_id(
+    accepted_samples: u64,
+    excluded_samples: u64,
+    cell_id: &Digest,
+    public_chunk_id: &Digest,
+    publication_allowed: bool,
+    raw_embedded: bool,
+) -> Result<Digest, ForgeError> {
+    Ok(chunk_id(&serde_json::to_vec(&serde_json::json!({
+        "accepted_samples": accepted_samples,
+        "cell_id": cell_id,
+        "excluded_samples": excluded_samples,
+        "public_chunk_id": public_chunk_id,
+        "publication_allowed": publication_allowed,
+        "raw_embedded": raw_embedded,
+    }))?))
 }
 
 /// Decodes the bounded deterministic surfel transport.
@@ -345,6 +422,12 @@ fn validate_session(session: &CaptureSession) -> Result<(), ForgeError> {
     {
         return Err(ForgeError::InvalidSession);
     }
+    if session
+        .captured_until_unix_us
+        .is_some_and(|end| end < session.captured_at_unix_us)
+    {
+        return Err(ForgeError::InvalidSession);
+    }
     Ok(())
 }
 
@@ -425,6 +508,18 @@ pub enum ForgeError {
     /// Bounds overflowed the canonical coordinate range.
     #[error("surfel coordinate overflow")]
     CoordinateOverflow,
+    /// Public report unexpectedly contained raw capture samples.
+    #[error("public Forge report disclosed raw capture samples")]
+    RawCaptureDisclosure,
+    /// Public surfel bytes, identity, or count did not match.
+    #[error("public Forge chunk mismatch")]
+    PublicChunkMismatch,
+    /// Forge Cell identity or Merkle root did not match.
+    #[error("Forge Cell identity mismatch")]
+    CellMismatch,
+    /// Forge report projection digest did not match.
+    #[error("Forge report identity mismatch")]
+    ReportMismatch,
     /// JSON encoding failed.
     #[error(transparent)]
     Json(#[from] serde_json::Error),
@@ -456,6 +551,7 @@ mod tests {
             session_id: digest(1),
             anchor_id: digest(2),
             captured_at_unix_us: 100,
+            captured_until_unix_us: None,
             clock_source: "capture/test-v0".to_string(),
             producer: "test-device".to_string(),
             device_key: Some(digest(3)),
@@ -534,5 +630,51 @@ mod tests {
         assert!(
             decode_surfel_chunk(&report.public_chunk[..report.public_chunk.len() - 1]).is_err()
         );
+    }
+
+    #[test]
+    fn capture_interval_is_identity_bearing_and_ordered() {
+        let mut ranged = session(vec![sample([0, 0, 0], [10, 20, 30, 255])]);
+        ranged.captured_until_unix_us = Some(200);
+        let report = forge_surfel_cell(ranged.clone(), policy()).unwrap();
+        assert_eq!(report.manifest.temporal_extent.start_unix_us, 100);
+        assert_eq!(report.manifest.temporal_extent.end_unix_us, 200);
+        assert_eq!(report.manifest.temporal_extent.published_at_unix_us, 200);
+
+        let instant = forge_surfel_cell(
+            session(vec![sample([0, 0, 0], [10, 20, 30, 255])]),
+            policy(),
+        )
+        .unwrap();
+        assert_ne!(report.cell_id, instant.cell_id);
+
+        ranged.captured_until_unix_us = Some(99);
+        assert!(matches!(
+            forge_surfel_cell(ranged, policy()),
+            Err(ForgeError::InvalidSession)
+        ));
+    }
+
+    #[test]
+    fn public_forge_report_reverifies_and_projection_mutation_rejects() {
+        let report = forge_surfel_cell(
+            session(vec![sample([0, 0, 0], [10, 20, 30, 255])]),
+            policy(),
+        )
+        .unwrap();
+        assert_eq!(verify_forge_report(&report).unwrap().verified_samples, 1);
+
+        let mut projection_mutation = report.clone();
+        projection_mutation.excluded_samples += 1;
+        assert!(matches!(
+            verify_forge_report(&projection_mutation),
+            Err(ForgeError::ReportMismatch)
+        ));
+        let mut raw_mutation = report;
+        raw_mutation.raw_embedded = true;
+        assert!(matches!(
+            verify_forge_report(&raw_mutation),
+            Err(ForgeError::RawCaptureDisclosure)
+        ));
     }
 }

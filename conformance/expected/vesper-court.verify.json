@@ -9,8 +9,8 @@
   "memory_capsule_valid": true,
   "physical_truth_claimed": false,
   "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
-  "first_cell_id": "sha256:b230683d9194600a7fa567cc62c433c07d1ad6e0d9ab322511c61effc9869755",
-  "rootprint_root": "sha256:a3f89c07f1fdb56b1bad1c88085b441accbbb5fab023ca608593c30b5aa6389c",
-  "replay_fingerprint": "sha256:a13fb023e401b7a0af151963cd2980af21c4674a1c0482d0af37f26d56692df7",
-  "capsule_digest": "sha256:45074407ea441daa1bc0ad5e4f7d5e7af2c70b9e69063b0ff6acdcc82284e70a"
+  "first_cell_id": "sha256:a1c4035b1179d26d599104a0030a16e4c597e7be5c4c5455100b109b61d932ae",
+  "rootprint_root": "sha256:e2b589939778fd8b78cea091b8e543131add1277b390d19b2f3cdffe82f203fb",
+  "replay_fingerprint": "sha256:348964e35c9d8e8f0f8632946ef0b3b18923fecf3111b6e64f3940ea7b4e0cbe",
+  "capsule_digest": "sha256:2086a36cffac43f80829a0e57bc643a92e78b7a120f0a8c91906e1c29d196fc5"
 }

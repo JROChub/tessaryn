@@ -1,0 +1,16 @@
+[package]
+name = "tessaryn-transport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Canonical bounded transport encodings for TESSARYN"
+
+[dependencies]
+base64.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

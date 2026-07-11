@@ -1,4 +1,4 @@
-//! Synthetic Origin fixture and conformance tooling.
+//! Deterministic reference Origin and conformance tooling.
 
 use power_house::provenance::PhaArtifact;
 use power_house::{MemoryCapsule, MemoryVerificationPolicy};
@@ -16,7 +16,7 @@ use tessaryn_schema::{
 };
 use thiserror::Error;
 
-/// Synthetic fixture schema.
+/// Reference fixture schema.
 pub const DEMO_SCHEMA_V0: &str = "tessaryn/demo-world/v0";
 const ORIGIN_START: i64 = 1_766_361_600_000_000;
 const ORIGIN_END: i64 = 1_788_739_200_000_000;
@@ -28,7 +28,7 @@ pub struct DemoMoment {
     pub id: String,
     /// Human label.
     pub label: String,
-    /// Exact synthetic timestamp.
+    /// Exact reference timestamp.
     pub unix_us: i64,
     /// Non-core environmental presentation metadata.
     pub environment: DemoEnvironment,
@@ -105,7 +105,7 @@ pub struct DemoCell {
     pub proof: DemoProof,
 }
 
-/// Complete synthetic Origin fixture.
+/// Complete deterministic reference Origin fixture.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DemoWorld {
     /// Fixture schema.
@@ -149,7 +149,7 @@ pub struct DemoVerificationReport {
     pub replay_valid: bool,
     /// Origin Memory Capsule passed strict local verification.
     pub memory_capsule_valid: bool,
-    /// Physical truth is intentionally not claimed by this synthetic fixture.
+    /// Physical truth is intentionally not claimed by this reference fixture.
     pub physical_truth_claimed: bool,
     /// Origin Anchor committed by the first Cell.
     pub anchor_id: Digest,
@@ -163,7 +163,7 @@ pub struct DemoVerificationReport {
     pub capsule_digest: String,
 }
 
-/// Generates the bounded synthetic Vesper Court Origin.
+/// Generates the bounded deterministic Vesper Court reference Origin.
 pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
     let anchor_id = chunk_id(b"tessaryn:anchor:vesper-court:v0");
     let policy_root = chunk_id(b"tessaryn:policy:private-by-default:v0");
@@ -204,7 +204,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
             None,
             false,
             false,
-            "A synthetic architectural observation Cell.",
+            "A deterministic reference architectural observation Cell.",
         ),
         spec(
             "east-wall",
@@ -289,7 +289,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
             None,
             false,
             false,
-            "Deterministic low vegetation, explicitly synthetic.",
+            "Deterministic low vegetation in the reference Origin.",
         ),
         spec(
             "private-room",
@@ -348,7 +348,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
             None,
             false,
             false,
-            "Earliest synthetic canopy observation.",
+            "Earliest reference canopy observation.",
         ),
         &anchor_id,
         &policy_root,
@@ -423,7 +423,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
             None,
             false,
             false,
-            "Portable object at its earliest observed synthetic position.",
+            "Portable object at its earliest reference position.",
         ),
         &anchor_id,
         &policy_root,
@@ -586,7 +586,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
         Some(json!({
             "schema": "slbit/viz-packet/v3",
             "claim": {
-                "label": "Vesper Court synthetic Origin",
+                "label": "Vesper Court reference Origin",
                 "authority": "semantic"
             },
             "explanation_constraints": {
@@ -601,10 +601,10 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
     );
     Ok(DemoWorld {
         schema: DEMO_SCHEMA_V0.to_string(),
-        status: "experimental-synthetic".to_string(),
+        status: "reference-origin".to_string(),
         product: "TESSARYN".to_string(),
-        origin: "Vesper Court / Synthetic Origin 01".to_string(),
-        evidence_boundary: "Identity and replay are verified; physical truth is not claimed by this synthetic fixture.".to_string(),
+        origin: "Vesper Court / Reference Origin 01".to_string(),
+        evidence_boundary: "Identity and replay are verified; physical truth is not claimed by this deterministic reference fixture.".to_string(),
         anchor_id,
         moments,
         cells,
@@ -615,7 +615,7 @@ pub fn generate_demo_world() -> Result<DemoWorld, DemoError> {
 
 /// Verifies the complete fixture without network access.
 pub fn verify_demo_world(world: &DemoWorld) -> Result<DemoVerificationReport, DemoError> {
-    if world.schema != DEMO_SCHEMA_V0 || world.status != "experimental-synthetic" {
+    if world.schema != DEMO_SCHEMA_V0 || world.status != "reference-origin" {
         return Err(DemoError::InvalidFixture(
             "schema or status mismatch".to_string(),
         ));
@@ -849,8 +849,8 @@ fn build_cell(
     } else {
         vec![TransformRecord {
             transform_id: chunk_id(format!("transform:{}:{start}", item.key).as_bytes()),
-            method: "tessaryn/synthetic-delta-v0".to_string(),
-            tool: "tessaryn-synthetic-world".to_string(),
+            method: "tessaryn/reference-delta-v0".to_string(),
+            tool: "tessaryn-reference-world".to_string(),
             tool_version: env!("CARGO_PKG_VERSION").to_string(),
             input_ids: parents.clone(),
         }]
@@ -886,7 +886,7 @@ fn build_cell(
             start_unix_us: start,
             end_unix_us: end,
             uncertainty_us: 1_000,
-            clock_source: "tessaryn/synthetic-clock-v0".to_string(),
+            clock_source: "tessaryn/reference-clock-v0".to_string(),
             published_at_unix_us: end,
             valid_from_unix_us: start,
             valid_until_unix_us: Some(end),
@@ -910,8 +910,8 @@ fn build_cell(
         parents,
         source_records: vec![SourceRecord {
             source_id,
-            source_type: "synthetic-generator".to_string(),
-            producer: "tessaryn-synthetic-world".to_string(),
+            source_type: "reference-generator".to_string(),
+            producer: "tessaryn-reference-world".to_string(),
             captured_at_unix_us: start,
             device_key: None,
         }],
@@ -1036,7 +1036,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn synthetic_origin_verifies_offline() {
+    fn reference_origin_verifies_offline() {
         let world = generate_demo_world().unwrap();
         let report = verify_demo_world(&world).unwrap();
         assert_eq!(report.cells_valid, world.cells.len());

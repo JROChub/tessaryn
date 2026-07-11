@@ -34,7 +34,12 @@ jobs:
       - run: diff -u conformance/expected/vesper-court.verify.json /tmp/vesper-court.verify.json
       - run: cargo run --locked -q -p tessaryn-cli -- challenge-demo apps/viewer-web/public/world/vesper-court.json > /tmp/vesper-court.challenge.json
       - run: diff -u conformance/expected/vesper-court.challenge.json /tmp/vesper-court.challenge.json
+      - run: cargo run --locked -q -p tessaryn-cli -- generate-reconstruction-vector /tmp/minimal-reconstruction.json
+      - run: diff -u conformance/reconstruction-v0/minimal-artifact.json /tmp/minimal-reconstruction.json
+      - run: cargo run --locked -q -p tessaryn-cli -- verify-reconstruction /tmp/minimal-reconstruction.json > /tmp/minimal-reconstruction.verify.json
+      - run: diff -u conformance/expected/minimal-reconstruction.verify.json /tmp/minimal-reconstruction.verify.json
       - run: ./scripts/check-no-map-substrate.sh
+      - run: node scripts/check-source-hygiene.mjs
       - run: node scripts/check-sbom.mjs
 
   reproducibility:
@@ -54,6 +59,12 @@ jobs:
         run: git diff --no-index --exit-code -- apps/viewer-web/public/world/vesper-court.json generated-vesper-court.json
       - name: Verify the regenerated Origin offline
         run: cargo run --locked -q -p tessaryn-cli -- verify-demo generated-vesper-court.json
+      - name: Regenerate the reconstruction conformance artifact
+        run: cargo run --locked -q -p tessaryn-cli -- generate-reconstruction-vector generated-reconstruction.json
+      - name: Require byte-identical reconstruction identity
+        run: git diff --no-index --exit-code -- conformance/reconstruction-v0/minimal-artifact.json generated-reconstruction.json
+      - name: Verify reconstruction and Power House bindings offline
+        run: cargo run --locked -q -p tessaryn-cli -- verify-reconstruction generated-reconstruction.json
 
   viewer:
     runs-on: ubuntu-latest

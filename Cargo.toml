@@ -4,15 +4,20 @@ members = [
   "crates/tessaryn-canonical",
   "crates/tessaryn-anchor",
   "crates/tessaryn-store",
+  "crates/tessaryn-transport",
   "crates/tessaryn-forge",
+  "crates/tessaryn-privacy",
+  "crates/tessaryn-reconstruct",
   "crates/tessaryn-weave",
+  "crates/tessaryn-sync",
+  "crates/tessaryn-witness",
   "crates/tessaryn-powerhouse",
   "tools/tessaryn-cli",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0-alpha.2"
+version = "0.1.0-rc.1"
 edition = "2021"
 license = "AGPL-3.0-only"
 authors = ["MFENX LLC"]
@@ -20,12 +25,20 @@ repository = "https://github.com/JROChub/tessaryn"
 rust-version = "1.82"
 
 [workspace.dependencies]
+base64 = "0.22"
 hex = "0.4"
+chacha20poly1305 = "0.10.1"
+ed25519-dalek = "2.2.0"
+getrandom = "0.3.4"
+hkdf = "0.12.4"
 power_house = { version = "0.3.24", default-features = false, features = ["memory"] }
+proptest = "=1.9.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 thiserror = "2"
+x25519-dalek = { version = "2.0.1", features = ["static_secrets", "zeroize"] }
+zeroize = "1.8.2"
 
 [profile.release]
 lto = "thin"

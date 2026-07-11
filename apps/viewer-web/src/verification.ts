@@ -3,6 +3,8 @@ import type {
   DemoCell,
   DemoWorld,
   PhaArtifact,
+  ReconstructionArtifactView,
+  ReconstructionBrowserReport,
   RejectionResult,
   Rootprint,
   RootprintBranch,
@@ -20,6 +22,8 @@ const CAPSULE_DOMAIN = encoder.encode("PHM-CAPSULE-v1\0");
 const CORE_DOMAIN = encoder.encode("PHM-CORE-v1\0");
 const SIDECAR_DOMAIN = encoder.encode("power-house:observatory-sidecar:v1\0");
 const SEMANTIC_DOMAIN = encoder.encode("PHM-SEMANTIC-PACKET-v1\0");
+const SURFEL_MAGIC = encoder.encode("TESSARYN-SURFEL-v0\0");
+const SDF_MAGIC = encoder.encode("TESSARYN-SDF-v0\0");
 
 export async function calculateCellId(manifest: CellManifest): Promise<string> {
   const canonical = canonicalizeManifest(manifest);
@@ -106,10 +110,283 @@ export async function verifyWorld(world: DemoWorld): Promise<VerificationReport>
   };
 }
 
+export async function verifyReconstructionArtifact(
+  artifact: ReconstructionArtifactView,
+): Promise<ReconstructionBrowserReport> {
+  const result: ReconstructionBrowserReport = {
+    cellsValid: 0,
+    phaValid: 0,
+    rootprintValid: false,
+    replayValid: false,
+    memoryValid: false,
+    reportValid: false,
+    rawFramesAbsent: false,
+    surfels: [],
+    voxels: 0,
+    errors: [],
+  };
+  try {
+    if (artifact.schema !== "tessaryn/reconstruction-artifact/v0") {
+      throw new Error("unsupported reconstruction artifact schema");
+    }
+    assertIntegerJson(artifact);
+    const report = artifact.report;
+    if (report.raw_frames_embedded || report.observation.raw_embedded) {
+      throw new Error("raw frame disclosure boundary failed");
+    }
+    result.rawFramesAbsent = true;
+
+    const surfelBytes = bytesFromBase64(report.observation.public_chunk, "surfel chunk");
+    result.surfels = decodeSurfelChunk(surfelBytes);
+    const observationChunkId = await hashDomain(CHUNK_DOMAIN, surfelBytes);
+    const observationRoot = await hashDomain(
+      MERKLE_LEAF_DOMAIN,
+      digestBytes(observationChunkId),
+    );
+    if (
+      observationChunkId !== report.observation.public_chunk_id ||
+      observationRoot !== report.observation.manifest.chunk_merkle_root ||
+      report.observation.manifest.channels.some(
+        (channel) => channel.chunk_root !== observationRoot,
+      ) ||
+      result.surfels.length !== report.observation.accepted_samples ||
+      (await calculateCellId(report.observation.manifest)) !== report.observation.cell_id
+    ) {
+      throw new Error("observation Cell or surfel commitment mismatch");
+    }
+    const forgeProjection = {
+      accepted_samples: report.observation.accepted_samples,
+      cell_id: report.observation.cell_id,
+      excluded_samples: report.observation.excluded_samples,
+      public_chunk_id: report.observation.public_chunk_id,
+      publication_allowed: report.observation.publication_allowed,
+      raw_embedded: false,
+    };
+    if (
+      (await hashDomain(CHUNK_DOMAIN, encoder.encode(canonicalStringify(forgeProjection)))) !==
+      report.observation.report_id
+    ) {
+      throw new Error("Forge report identity mismatch");
+    }
+    result.cellsValid += 1;
+
+    const sdfBytes = bytesFromBase64(report.sdf_chunk, "SDF chunk");
+    result.voxels = decodeSdfChunk(sdfBytes, artifact.reconstruction_policy.voxel_size_um);
+    const sdfChunkId = await hashDomain(CHUNK_DOMAIN, sdfBytes);
+    const sdfRoot = await hashDomain(MERKLE_LEAF_DOMAIN, digestBytes(sdfChunkId));
+    if (
+      sdfChunkId !== report.sdf_chunk_id ||
+      sdfRoot !== report.sdf_manifest.chunk_merkle_root ||
+      report.sdf_manifest.channels.some((channel) => channel.chunk_root !== sdfRoot) ||
+      (await calculateCellId(report.sdf_manifest)) !== report.sdf_cell_id ||
+      report.sdf_manifest.parents.length !== 1 ||
+      report.sdf_manifest.parents[0] !== report.observation.cell_id ||
+      result.voxels !== report.fused_voxels
+    ) {
+      throw new Error("derived SDF Cell or chunk commitment mismatch");
+    }
+    result.cellsValid += 1;
+
+    const reconstructionProjection = {
+      admitted_depth_samples: report.admitted_depth_samples,
+      capture_commitment: report.capture_commitment,
+      fused_voxels: report.fused_voxels,
+      masked_depth_samples: report.masked_depth_samples,
+      observation_cell: report.observation.cell_id,
+      raw_frames_embedded: false,
+      reconstruction: artifact.reconstruction_policy,
+      sdf_cell: report.sdf_cell_id,
+      sdf_chunk: report.sdf_chunk_id,
+    };
+    if (
+      (await hashDomain(
+        CHUNK_DOMAIN,
+        encoder.encode(canonicalStringify(reconstructionProjection)),
+      )) !== report.report_id
+    ) {
+      throw new Error("reconstruction report identity mismatch");
+    }
+    result.reportValid = true;
+
+    for (const [name, proof, expectedCell] of [
+      ["observation", artifact.observation_proof, report.observation.cell_id],
+      ["SDF", artifact.sdf_proof, report.sdf_cell_id],
+    ] as const) {
+      if (
+        proof.cell_id !== expectedCell ||
+        (await calculateCellId(proof.manifest)) !== expectedCell ||
+        (await calculatePhaFingerprint(proof.pha)) !== proof.pha.phx_fingerprint ||
+        proof.pha.embedded_proof.protocol !== "tessaryn/world-cell/v0" ||
+        proof.pha.embedded_proof.public_inputs.cell_manifest_digest !== expectedCell
+      ) {
+        throw new Error(name + " Power House Cell binding mismatch");
+      }
+      result.phaValid += 1;
+      const replay = await verifyRootprint(proof.rootprint);
+      if (replay !== proof.replay_fingerprint) {
+        throw new Error(name + " Rootprint replay mismatch");
+      }
+      if (!(await verifyMemoryCapsule(proof.memory_capsule))) {
+        throw new Error(name + " Memory Capsule mismatch");
+      }
+    }
+    result.memoryValid = true;
+
+    const lineageReplay = await verifyRootprint(artifact.lineage.rootprint);
+    result.rootprintValid = true;
+    result.replayValid = lineageReplay === artifact.lineage.replay_fingerprint;
+    if (!result.replayValid) throw new Error("world lineage replay mismatch");
+    const graphIds = Object.keys(artifact.lineage.rootprint.branches).sort(compareUtf8);
+    const mappedIds = Object.values(artifact.lineage.branches).sort(compareUtf8);
+    if (canonicalStringify(graphIds) !== canonicalStringify(mappedIds)) {
+      throw new Error("world lineage branch map mismatch");
+    }
+    for (const [label, expectedCell] of [
+      ["observation", report.observation.cell_id],
+      ["sdf-derived", report.sdf_cell_id],
+    ] as const) {
+      const branchId = artifact.lineage.branches[label];
+      const branch = branchId ? artifact.lineage.rootprint.branches[branchId] : undefined;
+      if (branch?.artifact.embedded_proof.public_inputs.cell_manifest_digest !== expectedCell) {
+        throw new Error(label + " lineage binding mismatch");
+      }
+    }
+    if (
+      !Object.values(artifact.observation_proof_report).every(
+        (value) => value === true || value === false,
+      ) ||
+      artifact.observation_proof_report.physical_truth_claimed !== false ||
+      artifact.sdf_proof_report.physical_truth_claimed !== false ||
+      artifact.verification.observation_valid !== true ||
+      artifact.verification.sdf_valid !== true ||
+      artifact.verification.report_valid !== true ||
+      artifact.verification.raw_frames_absent !== true ||
+      artifact.verification.verified_surfels !== result.surfels.length ||
+      artifact.verification.verified_voxels !== result.voxels
+    ) {
+      throw new Error("stored verification report mismatch");
+    }
+  } catch (error) {
+    result.errors.push(error instanceof Error ? error.message : String(error));
+  }
+  return result;
+}
+
+function decodeSurfelChunk(bytes: Uint8Array): ReconstructionBrowserReport["surfels"] {
+  const header = SURFEL_MAGIC.length + 4;
+  if (!hasMagic(bytes, SURFEL_MAGIC) || bytes.length < header) {
+    throw new Error("malformed surfel chunk");
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const count = view.getUint32(SURFEL_MAGIC.length, true);
+  if (count > 1_000_000 || bytes.length !== header + count * 40) {
+    throw new Error("surfel chunk resource or length mismatch");
+  }
+  const surfels: ReconstructionBrowserReport["surfels"] = [];
+  let cursor = header;
+  for (let index = 0; index < count; index += 1) {
+    const position = [0, 0, 0] as [number, number, number];
+    for (let axis = 0; axis < 3; axis += 1) {
+      const coordinate = view.getBigInt64(cursor, true);
+      cursor += 8;
+      const numeric = Number(coordinate);
+      if (!Number.isSafeInteger(numeric)) throw new Error("surfel coordinate is unsafe");
+      position[axis] = numeric;
+    }
+    const normalQ15 = [
+      view.getInt16(cursor, true),
+      view.getInt16(cursor + 2, true),
+      view.getInt16(cursor + 4, true),
+    ] as [number, number, number];
+    cursor += 6;
+    const color = [
+      view.getUint8(cursor),
+      view.getUint8(cursor + 1),
+      view.getUint8(cursor + 2),
+      view.getUint8(cursor + 3),
+    ] as [number, number, number, number];
+    cursor += 4;
+    const radiusUm = view.getUint32(cursor, true);
+    cursor += 4;
+    const confidence = view.getUint16(cursor, true);
+    cursor += 2;
+    if (radiusUm === 0 || confidence > 10_000) throw new Error("invalid surfel sample");
+    surfels.push({ positionUm: position, normalQ15, color, radiusUm });
+  }
+  return surfels;
+}
+
+function decodeSdfChunk(bytes: Uint8Array, expectedVoxelSize: number): number {
+  const header = SDF_MAGIC.length + 8;
+  if (!hasMagic(bytes, SDF_MAGIC) || bytes.length < header) {
+    throw new Error("malformed sparse SDF chunk");
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const voxelSize = view.getUint32(SDF_MAGIC.length, true);
+  const count = view.getUint32(SDF_MAGIC.length + 4, true);
+  if (
+    voxelSize !== expectedVoxelSize ||
+    count > 2_000_000 ||
+    bytes.length !== header + count * 20
+  ) {
+    throw new Error("sparse SDF dimensions mismatch");
+  }
+  let cursor = header;
+  let previous: [number, number, number] | null = null;
+  for (let index = 0; index < count; index += 1) {
+    const coordinate = [
+      view.getInt32(cursor, true),
+      view.getInt32(cursor + 4, true),
+      view.getInt32(cursor + 8, true),
+    ] as [number, number, number];
+    cursor += 16;
+    const weight = view.getUint32(cursor, true);
+    cursor += 4;
+    if (weight === 0 || (previous && compareCoordinate(previous, coordinate) >= 0)) {
+      throw new Error("noncanonical sparse SDF voxel");
+    }
+    previous = coordinate;
+  }
+  return count;
+}
+
+function compareCoordinate(
+  left: [number, number, number],
+  right: [number, number, number],
+): number {
+  return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+}
+
+function bytesFromBase64(encoded: string, label: string): Uint8Array {
+  if (!/^[A-Za-z0-9+/]*$/.test(encoded) || encoded.length % 4 === 1) {
+    throw new Error(label + " contains noncanonical Base64");
+  }
+  const padding = "=".repeat((4 - (encoded.length % 4)) % 4);
+  let binary: string;
+  try {
+    binary = atob(encoded + padding);
+  } catch {
+    throw new Error(label + " contains invalid Base64");
+  }
+  if (btoa(binary).replace(/=+$/u, "") !== encoded) {
+    throw new Error(label + " contains noncanonical Base64");
+  }
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function hasMagic(bytes: Uint8Array, magic: Uint8Array): boolean {
+  return (
+    bytes.length >= magic.length && magic.every((value, index) => bytes[index] === value)
+  );
+}
+
 export async function runMutation(
   world: DemoWorld,
   selected: DemoCell,
   mutation: string,
+  semanticCapsule: Record<string, any> = world.origin_memory_capsule,
 ): Promise<RejectionResult> {
   if (mutation === "coordinate") {
     const manifest = structuredClone(selected.manifest);
@@ -138,7 +415,7 @@ export async function runMutation(
     };
   }
   if (mutation === "semantic") {
-    const capsule = structuredClone(world.origin_memory_capsule);
+    const capsule = structuredClone(semanticCapsule);
     const packet = capsule.semantics?.packets?.[0];
     if (!packet?.packet) throw new Error("semantic packet unavailable");
     packet.packet.summary = "tampered semantic presentation";

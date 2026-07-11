@@ -1,0 +1,22 @@
+name: adversarial-fuzz
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: nightly
+      - run: cargo install cargo-fuzz --version 0.13.2 --locked
+      - run: cargo fuzz run strict_json -- -runs=25000 -max_len=1048576
+      - run: cargo fuzz run world_codecs -- -runs=25000 -max_len=1048576
+      - run: cargo fuzz run signed_envelopes -- -runs=25000 -max_len=1048576

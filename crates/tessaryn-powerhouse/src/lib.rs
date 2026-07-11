@@ -74,6 +74,19 @@ pub struct WorldLineageBundle {
     pub replay_fingerprint: String,
 }
 
+/// Independent verification result for a multi-Cell world lineage.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorldLineageReport {
+    /// Rootprint graph and every branch relation verified.
+    pub rootprint_valid: bool,
+    /// Deterministic replay fingerprint matched.
+    pub replay_valid: bool,
+    /// Every declared label resolved to one graph branch.
+    pub branch_map_valid: bool,
+    /// Number of verified lineage branches.
+    pub branches_verified: u64,
+}
+
 /// Creates the complete Power House projection for a Cell.
 pub fn prove_cell(
     manifest: CellManifestV0,
@@ -186,6 +199,37 @@ pub fn prove_lineage(steps: Vec<CellLineageStep>) -> Result<WorldLineageBundle, 
         rootprint,
         branches,
         replay_fingerprint: replay.state_fingerprint,
+    })
+}
+
+/// Re-verifies a multi-Cell Rootprint lineage and deterministic replay state.
+pub fn verify_lineage_bundle(
+    bundle: &WorldLineageBundle,
+) -> Result<WorldLineageReport, BridgeError> {
+    bundle.rootprint.verify()?;
+    let branch_ids = bundle
+        .branches
+        .values()
+        .map(String::as_str)
+        .collect::<std::collections::BTreeSet<_>>();
+    let graph_ids = bundle
+        .rootprint
+        .branches
+        .keys()
+        .map(String::as_str)
+        .collect::<std::collections::BTreeSet<_>>();
+    if branch_ids != graph_ids || bundle.branches.len() != bundle.rootprint.branches.len() {
+        return Err(BridgeError::LineageBranchMapMismatch);
+    }
+    let replay = bundle.rootprint.replay()?;
+    if replay.state_fingerprint != bundle.replay_fingerprint {
+        return Err(BridgeError::ReplayMismatch);
+    }
+    Ok(WorldLineageReport {
+        rootprint_valid: true,
+        replay_valid: true,
+        branch_map_valid: true,
+        branches_verified: bundle.branches.len() as u64,
     })
 }
 
@@ -311,6 +355,9 @@ pub enum BridgeError {
     /// Lineage labels or parents were invalid.
     #[error("invalid world lineage: {0}")]
     InvalidLineage(String),
+    /// Declared labels did not map exactly to Rootprint branches.
+    #[error("world lineage branch map mismatch")]
+    LineageBranchMapMismatch,
 }
 
 #[cfg(test)]
@@ -398,6 +445,40 @@ mod tests {
         assert!(matches!(
             verify_bundle(&bundle),
             Err(BridgeError::CellIdentityMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn world_lineage_reverifies_and_branch_map_mutation_rejects() {
+        let root = manifest();
+        let mut derived = root.clone();
+        derived.class = CellClass::Derived;
+        derived.temporal_extent.state_kind = TemporalStateKind::Derived;
+        derived.parents = vec![cell_id(&root).unwrap()];
+        derived.channels[0].chunk_root = digest(20);
+        derived.chunk_merkle_root = digest(20);
+        let lineage = prove_lineage(vec![
+            CellLineageStep {
+                label: "observation".to_string(),
+                parent_labels: Vec::new(),
+                manifest: root,
+            },
+            CellLineageStep {
+                label: "derived".to_string(),
+                parent_labels: vec!["observation".to_string()],
+                manifest: derived,
+            },
+        ])
+        .unwrap();
+        assert_eq!(
+            verify_lineage_bundle(&lineage).unwrap().branches_verified,
+            2
+        );
+        let mut mutation = lineage;
+        mutation.branches.remove("derived");
+        assert!(matches!(
+            verify_lineage_bundle(&mutation),
+            Err(BridgeError::LineageBranchMapMismatch)
         ));
     }
 }

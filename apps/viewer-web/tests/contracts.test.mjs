@@ -11,7 +11,7 @@ const workerUrl = new URL("../public/sw.js", import.meta.url);
 test("the bounded Origin declares its evidence state", async () => {
   const world = JSON.parse(await readFile(fixtureUrl, "utf8"));
   assert.equal(world.schema, "tessaryn/demo-world/v0");
-  assert.equal(world.status, "experimental-synthetic");
+  assert.equal(world.status, "reference-origin");
   assert.equal(world.cells.length, 18);
   assert.equal(world.moments.length, 3);
   assert.equal(world.cells.filter((cell) => cell.manifest.evidence.disputed).length, 2);

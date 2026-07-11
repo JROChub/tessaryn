@@ -41,7 +41,7 @@
       "expected_code": "PHA_CORE_INVALID",
       "actual_code": "PHA_CORE_INVALID",
       "core_valid_before_failure": false,
-      "detail": "PHA core fingerprint mismatch: expected sha256:19c5da96493d2bf6c1d79dca40d4585655a423d108744383fb805340dc437f9e, found sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      "detail": "PHA core fingerprint mismatch: expected sha256:f3c7a90465f9a42d582bd30699864c810afc8d68b9ea7b1047e6c509fffe3c7a, found sha256:2222222222222222222222222222222222222222222222222222222222222222"
     },
     {
       "id": "mut_rootprint_root_001",
@@ -71,7 +71,7 @@
       "expected_code": "SIDECAR_INVALID",
       "actual_code": "SIDECAR_INVALID",
       "core_valid_before_failure": true,
-      "detail": "Observatory sidecar digest mismatch: expected sha256:2ee98644657a9563bce2e48037dfa4d0ad7ebac0e9d933f9eb0fe8f4f68b0f28, found sha256:5555555555555555555555555555555555555555555555555555555555555555"
+      "detail": "Observatory sidecar digest mismatch: expected sha256:2ab334651c15466d630a085725b3156ef26db2bd421eafe82a207bea190e5e57, found sha256:5555555555555555555555555555555555555555555555555555555555555555"
     },
     {
       "id": "mut_semantic_digest_001",

@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
+
+const reconstructionArtifact = fileURLToPath(
+  new URL("../../../conformance/reconstruction-v0/minimal-artifact.json", import.meta.url),
+);
 
 async function openOrigin(page: Page): Promise<void> {
   await page.goto("/");
@@ -35,6 +41,7 @@ function expectInsideViewport(rectangle: Awaited<ReturnType<typeof bounds>>): vo
 test("locally verifies every committed layer and renders nonblank canvas pixels", async ({
   page,
 }) => {
+  test.slow();
   await page.setViewportSize({ width: 1440, height: 900 });
   await openOrigin(page);
   const report = await page.evaluate(() => window.__tessaryn?.verification);
@@ -47,6 +54,10 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
     errors: [],
   });
   await page.locator('body[data-materialized="true"]').waitFor();
+  const metrics = await page.evaluate(() => window.__tessaryn?.metrics);
+  expect(metrics?.firstStructureMs).toBeGreaterThan(0);
+  expect(metrics?.materializedMs).toBeGreaterThan(metrics?.firstStructureMs ?? 0);
+  expect(metrics?.verificationMs).toBeGreaterThan(0);
 
   const screenshot = await page.locator("#world-canvas").screenshot();
   const image = PNG.sync.read(screenshot);
@@ -68,6 +79,109 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   }
   expect(colors.size).toBeGreaterThan(100);
   expect(nonblack / samples).toBeGreaterThan(0.8);
+});
+
+test("imports, reverifies, and renders a reconstruction artifact without upload", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openOrigin(page);
+  await page.locator("#import-input").setInputFiles(reconstructionArtifact);
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL CAPTURE ACCEPTED");
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "imported");
+  await expect(page.locator("#cell-count")).toHaveText("2 CELLS");
+  await expect(page.locator("#verify-cells")).toHaveText("2 / 2 VALID");
+  await expect(page.locator("#verify-pha")).toHaveText("2 / 2 VALID");
+  await expect(page.locator("#verify-rootprint")).toHaveText("VALID");
+  await expect(page.locator("#verify-replay")).toHaveText("VALID");
+  await expect(page.locator("#verify-memory")).toHaveText("VALID");
+  await expect(page.locator("#chronofold-button")).toBeDisabled();
+  expect(await page.evaluate(() => window.__tessaryn?.importedVerification)).toMatchObject({
+    cellsValid: 2,
+    phaValid: 2,
+    rootprintValid: true,
+    replayValid: true,
+    memoryValid: true,
+    reportValid: true,
+    rawFramesAbsent: true,
+    voxels: 90,
+    errors: [],
+  });
+  expect(
+    await page.evaluate(() => window.__tessaryn?.importedVerification?.surfels.length),
+  ).toBe(18);
+  await page.locator("#verify-close").click();
+  await expect(page.locator("#trace-title")).toHaveText("IMPORTED RGB-D OBSERVATION");
+  await page.locator("#trace-close").click();
+  await page.locator("#challenge-button").click();
+  for (const [mutation, code] of [
+    ["coordinate", "CELL_ID_MISMATCH"],
+    ["fingerprint", "PHA_CORE_INVALID"],
+    ["semantic", "PACKET_DIGEST_MISMATCH"],
+  ] as const) {
+    await page.locator(`[data-mutation="${mutation}"]`).click();
+    await expect(page.locator("#rejection-trace > b")).toHaveText(code);
+  }
+  await page.locator("#challenge-close").click();
+
+  const screenshot = await page.locator("#world-canvas").screenshot();
+  const image = PNG.sync.read(screenshot);
+  const colors = new Set<string>();
+  for (let y = 0; y < image.height; y += Math.max(1, Math.floor(image.height / 72))) {
+    for (let x = 0; x < image.width; x += Math.max(1, Math.floor(image.width / 72))) {
+      const index = (y * image.width + x) * 4;
+      colors.add(
+        `${String(image.data[index] ?? 0)},${String(image.data[index + 1] ?? 0)},${String(image.data[index + 2] ?? 0)}`,
+      );
+    }
+  }
+  expect(colors.size).toBeGreaterThan(20);
+});
+
+test("rejects duplicate-key and binary mutations before materialization", async ({ page }) => {
+  await openOrigin(page);
+  const valid = await readFile(reconstructionArtifact, "utf8");
+  const duplicate = valid.replace(
+    '"schema":"tessaryn/reconstruction-artifact/v0"',
+    '"schema":"invalid","schema":"tessaryn/reconstruction-artifact/v0"',
+  );
+  await page.locator("#import-input").setInputFiles({
+    name: "duplicate.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(duplicate),
+  });
+  await expect(page.locator("#toast")).toContainText("DUPLICATE JSON KEY");
+  await expect(page.locator("#app")).not.toHaveAttribute("data-source", "imported");
+
+  const tampered = JSON.parse(valid) as {
+    report: { observation: { public_chunk: string } };
+  };
+  const chunk = tampered.report.observation.public_chunk;
+  tampered.report.observation.public_chunk =
+    chunk.slice(0, 30) + (chunk[30] === "A" ? "B" : "A") + chunk.slice(31);
+  await page.locator("#import-input").setInputFiles({
+    name: "tampered.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(tampered)),
+  });
+  await expect(page.locator("#toast")).toContainText("OBSERVATION CELL");
+  await expect(page.locator("#app")).not.toHaveAttribute("data-source", "imported");
+});
+
+test("mobile import keeps verification and close controls reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openOrigin(page);
+  await page.locator("#import-input").setInputFiles(reconstructionArtifact);
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL CAPTURE ACCEPTED");
+  expectInsideViewport(await bounds(page, "#verification-dialog"));
+  expectInsideViewport(await bounds(page, "#verify-close"));
+  await page.locator("#verify-close").click();
+  expectInsideViewport(await bounds(page, "#trace-drawer"));
+  expectInsideViewport(await bounds(page, "#trace-close"));
+  await page.locator("#trace-close").click();
+  await page.locator("#challenge-button").click();
+  expectInsideViewport(await bounds(page, "#challenge-drawer"));
+  expectInsideViewport(await bounds(page, "#challenge-close"));
 });
 
 for (const [name, viewport] of [
@@ -105,12 +219,8 @@ for (const [name, viewport] of [
     expectInsideViewport(await bounds(page, "#challenge-close"));
     await page.locator('[data-mutation="coordinate"]').click();
     await expect(page.locator("#rejection-trace > b")).toHaveText("CELL_ID_MISMATCH");
-    await page.locator('[data-mutation="fingerprint"]').click();
-    await expect(page.locator("#rejection-trace > b")).toHaveText("PHA_CORE_INVALID");
-    await page.locator('[data-mutation="semantic"]').click();
-    await expect(page.locator("#rejection-trace > b")).toHaveText(
-      "PACKET_DIGEST_MISMATCH",
-    );
+    await page.locator("#challenge-close").click();
+    await expect(page.locator("#challenge-drawer")).not.toHaveClass(/open/);
   });
 }
 

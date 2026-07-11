@@ -6,17 +6,17 @@
     <meta name="theme-color" content="#111511">
     <meta
       name="description"
-      content="TESSARYN experimental synthetic Origin: a native, local-first World Cell construction."
+      content="TESSARYN native 4D Origin viewer and local World Cell reconstruction verifier."
     >
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./tessaryn-mark.svg" type="image/svg+xml">
-    <title>TESSARYN / Synthetic Origin 01</title>
+    <title>TESSARYN / Native 4D Origin</title>
   </head>
   <body>
     <div id="app" class="app-shell" data-ready="false">
       <canvas
         id="world-canvas"
-        aria-label="Traversable synthetic TESSARYN Origin"
+        aria-label="Traversable TESSARYN Origin"
         tabindex="0"
       ></canvas>
 
@@ -31,10 +31,14 @@
         </div>
         <div class="top-states" aria-live="polite">
           <span id="network-state"><i></i>LOCAL</span>
-          <span><i></i>EXPERIMENTAL</span>
+          <span><i></i>LOCAL-FIRST</span>
           <span id="cell-count">0 CELLS</span>
         </div>
         <div class="top-actions">
+          <button id="import-button" class="icon-command secondary" type="button" title="Open local reconstruction artifact">
+            <i data-lucide="upload"></i><span>OPEN</span>
+          </button>
+          <input id="import-input" type="file" accept="application/json,.json" hidden>
           <button id="verify-button" class="icon-command" type="button" title="Verify local world">
             <i data-lucide="shield-check"></i><span>VERIFY</span>
           </button>
@@ -165,7 +169,7 @@
 
       <div id="boot-field" class="boot-field">
         <div class="boot-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-        <small>TESSARYN / SYNTHETIC ORIGIN 01</small>
+        <small>TESSARYN / REFERENCE ORIGIN 01</small>
         <b>THE WORLD IS CONSTRUCTED</b>
         <span id="boot-status">READING LOCAL CELL MANIFESTS</span>
       </div>

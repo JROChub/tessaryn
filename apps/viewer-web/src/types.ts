@@ -138,7 +138,7 @@ export interface DemoCell {
 
 export interface DemoWorld {
   schema: "tessaryn/demo-world/v0";
-  status: "experimental-synthetic";
+  status: "reference-origin";
   product: string;
   origin: string;
   evidence_boundary: string;
@@ -171,4 +171,86 @@ export interface RejectionResult {
   code: string;
   coreUnchanged: boolean;
   detail: string;
+}
+
+export interface ForgeReportView {
+  manifest: CellManifest;
+  cell_id: Digest;
+  public_chunk_id: Digest;
+  public_chunk: string;
+  accepted_samples: number;
+  excluded_samples: number;
+  raw_embedded: boolean;
+  publication_allowed: boolean;
+  report_id: Digest;
+}
+
+export interface CellProofBundleView {
+  manifest: CellManifest;
+  cell_id: Digest;
+  pha: PhaArtifact;
+  rootprint: Rootprint;
+  replay_fingerprint: Digest;
+  memory_capsule: Record<string, any>;
+}
+
+export interface ReconstructionArtifactView {
+  schema: "tessaryn/reconstruction-artifact/v0";
+  reconstruction_policy: {
+    pixel_stride: number;
+    surfel_radius_um: number;
+    voxel_size_um: number;
+    truncation_um: number;
+  };
+  report: {
+    capture_commitment: Digest;
+    observation: ForgeReportView;
+    sdf_manifest: CellManifest;
+    sdf_cell_id: Digest;
+    sdf_chunk_id: Digest;
+    sdf_chunk: string;
+    admitted_depth_samples: number;
+    masked_depth_samples: number;
+    fused_voxels: number;
+    report_id: Digest;
+    raw_frames_embedded: boolean;
+  };
+  verification: {
+    observation_valid: boolean;
+    sdf_valid: boolean;
+    report_valid: boolean;
+    raw_frames_absent: boolean;
+    verified_surfels: number;
+    verified_voxels: number;
+  };
+  observation_proof: CellProofBundleView;
+  observation_proof_report: Record<string, boolean | number>;
+  sdf_proof: CellProofBundleView;
+  sdf_proof_report: Record<string, boolean | number>;
+  lineage: {
+    rootprint: Rootprint;
+    branches: Record<string, Digest>;
+    replay_fingerprint: Digest;
+  };
+  lineage_report: Record<string, boolean | number>;
+}
+
+export interface SurfelPoint {
+  positionUm: [number, number, number];
+  normalQ15: [number, number, number];
+  color: [number, number, number, number];
+  radiusUm: number;
+}
+
+export interface ReconstructionBrowserReport {
+  cellsValid: number;
+  phaValid: number;
+  rootprintValid: boolean;
+  replayValid: boolean;
+  memoryValid: boolean;
+  reportValid: boolean;
+  rawFramesAbsent: boolean;
+  surfels: SurfelPoint[];
+  voxels: number;
+  errors: string[];
 }

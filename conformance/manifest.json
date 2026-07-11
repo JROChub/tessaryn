@@ -1,13 +1,19 @@
 {
   "schema": "tessaryn/conformance-manifest/v0",
-  "status": "experimental",
+  "status": "release-candidate",
   "vectors": [
     {
-      "id": "vesper-court-synthetic-origin-v0",
+      "id": "vesper-court-reference-origin-v0",
       "fixture": "../apps/viewer-web/public/world/vesper-court.json",
-      "fixture_sha256": "4fc8f3dec0e96fac9ed9750043c7e1d6af7ec49eacf2e2ba6479409c33aa5804",
+      "fixture_sha256": "81da7f1661a9c67aefe5e8ac1a0ec1e7e2b2473bc30d0ee584cb4e6b954b0427",
       "expected_report": "expected/vesper-court.verify.json",
       "expected_challenge": "expected/vesper-court.challenge.json"
+    },
+    {
+      "id": "minimal-rgbd-reconstruction-v0",
+      "fixture": "reconstruction-v0/minimal-artifact.json",
+      "fixture_sha256": "f7e8a0a7773586f64b1152dad10e83635fd028d67fb743bf7bcaacfd20be66a4",
+      "expected_report": "expected/minimal-reconstruction.verify.json"
     }
   ]
 }

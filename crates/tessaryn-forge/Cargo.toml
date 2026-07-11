@@ -11,6 +11,7 @@ description = "Privacy-gated deterministic capture-record Forge for TESSARYN Cel
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
-tessaryn-canonical = { version = "=0.1.0-alpha.2", path = "../tessaryn-canonical" }
-tessaryn-schema = { version = "=0.1.0-alpha.2", path = "../tessaryn-schema" }
+tessaryn-canonical = { version = "=0.1.0-rc.1", path = "../tessaryn-canonical" }
+tessaryn-schema = { version = "=0.1.0-rc.1", path = "../tessaryn-schema" }
+tessaryn-transport = { version = "=0.1.0-rc.1", path = "../tessaryn-transport" }
 thiserror.workspace = true

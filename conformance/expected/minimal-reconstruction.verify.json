@@ -1,0 +1,8 @@
+{
+  "observation_valid": true,
+  "sdf_valid": true,
+  "report_valid": true,
+  "raw_frames_absent": true,
+  "verified_surfels": 18,
+  "verified_voxels": 90
+}

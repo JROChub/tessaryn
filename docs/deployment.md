@@ -3,13 +3,13 @@
 The TESSARYN Origin is a static, same-origin application built from
 `apps/viewer-web`. GitHub Actions runs its contract tests and production build
 before GitHub Pages can deploy it. The browser fetches only versioned application
-assets and the bundled synthetic world fixture. A service worker retains those
+assets and the bundled reference world fixture. A service worker retains those
 assets for offline reconstruction after the first successful load.
 
-## Published Origins
+## Published Origin
 
-- Canonical first-party path: `https://mfenx.com/tessaryn/`
-- Repository Pages mirror: `https://jrochub.github.io/tessaryn/`
+- Canonical host: `https://tessaryn.com/`
+- Canonical redirect: `https://www.tessaryn.com/` to the apex
 
 The first-party path is deployed as an exact copy of the tested
 `apps/viewer-web/dist` output. The release fixture at both origins must hash to
@@ -17,10 +17,9 @@ the value recorded in `conformance/SHA256SUMS`. Neither distribution changes the
 TESSARYN trust boundary or makes the MFENX website part of canonical Cell
 identity.
 
-## Custom Domain Gate
+## Custom Domain State
 
-Do not configure `tessaryn.com` as the Pages custom domain until all of these
-conditions hold:
+The following gate passed on 2026-07-10:
 
 1. The apex has the four current GitHub Pages `A` records.
 2. `www` is a `CNAME` to `jrochub.github.io`.
@@ -39,6 +38,8 @@ As documented by GitHub on 2026-07-10, the apex records are:
 185.199.111.153
 ```
 
-This repository intentionally contains no `CNAME` file while the domain remains
-parked. A working GitHub Pages origin is preferable to a custom-domain redirect
-whose DNS or certificate has not passed verification.
+The apex also has the four GitHub Pages IPv6 records. GitHub Pages reports the
+custom domain approved, the certificate covers both hosts, HTTPS enforcement is
+enabled, HTTP redirects to HTTPS, and `www` redirects to the apex. The domain is
+configured through the Pages API; the deployment artifact remains build output
+from this repository.

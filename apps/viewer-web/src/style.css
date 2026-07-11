@@ -220,6 +220,21 @@ canvas:focus-visible {
   text-decoration: none;
 }
 
+.icon-command.secondary {
+  color: var(--bone);
+  border-color: var(--line-strong);
+  background: rgba(232, 229, 215, 0.05);
+}
+
+.icon-command:disabled,
+.world-controls button:disabled {
+  color: var(--muted);
+  border-color: var(--line);
+  background: rgba(232, 229, 215, 0.025);
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .icon-button:hover,
 .icon-command:hover,
 .world-controls button:hover {
@@ -922,6 +937,10 @@ canvas:focus-visible {
     right: 10px;
     left: auto;
   }
+
+  .app-shell[data-source="imported"] .moment-rail {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 680px) {
@@ -973,6 +992,10 @@ canvas:focus-visible {
     width: 100%;
     border-top: 0;
     border-bottom: 1px solid var(--line);
+  }
+
+  .app-shell[data-source="imported"] .moment-rail {
+    grid-template-columns: 1fr;
   }
 
   .moment-rail::before {

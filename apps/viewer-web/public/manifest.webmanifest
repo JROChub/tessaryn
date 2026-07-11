@@ -1,7 +1,7 @@
 {
-  "name": "TESSARYN Synthetic Origin",
+  "name": "TESSARYN Reference Origin",
   "short_name": "TESSARYN",
-  "description": "Local-first experimental World Cell construction.",
+  "description": "Local-first native 4D World Cell construction and verification.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#111511",
