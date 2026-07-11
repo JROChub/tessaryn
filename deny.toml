@@ -1,25 +1,30 @@
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+  { id = "RUSTSEC-2024-0388", reason = "Arkworks 0.4 transitively uses derivative; this is an unmaintained notice, not a vulnerability, and is tracked in docs/dependency-risk-register.md" },
+  { id = "RUSTSEC-2024-0436", reason = "Arkworks 0.4 transitively uses paste; this is an unmaintained notice, not a vulnerability, and is tracked in docs/dependency-risk-register.md" },
+  { id = "RUSTSEC-2025-0055", reason = "The transitive tracing-subscriber is never initialized by Power House or TESSARYN; migration is tracked in docs/dependency-risk-register.md" },
+]
 
 [licenses]
 version = 2
 confidence-threshold = 0.93
 allow = [
+  "AGPL-3.0-only",
   "Apache-2.0",
   "BSD-2-Clause",
   "BSD-3-Clause",
-  "CC0-1.0",
-  "ISC",
   "MIT",
-  "MPL-2.0",
   "Unicode-3.0",
-  "Zlib",
 ]
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+skip = [
+  { crate = "syn@1.0.109", reason = "Arkworks 0.4 procedural macros require syn 1 while current workspace macros use syn 2" },
+]
 
 [[bans.deny]]
 name = "mapbox-gl"
@@ -33,4 +38,3 @@ name = "google-maps"
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-

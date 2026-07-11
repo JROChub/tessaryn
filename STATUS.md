@@ -17,6 +17,7 @@ used as defined by the TESSARYN research charter.
 | Bounded Locus compiler | Implemented | Deterministic 10,000-Cell test |
 | Power House bridge | Implemented | `.pha`, Rootprint, replay, Memory Capsule tests |
 | Browser-local verifier | Implemented | 18 Cell and 18 PHA fixture verification |
+| Cross-platform canonical fixture gate | Implemented | Linux, macOS, and Windows CI require byte-identical output |
 | Exact-layer mutation lab | Experimental | Cell, core, and semantic browser challenges |
 | Condensation | Experimental | Vesper Court viewer |
 | Scale Breathing | Experimental | Object, room, and site states |
