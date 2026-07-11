@@ -113,7 +113,7 @@ impl CellStore {
         file.sync_all()?;
         match fs::rename(&temporary, path) {
             Ok(()) => Ok(()),
-            Err(error) if path.exists() => {
+            Err(_) if path.exists() => {
                 let _ = fs::remove_file(&temporary);
                 Ok(())
             }
