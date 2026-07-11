@@ -1,6 +1,6 @@
 # Development Status
 
-Version: `0.1.0-alpha.1`
+Version: `0.1.0-alpha.2`
 
 The words Implemented, Measured, Reproduced, Experimental, and Speculative are
 used as defined by the TESSARYN research charter.

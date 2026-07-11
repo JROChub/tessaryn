@@ -5,7 +5,7 @@
     {
       "id": "vesper-court-synthetic-origin-v0",
       "fixture": "../apps/viewer-web/public/world/vesper-court.json",
-      "fixture_sha256": "406389be2eedb958f3aa28d69f51d023a8171ab0c352541929dda9669cefe2ec",
+      "fixture_sha256": "4fc8f3dec0e96fac9ed9750043c7e1d6af7ec49eacf2e2ba6479409c33aa5804",
       "expected_report": "expected/vesper-court.verify.json",
       "expected_challenge": "expected/vesper-court.challenge.json"
     }

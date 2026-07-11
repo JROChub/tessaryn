@@ -18,12 +18,12 @@
       }
     ],
     "component": {
-      "bom-ref": "@tessaryn/viewer-web@0.1.0-alpha.1",
+      "bom-ref": "@tessaryn/viewer-web@0.1.0-alpha.2",
       "type": "application",
       "name": "viewer-web",
-      "version": "0.1.0-alpha.1",
+      "version": "0.1.0-alpha.2",
       "scope": "required",
-      "purl": "pkg:npm/%40tessaryn/viewer-web@0.1.0-alpha.1",
+      "purl": "pkg:npm/%40tessaryn/viewer-web@0.1.0-alpha.2",
       "properties": [
         {
           "name": "cdx:npm:package:private",
@@ -1656,7 +1656,7 @@
   ],
   "dependencies": [
     {
-      "ref": "@tessaryn/viewer-web@0.1.0-alpha.1",
+      "ref": "@tessaryn/viewer-web@0.1.0-alpha.2",
       "dependsOn": [
         "lucide@1.24.0",
         "three@0.185.1",

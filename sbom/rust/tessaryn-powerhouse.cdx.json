@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.1.0-alpha.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.1.0-alpha.2",
       "author": "MFENX LLC",
       "name": "tessaryn-powerhouse",
-      "version": "0.1.0-alpha.1",
+      "version": "0.1.0-alpha.2",
       "description": "Narrow Power House provenance adapter for TESSARYN Cells",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-powerhouse@0.1.0-alpha.1?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-powerhouse@0.1.0-alpha.2?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,10 +39,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.1.0-alpha.1 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.1.0-alpha.2 bin-target-0",
           "name": "tessaryn_powerhouse",
-          "version": "0.1.0-alpha.1",
-          "purl": "pkg:cargo/tessaryn-powerhouse@0.1.0-alpha.1?download_url=file://.#src/lib.rs"
+          "version": "0.1.0-alpha.2",
+          "purl": "pkg:cargo/tessaryn-powerhouse@0.1.0-alpha.2?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -56,10 +56,10 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.2",
       "author": "MFENX LLC",
       "name": "tessaryn-canonical",
-      "version": "0.1.0-alpha.1",
+      "version": "0.1.0-alpha.2",
       "description": "Strict canonicalization, Cell identity, and chunk Merkle binding for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -67,7 +67,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-canonical@0.1.0-alpha.1?download_url=file://../tessaryn-canonical",
+      "purl": "pkg:cargo/tessaryn-canonical@0.1.0-alpha.2?download_url=file://../tessaryn-canonical",
       "externalReferences": [
         {
           "type": "vcs",
@@ -77,10 +77,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.1.0-alpha.1",
+      "version": "0.1.0-alpha.2",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -88,7 +88,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.1.0-alpha.1?download_url=file://../tessaryn-schema",
+      "purl": "pkg:cargo/tessaryn-schema@0.1.0-alpha.2?download_url=file://../tessaryn-schema",
       "externalReferences": [
         {
           "type": "vcs",
@@ -143,9 +143,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-bn254@0.4.0",
@@ -180,9 +178,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-crypto-primitives@0.4.0",
@@ -217,9 +213,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-ec@0.4.2",
@@ -254,9 +248,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-ed-on-bn254@0.4.0",
@@ -291,9 +283,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-ff-asm@0.4.2",
@@ -328,9 +318,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-ff-macros@0.4.2",
@@ -365,9 +353,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-ff@0.4.2",
@@ -402,9 +388,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-groth16@0.4.0",
@@ -439,9 +423,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-poly@0.4.2",
@@ -476,9 +458,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-r1cs-std@0.4.0",
@@ -513,9 +493,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-relations@0.4.0",
@@ -550,9 +528,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-serialize-derive@0.4.2",
@@ -587,9 +563,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-serialize@0.4.2",
@@ -624,9 +598,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-snark@0.4.0",
@@ -661,9 +633,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/ark-std@0.4.0",
@@ -970,9 +940,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/derivative@2.2.0",
@@ -1184,9 +1152,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/itertools@0.10.5",
@@ -2452,9 +2418,7 @@
       ],
       "licenses": [
         {
-          "license": {
-            "name": "MIT/Apache-2.0"
-          }
+          "expression": "MIT OR Apache-2.0"
         }
       ],
       "purl": "pkg:cargo/version_check@0.9.5",
@@ -2650,31 +2614,31 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.2",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.1",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.1.0-alpha.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.1.0-alpha.2",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#power_house@0.3.24",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.1",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.1",
+        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.1.0-alpha.2",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-alpha.2",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"

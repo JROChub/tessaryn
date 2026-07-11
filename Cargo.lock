@@ -657,7 +657,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-anchor"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "serde",
  "tessaryn-schema",
@@ -666,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-canonical"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "hex",
  "serde",
@@ -678,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-cli"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "power_house",
  "serde",
@@ -691,7 +691,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-forge"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -702,7 +702,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-powerhouse"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "hex",
  "power_house",
@@ -716,7 +716,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-schema"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "serde",
  "thiserror",
@@ -724,7 +724,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-store"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "tessaryn-canonical",
  "tessaryn-schema",
@@ -733,7 +733,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-weave"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "hex",
  "serde",

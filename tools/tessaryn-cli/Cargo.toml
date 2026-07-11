@@ -12,9 +12,9 @@ description = "TESSARYN Cell inspection, conformance, and synthetic-world toolin
 power_house.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tessaryn-canonical = { version = "=0.1.0-alpha.1", path = "../../crates/tessaryn-canonical" }
-tessaryn-powerhouse = { version = "=0.1.0-alpha.1", path = "../../crates/tessaryn-powerhouse" }
-tessaryn-schema = { version = "=0.1.0-alpha.1", path = "../../crates/tessaryn-schema" }
+tessaryn-canonical = { version = "=0.1.0-alpha.2", path = "../../crates/tessaryn-canonical" }
+tessaryn-powerhouse = { version = "=0.1.0-alpha.2", path = "../../crates/tessaryn-powerhouse" }
+tessaryn-schema = { version = "=0.1.0-alpha.2", path = "../../crates/tessaryn-schema" }
 thiserror.workspace = true
 
 [lib]

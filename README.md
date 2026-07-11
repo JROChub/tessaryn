@@ -8,7 +8,7 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.1.0-alpha.1`. It contains a tested World Cell kernel and a
+This repository is `0.1.0-alpha.2`. It contains a tested World Cell kernel and a
 synthetic Origin-to-Cell vertical slice named Vesper Court. It is not TESSARYN
 v0.1 and does not claim a captured place, physical truth, production capture,
 multi-device privacy, or independent reproduction. See [STATUS.md](STATUS.md).
