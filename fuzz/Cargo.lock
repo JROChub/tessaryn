@@ -944,7 +944,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-canonical"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "hex",
  "serde",
@@ -956,7 +956,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-forge"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -981,7 +981,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-powerhouse"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "hex",
  "power_house",
@@ -995,7 +995,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-privacy"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "chacha20poly1305",
  "getrandom 0.3.4",
@@ -1012,7 +1012,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-reconstruct"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "hex",
  "serde",
@@ -1027,7 +1027,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-schema"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "serde",
  "thiserror",
@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-store"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "tessaryn-canonical",
  "tessaryn-schema",
@@ -1044,7 +1044,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-sync"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "ed25519-dalek",
  "getrandom 0.3.4",
@@ -1065,7 +1065,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-transport"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "base64",
  "serde",
@@ -1073,7 +1073,7 @@ dependencies = [
 
 [[package]]
 name = "tessaryn-witness"
-version = "0.1.0-rc.1"
+version = "0.1.0"
 dependencies = [
  "ed25519-dalek",
  "getrandom 0.3.4",

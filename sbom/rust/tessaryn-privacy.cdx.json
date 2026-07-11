@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.1.0-rc.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.1.0",
       "author": "MFENX LLC",
       "name": "tessaryn-privacy",
-      "version": "0.1.0-rc.1",
+      "version": "0.1.0",
       "description": "Authenticated private Locus transport and revocation for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-privacy@0.1.0-rc.1?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-privacy@0.1.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,27 +39,27 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.1.0-rc.1 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.1.0 bin-target-0",
           "name": "tessaryn_privacy",
-          "version": "0.1.0-rc.1",
-          "purl": "pkg:cargo/tessaryn-privacy@0.1.0-rc.1?download_url=file://.#src/lib.rs"
+          "version": "0.1.0",
+          "purl": "pkg:cargo/tessaryn-privacy@0.1.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
     "properties": [
       {
-        "name": "cdx:rustc:sbom:target:all_targets",
-        "value": "true"
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "x86_64-unknown-linux-gnu"
       }
     ]
   },
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.1.0-rc.1",
+      "version": "0.1.0",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -67,7 +67,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.1.0-rc.1?download_url=file://../tessaryn-schema",
+      "purl": "pkg:cargo/tessaryn-schema@0.1.0?download_url=file://../tessaryn-schema",
       "externalReferences": [
         {
           "type": "vcs",
@@ -77,10 +77,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.0-rc.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.0",
       "author": "MFENX LLC",
       "name": "tessaryn-transport",
-      "version": "0.1.0-rc.1",
+      "version": "0.1.0",
       "description": "Canonical bounded transport encodings for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -88,7 +88,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-transport@0.1.0-rc.1?download_url=file://../tessaryn-transport",
+      "purl": "pkg:cargo/tessaryn-transport@0.1.0?download_url=file://../tessaryn-transport",
       "externalReferences": [
         {
           "type": "vcs",
@@ -473,37 +473,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#fiat-crypto@0.2.9",
-      "author": "Fiat Crypto library authors <jgross@mit.edu>",
-      "name": "fiat-crypto",
-      "version": "0.2.9",
-      "description": "Fiat-crypto generated Rust",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0 OR BSD-1-Clause"
-        }
-      ],
-      "purl": "pkg:cargo/fiat-crypto@0.2.9",
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://github.com/mit-plv/fiat-crypto"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/mit-plv/fiat-crypto"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#generic-array@0.14.7",
       "author": "Bartłomiej Kamiński <fizyk20@gmail.com>, Aaron Trent <novacrazy@gmail.com>",
       "name": "generic-array",
@@ -867,36 +836,6 @@
         {
           "type": "vcs",
           "url": "https://github.com/dtolnay/quote"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#r-efi@5.3.0",
-      "name": "r-efi",
-      "version": "5.3.0",
-      "description": "UEFI Reference Specification Protocol Constants and Definitions",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0 OR LGPL-2.1-or-later"
-        }
-      ],
-      "purl": "pkg:cargo/r-efi@5.3.0",
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://github.com/r-efi/r-efi/wiki"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/r-efi/r-efi"
         }
       ]
     },
@@ -1381,98 +1320,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#wasi@0.11.1+wasi-snapshot-preview1",
-      "author": "The Cranelift Project Developers",
-      "name": "wasi",
-      "version": "0.11.1+wasi-snapshot-preview1",
-      "description": "Experimental WASI API bindings for Rust",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
-        }
-      ],
-      "purl": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/wasi"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/bytecodealliance/wasi"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#wasip2@1.0.4+wasi-0.2.12",
-      "name": "wasip2",
-      "version": "1.0.4+wasi-0.2.12",
-      "description": "WASIp2 API bindings for Rust",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "b67efb37e106e55ce722a510d6b5f9c17f083e5fc79afc2badeb12cc313d9487"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
-        }
-      ],
-      "purl": "pkg:cargo/wasip2@1.0.4+wasi-0.2.12",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/wasip2"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/bytecodealliance/wasi-rs"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#wit-bindgen@0.57.1",
-      "author": "Alex Crichton <alex@alexcrichton.com>",
-      "name": "wit-bindgen",
-      "version": "0.57.1",
-      "description": "Rust bindings generator and runtime support for WIT and the component model. Used when compiling Rust programs to the component model. ",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
-        }
-      ],
-      "purl": "pkg:cargo/wit-bindgen@0.57.1",
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://github.com/bytecodealliance/wit-bindgen"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/bytecodealliance/wit-bindgen"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#x25519-dalek@2.0.1",
       "author": "Isis Lovecruft <isis@patternsinthevoid.net>, DebugSteven <debugsteven@gmail.com>, Henry de Valence <hdevalence@hdevalence.ca>",
       "name": "x25519-dalek",
@@ -1571,7 +1418,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.1.0-rc.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.1.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chacha20poly1305@0.10.1",
         "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.3.4",
@@ -1579,22 +1426,22 @@
         "registry+https://github.com/rust-lang/crates.io-index#hkdf@0.12.4",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
-        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.0-rc.1",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
         "registry+https://github.com/rust-lang/crates.io-index#x25519-dalek@2.0.1",
         "registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.0-rc.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228"
@@ -1646,10 +1493,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#cpufeatures@0.2.17",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186"
-      ]
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#cpufeatures@0.2.17"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#crypto-common@0.1.7",
@@ -1674,7 +1518,6 @@
         "registry+https://github.com/rust-lang/crates.io-index#cpufeatures@0.2.17",
         "registry+https://github.com/rust-lang/crates.io-index#curve25519-dalek-derive@0.1.1",
         "registry+https://github.com/rust-lang/crates.io-index#digest@0.10.7",
-        "registry+https://github.com/rust-lang/crates.io-index#fiat-crypto@0.2.9",
         "registry+https://github.com/rust-lang/crates.io-index#rustc_version@0.4.1",
         "registry+https://github.com/rust-lang/crates.io-index#subtle@2.6.1",
         "registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0"
@@ -1689,9 +1532,6 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#fiat-crypto@0.2.9"
-    },
-    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#generic-array@0.14.7",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#typenum@1.20.1",
@@ -1702,17 +1542,14 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
-        "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186",
-        "registry+https://github.com/rust-lang/crates.io-index#wasi@0.11.1+wasi-snapshot-preview1"
+        "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186"
       ]
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.3.4",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
-        "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186",
-        "registry+https://github.com/rust-lang/crates.io-index#r-efi@5.3.0",
-        "registry+https://github.com/rust-lang/crates.io-index#wasip2@1.0.4+wasi-0.2.12"
+        "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186"
       ]
     },
     {
@@ -1763,9 +1600,6 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#r-efi@5.3.0"
-    },
-    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.6.4",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17"
@@ -1788,10 +1622,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228"
-      ]
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228",
@@ -1849,18 +1680,6 @@
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#version_check@0.9.5"
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#wasi@0.11.1+wasi-snapshot-preview1"
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#wasip2@1.0.4+wasi-0.2.12",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#wit-bindgen@0.57.1"
-      ]
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#wit-bindgen@0.57.1"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#x25519-dalek@2.0.1",

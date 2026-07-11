@@ -10,5 +10,5 @@ description = "Deterministic fixed-point Anchor Graph for TESSARYN"
 
 [dependencies]
 serde.workspace = true
-tessaryn-schema = { version = "=0.1.0-rc.1", path = "../tessaryn-schema" }
+tessaryn-schema = { version = "=0.1.0", path = "../tessaryn-schema" }
 thiserror.workspace = true

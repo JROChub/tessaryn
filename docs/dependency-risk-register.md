@@ -19,7 +19,7 @@ TESSARYN does not call it directly.
 
 ## RUSTSEC-2025-0055
 
-Remediated in `0.1.0-rc.1`. The published Arkworks 0.4 crate constrains
+Remediated in `0.1.0`. The published Arkworks 0.4 crate constrains
 `tracing-subscriber` to the vulnerable 0.2 line. TESSARYN carries a minimal,
 licensed compatibility backport in `vendor/ark-relations`: it updates the
 dependency to 0.3 and renames the empty `Layer::new_span` hook to

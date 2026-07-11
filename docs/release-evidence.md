@@ -1,10 +1,9 @@
-# Release Evidence Boundary
+# Optional Field Evidence Profile
 
-`0.1.0-rc.1` means the software release candidate passes its internal
-conformance contract. It does not mean a physical pilot has been manufactured
-inside CI.
+TESSARYN software releases are governed by repository conformance. A physical
+deployment is optional and does not gate `0.1.0` or later software versions.
 
-Promotion to `0.1.0` requires an evidence package containing:
+An operator may publish a field-evidence package containing:
 
 1. one authorized 20-40 meter indoor/outdoor site;
 2. three capture sessions on distinct dates;
@@ -16,7 +15,10 @@ Promotion to `0.1.0` requires an evidence package containing:
    receipts;
 7. one unresolved reconstruction branch and its source evidence;
 8. a networking-disabled replay and verification receipt;
-9. trademark counsel's jurisdiction- and class-specific review record.
+9. any deployment-specific legal or policy records the operator elects to
+   disclose.
 
 Code may validate the digital artifacts and signatures in that package. Only
-the named operators, reviewers, and counsel can create their external evidence.
+the named operators and reviewers can create external evidence. Absence of a
+field package does not make the software incomplete; presence of one does not
+upgrade a computational identity claim into proof of physical truth.

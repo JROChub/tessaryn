@@ -24,5 +24,6 @@ physical truth. Semantic text is non-core and must never be rendered as HTML.
 - Keep browser verifier-critical code same-origin and free of remote scripts.
 - Run decoders for untrusted rich formats in a sandbox before production use.
 
-The current alpha has no production capture or peer synchronization path. Those
-surfaces require separate threat-model and privacy reviews before release.
+A production deployment that enables real-world capture or peer synchronization
+should apply a deployment-specific threat model and privacy review. Those
+operator controls do not gate the versioned TESSARYN software release.

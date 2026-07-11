@@ -9,6 +9,6 @@ rust-version.workspace = true
 description = "Local content-addressed Cell and chunk store for TESSARYN"
 
 [dependencies]
-tessaryn-canonical = { version = "=0.1.0-rc.1", path = "../tessaryn-canonical" }
-tessaryn-schema = { version = "=0.1.0-rc.1", path = "../tessaryn-schema" }
+tessaryn-canonical = { version = "=0.1.0", path = "../tessaryn-canonical" }
+tessaryn-schema = { version = "=0.1.0", path = "../tessaryn-schema" }
 thiserror.workspace = true

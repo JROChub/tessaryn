@@ -4,6 +4,7 @@ import type { DemoCell, DemoMoment, DemoWorld, SurfelPoint } from "./types";
 export type ScaleMode = "object" | "room" | "site";
 
 export interface WorldDiagnostics {
+  visualProfile: "full" | "constrained";
   frameMedianMs: number | null;
   frameP95Ms: number | null;
   drawCalls: number;
@@ -15,6 +16,9 @@ export interface WorldDiagnostics {
   firstStructureMs: number | null;
   materializationMs: number | null;
   cellCount: number;
+  provenanceLinks: number;
+  temporalManifolds: number;
+  semanticConstellations: number;
   scale: ScaleMode;
   chronofold: boolean;
 }
@@ -25,15 +29,22 @@ interface CellNode {
   materials: THREE.Material[];
   basePosition: THREE.Vector3;
   targetPosition: THREE.Vector3;
+  baseQuaternion: THREE.Quaternion;
+  assemblyQuaternion: THREE.Quaternion;
+  halo: THREE.Mesh | null;
+  haloMaterial: THREE.MeshBasicMaterial | null;
   currentOpacity: number;
   targetOpacity: number;
   condensed: boolean;
   condenseAt: number;
+  assembledAt: number | null;
   momentIndex: number;
 }
 
 interface WeaveLink {
   line: THREE.Line;
+  pulse: THREE.Mesh;
+  phase: number;
   from: CellNode;
   to: CellNode;
 }
@@ -55,8 +66,10 @@ export class TessarynWorld {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(52, 1, 0.05, 160);
+  private readonly fieldRoot = new THREE.Group();
   private readonly root = new THREE.Group();
   private readonly aggregateRoot = new THREE.Group();
+  private readonly temporalRoot = new THREE.Group();
   private readonly importedRoot = new THREE.Group();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
@@ -67,14 +80,18 @@ export class TessarynWorld {
   private readonly textureCache = new Map<string, THREE.CanvasTexture>();
   private readonly animatedShaders: THREE.ShaderMaterial[] = [];
   private readonly aggregateMaterials: THREE.Material[] = [];
+  private readonly temporalMaterials: THREE.Material[] = [];
   private readonly keys = new Set<string>();
   private readonly timer = new THREE.Timer();
   private readonly focus = new THREE.Vector3(0, 1.1, 0);
   private readonly targetFocus = new THREE.Vector3(0, 1.1, 0);
   private readonly selectedWorld = new THREE.Vector3();
-  private readonly targetBackground = new THREE.Color("#a8c5c2");
-  private readonly sun = new THREE.DirectionalLight("#fff0bb", 2.2);
-  private readonly ambient = new THREE.HemisphereLight("#d8ded2", "#283228", 1.5);
+  private readonly targetBackground = new THREE.Color("#060b10");
+  private readonly sun = new THREE.DirectionalLight("#ffe1a1", 3.4);
+  private readonly ambient = new THREE.HemisphereLight("#b9dce0", "#15120f", 1.45);
+  private readonly crystalLight = new THREE.PointLight("#73cdd0", 12, 34, 1.8);
+  private readonly archiveLight = new THREE.PointLight("#e2b76d", 8, 28, 1.9);
+  private readonly constrainedRenderer: boolean;
   private pointerState: { x: number; y: number; moved: boolean } | null = null;
   private yaw = 0.12;
   private pitch = 0.44;
@@ -90,11 +107,14 @@ export class TessarynWorld {
   private animationFrame = 0;
   private aggregateOpacity = 0;
   private targetAggregateOpacity = 0;
+  private temporalOpacity = 0;
+  private targetTemporalOpacity = 0;
   private readonly frameDurations: number[] = [];
   private firstStructureMs: number | null = null;
   private materializationMs: number | null = null;
   private resizeObserver: ResizeObserver;
   private importedFrame: { focus: THREE.Vector3; radius: number } | null = null;
+  private readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   constructor(canvas: HTMLCanvasElement, world: DemoWorld, callbacks: WorldCallbacks) {
     this.canvas = canvas;
@@ -105,24 +125,40 @@ export class TessarynWorld {
       antialias: true,
       powerPreference: "high-performance",
     });
+    this.constrainedRenderer = this.detectConstrainedRenderer();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth <= 680 ? 1 : 1.4));
-    this.renderer.shadowMap.enabled = innerWidth > 680;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.scene.background = new THREE.Color("#a8c5c2");
-    this.scene.fog = new THREE.FogExp2("#a8c5c2", 0.013);
-    this.scene.add(this.root, this.aggregateRoot, this.importedRoot, this.ambient, this.sun);
+    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.setPixelRatio(
+      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.75 : innerWidth <= 680 ? 1 : 1.4),
+    );
+    this.renderer.shadowMap.enabled = innerWidth > 680 && !this.constrainedRenderer;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.scene.background = new THREE.Color("#060b10");
+    this.scene.fog = new THREE.FogExp2("#060b10", 0.018);
+    this.crystalLight.position.set(-7, 4.5, 2);
+    this.archiveLight.position.set(6, 2.8, -5);
+    this.scene.add(
+      this.fieldRoot,
+      this.root,
+      this.aggregateRoot,
+      this.temporalRoot,
+      this.importedRoot,
+      this.ambient,
+      this.sun,
+    );
+    if (!this.constrainedRenderer) this.scene.add(this.crystalLight, this.archiveLight);
     this.timer.connect(document);
     this.sun.position.set(-8, 14, 9);
-    this.sun.castShadow = innerWidth > 680;
+    this.sun.castShadow = innerWidth > 680 && !this.constrainedRenderer;
     this.sun.shadow.mapSize.set(1024, 1024);
     this.sun.shadow.camera.left = -18;
     this.sun.shadow.camera.right = 18;
     this.sun.shadow.camera.top = 18;
     this.sun.shadow.camera.bottom = -18;
     this.buildWorld();
+    const initialMoment = this.world.moments.find((candidate) => candidate.id === this.moment);
+    if (initialMoment) this.applyEnvironment(initialMoment);
     this.bindInteractions();
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
@@ -170,16 +206,21 @@ export class TessarynWorld {
 
   setChronofold(active: boolean): void {
     this.chronofold = active;
+    this.targetTemporalOpacity = active && !this.importedFrame ? 1 : 0;
     this.updateCellTargets();
   }
 
   setEvidence(active: boolean): void {
     this.evidence = active;
-    for (const link of this.weaveLinks) link.line.visible = active;
+    for (const link of this.weaveLinks) {
+      link.line.visible = active;
+      link.pulse.visible = active && !this.constrainedRenderer;
+    }
     for (const node of this.nodes.values()) {
       const boundary = node.group.getObjectByName("cell-boundary");
       if (boundary) boundary.visible = active;
     }
+    this.updateCellTargets();
   }
 
   selectCell(key: string): void {
@@ -289,11 +330,15 @@ export class TessarynWorld {
         void main() {
           vec2 disc = gl_PointCoord - vec2(0.5);
           float radius = length(disc);
-          if (radius > 0.5) discard;
+          float angle = atan(disc.y, disc.x);
+          float crystalEdge = 0.43 + 0.045 * cos(angle * 6.0);
+          if (radius > crystalEdge) discard;
           vec3 lightDirection = normalize(vec3(-0.35, 0.72, 0.48));
           float diffuse = 0.42 + 0.58 * abs(dot(normalize(vNormal), lightDirection));
-          float edge = 1.0 - smoothstep(0.38, 0.5, radius);
-          gl_FragColor = vec4(vColor * diffuse, opacity * edge);
+          float edge = 1.0 - smoothstep(crystalEdge - 0.08, crystalEdge, radius);
+          float core = 1.0 - smoothstep(0.0, crystalEdge, radius);
+          vec3 crystal = vColor * diffuse + vec3(0.14, 0.24, 0.23) * core;
+          gl_FragColor = vec4(crystal, opacity * edge);
         }
       `,
     });
@@ -318,10 +363,15 @@ export class TessarynWorld {
       materials: this.collectMaterials(group),
       basePosition: focus.clone(),
       targetPosition: focus.clone(),
+      baseQuaternion: group.quaternion.clone(),
+      assemblyQuaternion: group.quaternion.clone(),
+      halo: null,
+      haloMaterial: null,
       currentOpacity: 1,
       targetOpacity: 1,
       condensed: true,
       condenseAt: 0,
+      assembledAt: 0,
       momentIndex: 1,
     };
     this.nodes.set(cell.key, node);
@@ -329,7 +379,7 @@ export class TessarynWorld {
     this.interactive.push(points);
     this.importedFrame = { focus, radius };
     this.selected = node;
-    this.chronofold = false;
+    this.setChronofold(false);
     this.setScale("room");
     this.setOpacity(node, 1);
     this.callbacks.onCellSelected(cell);
@@ -364,6 +414,7 @@ export class TessarynWorld {
       ? String(context.getParameter(debug.UNMASKED_RENDERER_WEBGL))
       : String(context.getParameter(context.RENDERER));
     return {
+      visualProfile: this.constrainedRenderer ? "constrained" : "full",
       frameMedianMs: percentile(0.5),
       frameP95Ms: percentile(0.95),
       drawCalls: this.renderer.info.render.calls,
@@ -375,6 +426,11 @@ export class TessarynWorld {
       firstStructureMs: this.firstStructureMs,
       materializationMs: this.materializationMs,
       cellCount: this.nodes.size,
+      provenanceLinks: this.weaveLinks.length,
+      temporalManifolds: this.world.moments.length,
+      semanticConstellations: [...this.nodes.values()].filter((node) =>
+        Boolean(node.group.getObjectByName("slbit-constellation")),
+      ).length,
       scale: this.scale,
       chronofold: this.chronofold,
     };
@@ -386,6 +442,15 @@ export class TessarynWorld {
     document.removeEventListener("visibilitychange", this.handleVisibility);
     this.timer.dispose();
     this.renderer.dispose();
+  }
+
+  private detectConstrainedRenderer(): boolean {
+    const context = this.renderer.getContext();
+    const debug = context.getExtension("WEBGL_debug_renderer_info");
+    const renderer = debug
+      ? String(context.getParameter(debug.UNMASKED_RENDERER_WEBGL))
+      : String(context.getParameter(context.RENDERER));
+    return /swiftshader|llvmpipe|software rasterizer/i.test(renderer);
   }
 
   private disposeImportedRoot(): void {
@@ -402,15 +467,23 @@ export class TessarynWorld {
   }
 
   private buildWorld(): void {
+    this.createAnchorField();
+    const floorMaterial = this.constrainedRenderer
+      ? new THREE.MeshBasicMaterial({
+          color: "#10191a",
+          transparent: true,
+          opacity: 0.78,
+        })
+      : new THREE.MeshStandardMaterial({
+          color: "#10191a",
+          roughness: 0.72,
+          metalness: 0.18,
+          transparent: true,
+          opacity: 0.78,
+        });
     const plane = new THREE.Mesh(
-      new THREE.CircleGeometry(23, 96),
-      new THREE.MeshStandardMaterial({
-        color: "#768078",
-        roughness: 1,
-        metalness: 0,
-        transparent: true,
-        opacity: 0.2,
-      }),
+      new THREE.CircleGeometry(23, 12),
+      floorMaterial,
     );
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = -0.205;
@@ -421,18 +494,43 @@ export class TessarynWorld {
       const group = this.createCellObject(cell);
       const momentIndex = this.momentIndex(cell);
       const priority = this.condensationPriority(cell);
+      const baseQuaternion = group.quaternion.clone();
+      const random = seededRandom(cell.visual.seed ^ 0x51f15e);
+      const axis = new THREE.Vector3(
+        random() - 0.5,
+        0.35 + random() * 0.65,
+        random() - 0.5,
+      ).normalize();
+      const assemblyQuaternion = baseQuaternion
+        .clone()
+        .multiply(
+          new THREE.Quaternion().setFromAxisAngle(
+            axis,
+            (0.22 + random() * 0.34) * (random() > 0.5 ? 1 : -1),
+          ),
+        );
+      const assemblyHalo = group.getObjectByName("assembly-halo");
       const node: CellNode = {
         cell,
         group,
         materials: this.collectMaterials(group),
         basePosition: group.position.clone(),
         targetPosition: group.position.clone(),
+        baseQuaternion,
+        assemblyQuaternion,
+        halo: assemblyHalo instanceof THREE.Mesh ? assemblyHalo : null,
+        haloMaterial:
+          group.userData.haloMaterial instanceof THREE.MeshBasicMaterial
+            ? group.userData.haloMaterial
+            : null,
         currentOpacity: 0,
         targetOpacity: 0,
         condensed: cell.visual.primitive === "none",
         condenseAt: 260 + priority * 250 + index * 28,
+        assembledAt: cell.visual.primitive === "none" ? 0 : null,
         momentIndex,
       };
+      group.quaternion.copy(assemblyQuaternion);
       group.scale.setScalar(node.condensed ? 1 : 0.001);
       this.setOpacity(node, 0);
       this.nodes.set(cell.key, node);
@@ -442,7 +540,69 @@ export class TessarynWorld {
     this.createWeave();
     this.createUnknownBoundary();
     this.createAggregateField();
+    this.createTemporalField();
     this.updateCellTargets();
+  }
+
+  private createAnchorField(): void {
+    this.fieldRoot.name = "anchor-field";
+    const fieldMaterial = new THREE.MeshBasicMaterial({
+      color: "#5f999b",
+      transparent: true,
+      opacity: 0.035,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    for (const [inner, outer] of [
+      [4.4, 4.46],
+      [8.8, 8.88],
+      [14.2, 14.3],
+      [21.5, 21.64],
+    ] as const) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 12), fieldMaterial);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = -0.19;
+      this.fieldRoot.add(ring);
+    }
+
+    const radialPositions: number[] = [];
+    for (let index = 0; index < 12; index += 1) {
+      const angle = (index / 12) * Math.PI * 2;
+      radialPositions.push(0, -0.185, 0);
+      radialPositions.push(Math.cos(angle) * 21.5, -0.185, Math.sin(angle) * 21.5);
+    }
+    const radialGeometry = new THREE.BufferGeometry();
+    radialGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(radialPositions, 3),
+    );
+    this.fieldRoot.add(
+      new THREE.LineSegments(
+        radialGeometry,
+        new THREE.LineBasicMaterial({
+          color: "#7da6a4",
+          transparent: true,
+          opacity: 0.055,
+          depthWrite: false,
+        }),
+      ),
+    );
+
+    const anchorMaterial = this.constrainedRenderer
+      ? new THREE.MeshBasicMaterial({ color: "#a9ded7" })
+      : new THREE.MeshStandardMaterial({
+          color: "#d6ebe5",
+          emissive: "#4e9d9c",
+          emissiveIntensity: 0.7,
+          roughness: 0.16,
+          metalness: 0.28,
+        });
+    const anchorCore = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.18, 0),
+      anchorMaterial,
+    );
+    anchorCore.position.y = -0.02;
+    this.fieldRoot.add(anchorCore);
   }
 
   private createCellObject(cell: DemoCell): THREE.Group {
@@ -649,9 +809,17 @@ export class TessarynWorld {
         threshold.rotation.x = -0.18;
         break;
       }
-      case "none":
+      case "none": {
+        if (cell.manifest.evidence.semantic_only) {
+          this.createSemanticConstellation(group, cell);
+        }
+        break;
+      }
       default:
         break;
+    }
+    if (cell.visual.primitive !== "none" && cell.visual.primitive !== "privacy") {
+      this.createCrystallineLattice(group, cell, size);
     }
     if (
       cell.visual.primitive !== "none" &&
@@ -670,6 +838,154 @@ export class TessarynWorld {
       group.add(helper);
     }
     return group;
+  }
+
+  private createCrystallineLattice(
+    group: THREE.Group,
+    cell: DemoCell,
+    size: [number, number, number],
+  ): void {
+    const random = seededRandom(cell.visual.seed ^ 0xc311c311);
+    const stateColor = cell.manifest.evidence.disputed
+      ? "#e1846f"
+      : cell.manifest.evidence.restricted
+        ? "#dfbd73"
+        : "#8fd8d2";
+    const points: THREE.Vector3[] = [new THREE.Vector3()];
+    const count = this.constrainedRenderer ? 4 : innerWidth <= 680 ? 6 : 9;
+    for (let index = 0; index < count; index += 1) {
+      points.push(
+        new THREE.Vector3(
+          (random() - 0.5) * size[0] * 0.78,
+          (random() - 0.5) * size[1] * 0.78,
+          (random() - 0.5) * size[2] * 0.78,
+        ),
+      );
+    }
+
+    const segments: number[] = [];
+    for (let index = 1; index < points.length; index += 1) {
+      const point = points[index];
+      const next = points[index === points.length - 1 ? 1 : index + 1];
+      if (!point || !next) continue;
+      segments.push(0, 0, 0, point.x, point.y, point.z);
+      segments.push(point.x, point.y, point.z, next.x, next.y, next.z);
+    }
+    const latticeGeometry = new THREE.BufferGeometry();
+    latticeGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(segments, 3),
+    );
+    const latticeMaterial = new THREE.LineBasicMaterial({
+      color: stateColor,
+      transparent: true,
+      opacity: cell.manifest.evidence.disputed ? 0.31 : 0.16,
+      depthWrite: false,
+    });
+    latticeMaterial.userData.baseOpacity = latticeMaterial.opacity;
+    const lattice = new THREE.LineSegments(latticeGeometry, latticeMaterial);
+    lattice.name = "cell-lattice";
+    group.add(lattice);
+
+    if (!this.constrainedRenderer) {
+      const nodeGeometry = new THREE.OctahedronGeometry(0.035, 0);
+      const nodeMaterial = new THREE.MeshBasicMaterial({
+        color: stateColor,
+        transparent: true,
+        opacity: 0.52,
+        depthWrite: false,
+      });
+      nodeMaterial.userData.baseOpacity = nodeMaterial.opacity;
+      const nodes = new THREE.InstancedMesh(nodeGeometry, nodeMaterial, points.length);
+      const matrix = new THREE.Matrix4();
+      points.forEach((point, index) => {
+        const nodeScale = index === 0 ? 1.8 : 0.72 + random() * 0.55;
+        matrix.makeScale(nodeScale, nodeScale, nodeScale);
+        matrix.setPosition(point);
+        nodes.setMatrixAt(index, matrix);
+      });
+      nodes.instanceMatrix.needsUpdate = true;
+      group.add(nodes);
+    }
+
+    if (this.constrainedRenderer) return;
+    const haloMaterial = new THREE.MeshBasicMaterial({
+      color: stateColor,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    haloMaterial.userData.baseOpacity = 0;
+    const radius = Math.max(0.28, Math.hypot(size[0], size[2]) * 0.54);
+    const halo = new THREE.Mesh(
+      new THREE.RingGeometry(radius * 0.97, radius, 24),
+      haloMaterial,
+    );
+    halo.name = "assembly-halo";
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = -size[1] * 0.5 - 0.035;
+    group.add(halo);
+    group.userData.haloMaterial = haloMaterial;
+  }
+
+  private createSemanticConstellation(group: THREE.Group, cell: DemoCell): void {
+    const summarySeed = [...cell.semantic_summary].reduce(
+      (value, character) => Math.imul(value ^ character.charCodeAt(0), 16_777_619),
+      cell.visual.seed ^ 0x51b17,
+    );
+    const random = seededRandom(summarySeed);
+    const points: THREE.Vector3[] = [];
+    const count = innerWidth <= 680 ? 8 : 13;
+    for (let index = 0; index < count; index += 1) {
+      const angle = (index / count) * Math.PI * 2 + (random() - 0.5) * 0.28;
+      const radius = 1.45 + random() * 1.15;
+      points.push(
+        new THREE.Vector3(
+          Math.cos(angle) * radius,
+          2.5 + (random() - 0.5) * 1.45,
+          Math.sin(angle) * radius * 0.68,
+        ),
+      );
+    }
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const pointsMaterial = new THREE.PointsMaterial({
+      color: "#b7d9d6",
+      size: innerWidth <= 680 ? 0.075 : 0.055,
+      transparent: true,
+      opacity: 0.58,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    pointsMaterial.userData.baseOpacity = pointsMaterial.opacity;
+    const constellation = new THREE.Points(geometry, pointsMaterial);
+    constellation.name = "slbit-constellation";
+    this.registerInteractive(constellation, cell);
+    group.add(constellation);
+
+    const connections: number[] = [];
+    for (let index = 0; index < points.length; index += 1) {
+      const point = points[index];
+      const next = points[(index + 1) % points.length];
+      if (!point || !next) continue;
+      connections.push(point.x, point.y, point.z, next.x, next.y, next.z);
+      if (index % 3 === 0) {
+        connections.push(point.x, point.y, point.z, 0, 2.5, 0);
+      }
+    }
+    const connectionGeometry = new THREE.BufferGeometry();
+    connectionGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(connections, 3),
+    );
+    const connectionMaterial = new THREE.LineBasicMaterial({
+      color: "#9a8ec3",
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+    });
+    connectionMaterial.userData.baseOpacity = connectionMaterial.opacity;
+    group.add(new THREE.LineSegments(connectionGeometry, connectionMaterial));
   }
 
   private addMesh(
@@ -692,21 +1008,61 @@ export class TessarynWorld {
     this.interactive.push(object);
   }
 
-  private materialFor(cell: DemoCell): THREE.MeshStandardMaterial {
-    const texture = this.textureFor(cell.visual.material, cell.visual.color, cell.visual.seed);
+  private presentationColor(cell: DemoCell): THREE.Color {
+    const color = new THREE.Color(cell.visual.color);
+    const material = cell.visual.material;
+    if (material.includes("archive")) return color.lerp(new THREE.Color("#dfb86f"), 0.58);
+    if (material.includes("mineral")) return color.lerp(new THREE.Color("#244a4b"), 0.72);
+    if (material.includes("limestone") || material.includes("lichen")) {
+      return color.lerp(new THREE.Color("#6f918e"), 0.56);
+    }
+    if (material.includes("strata")) return color.lerp(new THREE.Color("#8c6c52"), 0.5);
+    if (material.includes("foliage") || material.includes("vegetation")) {
+      return color.lerp(new THREE.Color("#2f6c66"), 0.48);
+    }
+    if (material.includes("wood")) return color.lerp(new THREE.Color("#76533e"), 0.34);
+    return color;
+  }
+
+  private materialFor(
+    cell: DemoCell,
+  ): THREE.MeshStandardMaterial | THREE.MeshBasicMaterial {
+    const displayColor = this.presentationColor(cell);
+    const displayHex = "#" + displayColor.getHexString();
+    const texture = this.textureFor(cell.visual.material, displayHex, cell.visual.seed);
     const disputed = cell.manifest.evidence.disputed;
-    const material = new THREE.MeshStandardMaterial({
-      color: cell.visual.color,
+    const archive = cell.visual.material.includes("archive");
+    const baseColor = displayColor;
+    const common = {
+      color: displayColor,
       map: texture,
-      roughness: cell.visual.material.includes("archive") ? 0.46 : 0.86,
-      metalness: cell.visual.material.includes("archive") ? 0.18 : 0.02,
+      emissive: baseColor
+        .clone()
+        .multiplyScalar(disputed ? 0.17 : archive ? 0.11 : 0.055),
+      emissiveIntensity: disputed ? 0.8 : 0.55,
       transparent: true,
-      opacity: disputed ? 0.58 : 1,
+      opacity: disputed ? 0.62 : 0.96,
       depthWrite: !disputed,
-    });
-    if (disputed) material.emissive.set(cell.visual.color).multiplyScalar(0.08);
-    material.userData.baseEmissive = material.emissive.getHex();
-    material.userData.baseEmissiveIntensity = material.emissiveIntensity;
+    };
+    const material = this.constrainedRenderer
+      ? new THREE.MeshBasicMaterial({
+          color: displayColor,
+          map: texture,
+          transparent: true,
+          opacity: disputed ? 0.62 : 0.96,
+          depthWrite: !disputed,
+        })
+      : new THREE.MeshStandardMaterial({
+          ...common,
+          roughness: archive ? 0.24 : 0.38,
+          metalness: archive ? 0.34 : 0.14,
+        });
+    if (material instanceof THREE.MeshStandardMaterial) {
+      material.userData.baseEmissive = material.emissive.getHex();
+      material.userData.baseEmissiveIntensity = material.emissiveIntensity;
+    } else {
+      material.userData.baseColor = material.color.getHex();
+    }
     return material;
   }
 
@@ -720,40 +1076,50 @@ export class TessarynWorld {
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("2D texture context unavailable");
     const base = new THREE.Color(color);
-    const image = context.createImageData(canvas.width, canvas.height);
     const random = seededRandom(seed);
-    const veins = Array.from({ length: 7 }, () => ({
-      x: random() * canvas.width,
-      y: random() * canvas.height,
-      width: 4 + random() * 18,
-    }));
-    for (let y = 0; y < canvas.height; y += 1) {
-      for (let x = 0; x < canvas.width; x += 1) {
-        const grain =
-          (Math.sin((x + seed) * 0.17) + Math.sin((y - seed) * 0.13)) * 0.018 +
-          (random() - 0.5) * 0.075;
-        let vein = 0;
-        for (const line of veins) {
-          const distance = Math.abs(y - line.y - Math.sin((x - line.x) * 0.035) * line.width);
-          if (distance < 1.2) vein += 0.09;
-        }
-        const offset = (y * canvas.width + x) * 4;
-        image.data[offset] = Math.round(THREE.MathUtils.clamp((base.r + grain + vein) * 255, 0, 255));
-        image.data[offset + 1] = Math.round(
-          THREE.MathUtils.clamp((base.g + grain + vein * 0.45) * 255, 0, 255),
-        );
-        image.data[offset + 2] = Math.round(
-          THREE.MathUtils.clamp((base.b + grain * 0.7) * 255, 0, 255),
-        );
-        image.data[offset + 3] = 255;
+    context.fillStyle = base.clone().multiplyScalar(0.58).getStyle();
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    for (let index = 0; index < 34; index += 1) {
+      const centerX = random() * canvas.width;
+      const centerY = random() * canvas.height;
+      const radius = 14 + random() * 52;
+      const facet = base
+        .clone()
+        .offsetHSL((random() - 0.5) * 0.045, (random() - 0.5) * 0.08, 0.04 + random() * 0.2);
+      context.globalAlpha = 0.08 + random() * 0.16;
+      context.fillStyle = facet.getStyle();
+      context.beginPath();
+      for (let corner = 0; corner < 3; corner += 1) {
+        const angle = random() * Math.PI * 2;
+        const distance = radius * (0.35 + random() * 0.65);
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance;
+        if (corner === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
       }
+      context.closePath();
+      context.fill();
     }
-    context.putImageData(image, 0, 0);
+    context.globalAlpha = 0.28;
+    context.strokeStyle = base.clone().lerp(new THREE.Color("#e2eee8"), 0.52).getStyle();
+    context.lineWidth = 0.7;
+    for (let index = 0; index < 15; index += 1) {
+      context.beginPath();
+      const startX = random() * canvas.width;
+      const startY = random() * canvas.height;
+      context.moveTo(startX, startY);
+      context.lineTo(
+        startX + (random() - 0.5) * canvas.width * 0.8,
+        startY + (random() - 0.5) * canvas.height * 0.8,
+      );
+      context.stroke();
+    }
+    context.globalAlpha = 1;
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(2.5, 2.5);
+    texture.repeat.set(1.7, 1.7);
     texture.anisotropy = Math.min(this.renderer.capabilities.getMaxAnisotropy(), 4);
     this.textureCache.set(key, texture);
     return texture;
@@ -847,18 +1213,40 @@ export class TessarynWorld {
       from.group.position,
       to.group.position,
     ]);
+    const disputed = to.cell.manifest.evidence.disputed;
     const line = new THREE.Line(
       geometry,
-      new THREE.LineBasicMaterial({
-        color: to.cell.manifest.evidence.disputed ? to.cell.visual.color : "#d7d2bd",
+      new THREE.LineDashedMaterial({
+        color: disputed ? "#e1846f" : "#76c8c8",
         transparent: true,
-        opacity: to.cell.manifest.evidence.disputed ? 0.48 : 0.09,
+        opacity: disputed ? 0.48 : 0.18,
+        dashSize: disputed ? 0.1 : 0.24,
+        gapSize: disputed ? 0.16 : 0.32,
         depthWrite: false,
       }),
     );
+    line.computeLineDistances();
     line.visible = this.evidence;
     this.root.add(line);
-    this.weaveLinks.push({ line, from, to });
+    const pulse = new THREE.Mesh(
+      new THREE.OctahedronGeometry(disputed ? 0.07 : 0.052, 0),
+      new THREE.MeshBasicMaterial({
+        color: disputed ? "#f0a08a" : "#c2f2e9",
+        transparent: true,
+        opacity: disputed ? 0.82 : 0.68,
+        depthWrite: false,
+      }),
+    );
+    pulse.visible = this.evidence && !this.constrainedRenderer;
+    pulse.renderOrder = 6;
+    this.root.add(pulse);
+    this.weaveLinks.push({
+      line,
+      pulse,
+      phase: (to.cell.visual.seed % 997) / 997,
+      from,
+      to,
+    });
   }
 
   private createUnknownBoundary(): void {
@@ -1029,6 +1417,59 @@ export class TessarynWorld {
     this.aggregateRoot.visible = false;
   }
 
+  private createTemporalField(): void {
+    this.temporalRoot.name = "chronofold-field";
+    this.world.moments.forEach((moment, index) => {
+      const height = (index - 1) * 3.8;
+      const momentColor = new THREE.Color(moment.environment.sun).lerp(
+        new THREE.Color(index === 1 ? "#72c9ca" : index === 0 ? "#9a8ec3" : "#e1bc72"),
+        0.62,
+      );
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: momentColor,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      ringMaterial.userData.baseOpacity = index === 1 ? 0.19 : 0.13;
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(10.2 + index * 0.55, 0.012, 3, 96),
+        ringMaterial,
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.rotation.z = index * 0.12 - 0.1;
+      ring.position.y = height;
+      this.temporalRoot.add(ring);
+      this.temporalMaterials.push(ringMaterial);
+
+      const phasePositions: number[] = [];
+      for (let segment = 0; segment < 12; segment += 1) {
+        const angle = (segment / 12) * Math.PI * 2 + index * 0.08;
+        phasePositions.push(0, height, 0);
+        phasePositions.push(
+          Math.cos(angle) * (10.2 + index * 0.55),
+          height,
+          Math.sin(angle) * (10.2 + index * 0.55),
+        );
+      }
+      const phaseGeometry = new THREE.BufferGeometry();
+      phaseGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(phasePositions, 3),
+      );
+      const phaseMaterial = new THREE.LineBasicMaterial({
+        color: momentColor,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      phaseMaterial.userData.baseOpacity = index === 1 ? 0.08 : 0.045;
+      this.temporalRoot.add(new THREE.LineSegments(phaseGeometry, phaseMaterial));
+      this.temporalMaterials.push(phaseMaterial);
+    });
+    this.temporalRoot.visible = false;
+  }
+
   private updateCellTargets(): void {
     const objectFocus = this.selected ?? this.findVisibleArchive();
     this.targetAggregateOpacity = !this.importedFrame && this.scale === "site" ? 1 : 0;
@@ -1041,7 +1482,13 @@ export class TessarynWorld {
       const shared = node.cell.visual.moments.length === ALL_MOMENTS;
       const active = node.cell.visual.moments.includes(this.moment);
       const semanticOnly = node.cell.visual.primitive === "none";
-      const visible = node.condensed && !semanticOnly && (this.chronofold ? true : active || shared);
+      const visible =
+        node.condensed &&
+        (semanticOnly
+          ? this.evidence
+          : this.chronofold
+            ? true
+            : active || shared);
       const temporalOpacity = visible
         ? node.cell.manifest.evidence.disputed
           ? 0.66
@@ -1057,16 +1504,31 @@ export class TessarynWorld {
             ? node.cell.manifest.parents.includes(objectFocus.cell.cell_id) ||
               objectFocus.cell.manifest.parents.includes(node.cell.cell_id)
             : false);
-        scaleOpacity = node === objectFocus ? 1 : related ? 0.24 : 0.055;
+        scaleOpacity = semanticOnly ? 0.14 : node === objectFocus ? 1 : related ? 0.24 : 0.055;
       } else if (this.scale === "site") {
-        scaleOpacity = ["light-field", "grove", "canopy", "archive-stone"].includes(
-          node.cell.visual.primitive,
-        )
-          ? 0.22
-          : 0.48;
+        scaleOpacity = semanticOnly
+          ? 0.34
+          : ["light-field", "grove", "canopy", "archive-stone"].includes(
+                node.cell.visual.primitive,
+              )
+            ? 0.22
+            : 0.48;
       }
       node.targetOpacity = temporalOpacity * scaleOpacity;
       node.targetPosition.copy(node.basePosition);
+      const detailedEvidence =
+        this.evidence &&
+        (!this.constrainedRenderer ||
+          !this.chronofold ||
+          active ||
+          shared ||
+          node.cell.manifest.evidence.disputed);
+      node.group.traverse((object) => {
+        if (object.name === "cell-lattice" || object.name === "cell-boundary") {
+          object.visible = detailedEvidence;
+        }
+        if (object.name === "slbit-constellation") object.visible = this.evidence;
+      });
       if (this.chronofold && !shared) {
         node.targetPosition.y += (node.momentIndex - 1) * 3.8;
         if (node.cell.manifest.evidence.disputed) {
@@ -1077,12 +1539,19 @@ export class TessarynWorld {
   }
 
   private applyEnvironment(moment: DemoMoment): void {
-    this.targetBackground.set(moment.environment.sky);
+    this.targetBackground
+      .set(moment.environment.sky)
+      .lerp(new THREE.Color("#04080d"), 0.88);
     this.sun.color.set(moment.environment.sun);
-    this.sun.intensity = moment.environment.sun_milli / 420;
+    this.sun.intensity = moment.environment.sun_milli / 340;
+    this.ambient.color
+      .set(moment.environment.sky)
+      .lerp(new THREE.Color("#a7d2d3"), 0.72);
+    this.crystalLight.intensity = 8 + moment.environment.fog_ppm / 2_800;
+    this.archiveLight.intensity = 7 + moment.environment.sun_milli / 300;
     this.scene.fog = new THREE.FogExp2(
-      moment.environment.sky,
-      moment.environment.fog_ppm / 1_000_000 + 0.006,
+      this.targetBackground,
+      moment.environment.fog_ppm / 1_400_000 + 0.014,
     );
   }
 
@@ -1131,6 +1600,10 @@ export class TessarynWorld {
             material.emissiveIntensity = selected
               ? 0.22
               : Number(material.userData.baseEmissiveIntensity ?? 1);
+          } else if (material instanceof THREE.MeshBasicMaterial) {
+            material.color.setHex(
+              selected ? 0xc5d98d : Number(material.userData.baseColor ?? 0xffffff),
+            );
           }
         }
       });
@@ -1227,7 +1700,9 @@ export class TessarynWorld {
   private resize(): void {
     const width = Math.max(1, this.canvas.clientWidth);
     const height = Math.max(1, this.canvas.clientHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, width <= 680 ? 1 : 1.4));
+    this.renderer.setPixelRatio(
+      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.75 : width <= 680 ? 1 : 1.4),
+    );
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.fov = height < 500 ? 62 : width <= 680 ? 58 : 52;
@@ -1250,13 +1725,15 @@ export class TessarynWorld {
       if (this.frameDurations.length > 240) this.frameDurations.shift();
     }
     const elapsed = performance.now() - this.startedAt;
-    const seconds = performance.now() * 0.001;
+    const seconds = this.reducedMotion ? 0 : performance.now() * 0.001;
     let condensed = 0;
     for (const node of this.nodes.values()) {
       if (!node.condensed && elapsed >= node.condenseAt) {
         node.condensed = true;
+        node.assembledAt = elapsed;
         this.firstStructureMs ??= elapsed;
         node.group.scale.setScalar(0.02);
+        node.group.quaternion.copy(node.assemblyQuaternion);
         this.updateCellTargets();
       }
       if (node.condensed) condensed += 1;
@@ -1271,6 +1748,23 @@ export class TessarynWorld {
       const targetScale = node.condensed && node.targetOpacity > 0.001 ? 1 : 0.72;
       const scale = THREE.MathUtils.damp(node.group.scale.x, targetScale, 5.5, delta);
       node.group.scale.setScalar(scale);
+      node.group.quaternion.slerp(node.baseQuaternion, 1 - Math.exp(-delta * 4.8));
+      if (node.haloMaterial && node.assembledAt !== null) {
+        const assemblyAge = Math.max(0, elapsed - node.assembledAt);
+        const envelope = Math.max(0, 1 - assemblyAge / 1_700);
+        if (node.halo) {
+          node.halo.visible =
+            !this.reducedMotion && envelope > 0.002 && node.currentOpacity > 0.002;
+        }
+        node.haloMaterial.opacity = this.reducedMotion
+          ? 0
+          : envelope * node.currentOpacity * 0.62;
+      }
+      const constellation = node.group.getObjectByName("slbit-constellation");
+      if (constellation && !this.reducedMotion) {
+        constellation.rotation.y = seconds * 0.055;
+        constellation.rotation.z = Math.sin(seconds * 0.17) * 0.035;
+      }
     }
     this.aggregateOpacity = THREE.MathUtils.damp(
       this.aggregateOpacity,
@@ -1284,6 +1778,21 @@ export class TessarynWorld {
         material.transparent = true;
         material.opacity =
           this.aggregateOpacity * Number(material.userData.baseOpacity ?? 1);
+      }
+    }
+    this.temporalOpacity = THREE.MathUtils.damp(
+      this.temporalOpacity,
+      this.targetTemporalOpacity,
+      4.8,
+      delta,
+    );
+    this.temporalRoot.visible = this.temporalOpacity > 0.002;
+    if (!this.reducedMotion) this.temporalRoot.rotation.y = seconds * 0.012;
+    for (const material of this.temporalMaterials) {
+      if ("opacity" in material) {
+        material.transparent = true;
+        material.opacity =
+          this.temporalOpacity * Number(material.userData.baseOpacity ?? 1);
       }
     }
     const progress = condensed / this.nodes.size;
@@ -1303,8 +1812,38 @@ export class TessarynWorld {
       positions.setXYZ(0, link.from.group.position.x, link.from.group.position.y, link.from.group.position.z);
       positions.setXYZ(1, link.to.group.position.x, link.to.group.position.y, link.to.group.position.z);
       positions.needsUpdate = true;
-      link.line.visible =
-        this.evidence && link.from.currentOpacity > 0.03 && link.to.currentOpacity > 0.03;
+      const currentDetail = [link.from, link.to].some(
+        (node) =>
+          node.cell.visual.moments.includes(this.moment) ||
+          node.cell.visual.moments.length === ALL_MOMENTS ||
+          node.cell.manifest.evidence.disputed,
+      );
+      const visible =
+        this.evidence &&
+        link.from.currentOpacity > 0.03 &&
+        link.to.currentOpacity > 0.03 &&
+        (!this.constrainedRenderer || !this.chronofold || currentDetail);
+      link.line.visible = visible;
+      link.pulse.visible = visible && !this.constrainedRenderer;
+      if (visible) {
+        const rate = link.to.cell.manifest.evidence.disputed ? 0.1 : 0.065;
+        const position = (seconds * rate + link.phase) % 1;
+        if (!this.constrainedRenderer) {
+          link.pulse.position.lerpVectors(
+            link.from.group.position,
+            link.to.group.position,
+            position,
+          );
+          const pulseScale = 0.74 + Math.sin((position + link.phase) * Math.PI) * 0.48;
+          link.pulse.scale.setScalar(pulseScale);
+        }
+        const lineMaterial = link.line.material;
+        if (lineMaterial instanceof THREE.LineDashedMaterial) {
+          lineMaterial.opacity = link.to.cell.manifest.evidence.disputed
+            ? 0.32 + Math.abs(Math.sin(seconds * 2.1 + link.phase * 8)) * 0.2
+            : 0.16;
+        }
+      }
     }
     this.updateMovement(delta);
     this.focus.lerp(this.targetFocus, 1 - Math.exp(-delta * 4.5));

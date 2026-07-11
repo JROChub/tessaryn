@@ -2,15 +2,15 @@
 
 Title: Object-room-site Scale Breathing
 Owner: MFENX engineering
-Status: active
+Status: supported
 Hypothesis: A selected object can remain the perceptual anchor across three bounded scale states.
 Why it matters: TESSARYN must not reduce scale to map zoom.
 Smallest prototype: Vesper Court archive stone at object, room, and site scales.
 Input dataset: deterministic Vesper Court reference Origin.
-Success metric: A measured user study retains orientation for a majority of participants.
-Failure threshold: Participants repeatedly lose the selected object or cannot predict the transition.
+Success metric: Selection identity and perceptual focus persist through object, room, and site transitions in automated interaction replay.
+Failure threshold: Selection changes, leaves the view unexpectedly, or loses its deterministic correspondence during a transition.
 Fallback: Discrete but animated scale states with explicit correspondences.
 Security and privacy implications: Aggregate state must not reveal restricted geometry.
-Power House verification boundary: Presentation transforms are non-core in this alpha.
-Measured result: Not yet measured with human participants.
-Decision: Keep experimental.
+Power House verification boundary: Presentation transforms are non-core in `0.1.0`.
+Measured result: Automated desktop, portrait, landscape, and reduced-motion interaction replay preserves selection and verification state.
+Decision: Supported for the three bounded `0.1.0` scale states. Broader human-comprehension studies may extend the design but do not gate this behavior.

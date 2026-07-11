@@ -13,6 +13,7 @@ local processing, identity-bound pixel masks, exclusion volumes, separate raw
 and public products, and raw-frame omission. Restricted Loci use authenticated
 multi-recipient encryption and signed replay-protected synchronization.
 
-These controls do not replace a site-specific privacy review. A physical pilot
-must still test aggregate leakage, residual channels, location metadata,
-retention, bystander consent, and endpoint compromise before publication.
+These controls do not make publication automatically appropriate. Operators of
+real capture deployments remain responsible for aggregate leakage, residual
+channels, location metadata, retention, bystander consent, and endpoint
+compromise. Deployment review is not a TESSARYN software-release gate.

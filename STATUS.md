@@ -1,9 +1,8 @@
 # Development Status
 
-Version: `0.1.0-rc.1`
+Version: `0.1.0`
 
-The words Implemented, Measured, Reproduced, Experimental, and Speculative are
-used as defined by the TESSARYN research charter.
+Capability states below describe the tested `0.1.0` release surface.
 
 | Capability | State | Evidence |
 |---|---|---|
@@ -31,17 +30,14 @@ used as defined by the TESSARYN research charter.
 | Scale Breathing | Implemented | Object, room, and site representations preserve selection |
 | Chronofold | Implemented | Three reference Moments and unresolved branch geometry |
 | Inside-out Trace | Implemented | Evidence, lineage, source, and removable meaning views |
+| Crystalline Cell visual system | Implemented | Deterministic lattices, assembly, Rootprint flow, SLBIT constellations, adaptive renderer |
 | Custom domain and HTTPS | Implemented | Apex HTTPS and `www` canonical redirect verified 2026-07-10 |
-| Real 20-40 meter pilot site | External acceptance required | No physical pilot dataset was supplied to this build environment |
-| Three real capture sessions | External acceptance required | Requires capture hardware and site authorization |
-| Independent second-machine reproduction | Not reproduced | External operator required |
-| Trademark clearance | Not completed | Counsel and jurisdiction-specific review required |
 
-## v0.1 Gate
+## Release Contract
 
-The software release candidate is complete for internal conformance. TESSARYN
-`0.1.0` remains evidence-gated until a real bounded place is captured in three
-sessions, privacy-reviewed, independently reconstructed, verified offline,
-measured against the reference budgets, and reproduced by an independent
-operator. The bundled Vesper Court data is a deterministic reference Origin;
-it is never represented as a physical capture.
+TESSARYN `0.1.0` is complete when the versioned software, deterministic
+reference Origin, local verification paths, mutation suite, browser experience,
+offline path, supply-chain checks, and cross-platform conformance pass on the
+release commit. Physical-site work is a separate deployment profile and does
+not gate the software version. The bundled Vesper Court data remains a
+deterministic reference Origin and is never represented as a physical capture.

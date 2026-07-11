@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.1.0-rc.1",
+      "version": "0.1.0",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.1.0-rc.1?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-schema@0.1.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,17 +39,17 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0 bin-target-0",
           "name": "tessaryn_schema",
-          "version": "0.1.0-rc.1",
-          "purl": "pkg:cargo/tessaryn-schema@0.1.0-rc.1?download_url=file://.#src/lib.rs"
+          "version": "0.1.0",
+          "purl": "pkg:cargo/tessaryn-schema@0.1.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
     "properties": [
       {
-        "name": "cdx:rustc:sbom:target:all_targets",
-        "value": "true"
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "x86_64-unknown-linux-gnu"
       }
     ]
   },
@@ -344,7 +344,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0-rc.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.1.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
@@ -370,10 +370,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228"
-      ]
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228",

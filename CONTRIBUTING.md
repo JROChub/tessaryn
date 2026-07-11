@@ -1,7 +1,7 @@
 # Contributing
 
-TESSARYN is evidence-gated research. A visually persuasive prototype is not a
-protocol result.
+TESSARYN uses conformance-bound engineering. A visually persuasive demo is not
+a protocol result.
 
 Every contribution must:
 

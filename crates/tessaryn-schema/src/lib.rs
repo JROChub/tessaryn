@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use thiserror::Error;
 
-/// Stable schema identifier for the first experimental Cell format.
+/// Stable schema identifier for the first versioned Cell format.
 pub const CELL_SCHEMA_V0: &str = "tessaryn/cell/v0";
 
 /// A validated SHA-256 content address.

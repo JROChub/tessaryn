@@ -52,7 +52,7 @@ pub struct DemoEnvironment {
 /// Renderer descriptor kept outside Cell identity.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DemoVisual {
-    /// Primitive understood by the experimental renderer.
+    /// Primitive understood by the native reference renderer.
     pub primitive: String,
     /// Center position in millimeters.
     pub position_mm: [i64; 3],

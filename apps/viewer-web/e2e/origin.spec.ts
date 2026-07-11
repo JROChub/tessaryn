@@ -81,6 +81,37 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   expect(nonblack / samples).toBeGreaterThan(0.8);
 });
 
+test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to world state", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openOrigin(page);
+  await page.locator('body[data-materialized="true"]').waitFor();
+
+  const diagnostics = await page.evaluate(() => window.__tessaryn?.scene.diagnostics());
+  expect(diagnostics?.cellCount).toBe(18);
+  expect(diagnostics?.provenanceLinks).toBeGreaterThan(0);
+  expect(diagnostics?.temporalManifolds).toBe(3);
+  expect(diagnostics?.semanticConstellations).toBe(1);
+  expect(diagnostics?.drawCalls).toBeLessThan(140);
+  expect(diagnostics?.materializationMs).toBeLessThan(4_000);
+
+  await page.locator("#chronofold-button").click();
+  await expect(page.locator("#chronofold-button")).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().chronofold)).toBe(true);
+
+  await page.evaluate(() => window.__tessaryn?.scene.selectCell("meaning-layer"));
+  await expect(page.locator("#trace-title")).toHaveText("ORIGIN INTERPRETATION");
+  await page.locator('[data-trace-tab="meaning"]').click();
+  await expect(page.locator("#trace-summary")).toContainText(
+    "SLBIT meaning remains removable and non-core",
+  );
+
+  await page.locator("#evidence-button").click();
+  await expect(page.locator("#evidence-button")).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
+});
+
 test("imports, reverifies, and renders a reconstruction artifact without upload", async ({
   page,
 }) => {

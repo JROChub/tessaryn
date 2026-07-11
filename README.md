@@ -8,13 +8,13 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.1.0-rc.1`. It contains the tested World Cell kernel,
+This repository is `0.1.0`. It contains the tested World Cell kernel,
 capture-to-Cell reconstruction, authenticated private Locus exchange, signed
 witness receipts, Power House packaging, a browser-local verifier, and the
 Vesper Court deterministic reference Origin. See [STATUS.md](STATUS.md) for the
-software and external field-acceptance boundaries.
+software release contract and optional field-evidence profile.
 
-The release candidate implements:
+The release implements:
 
 - strict integer-only Cell manifests and deterministic Cell IDs;
 - domain-separated chunk hashing and Merkle roots;
@@ -35,6 +35,8 @@ The release candidate implements:
   mutation rejection for portable reconstruction artifacts;
 - full-bleed native Three.js construction, Condensation, Scale Breathing,
   Chronofold, evidence Lens, and inside-out Cell Trace inspection;
+- deterministic crystalline Cell lattices, Rootprint flow, SLBIT meaning
+  constellations, temporal manifolds, and an adaptive software-renderer path;
 - service-worker-backed offline operation after the first successful load.
 
 ## Run The Origin

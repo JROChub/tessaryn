@@ -1,10 +1,10 @@
 # Reference Measurement
 
-Status: measured locally, not independently reproduced.
+Status: local reference measurement; informational, not a software-release gate.
 
 Date: 2026-07-10
 
-Release: `0.1.0-rc.1`
+Release: `0.1.0`
 
 Reference Origin SHA-256:
 `81da7f1661a9c67aefe5e8ac1a0ec1e7e2b2473bc30d0ee584cb4e6b954b0427`

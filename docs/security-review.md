@@ -1,6 +1,6 @@
 # Security Review Record
 
-Status: engineering self-review for `0.1.0-rc.1`. This is not an independent
+Status: engineering review for `0.1.0`. This is not an independent
 cryptographic, legal, privacy, or physical-site assessment.
 
 ## Boundaries reviewed
@@ -29,8 +29,9 @@ offline, source-hygiene, no-map, SBOM, and cross-platform conformance gates run
 in CI. Cargo-fuzz targets strict JSON, surfel/SDF codecs, and signed packet and
 witness envelopes on a scheduled campaign.
 
-## Residual external review
+## Additional assurance
 
 Independent cryptographic review, a real-site privacy review, capture-device
-threat analysis, counsel review, and independent reproduction remain external
-acceptance evidence. These are not replaced by passing automated tests.
+threat analysis, counsel review, and independent reproduction can provide
+additional assurance for a specific deployment. They are not software-release
+gates and are not replaced by passing automated tests.
