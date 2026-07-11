@@ -15,6 +15,8 @@ test("the bounded Origin declares its evidence state", async () => {
   assert.equal(world.moments.length, 3);
   assert.equal(world.cells.filter((cell) => cell.manifest.evidence.disputed).length, 2);
   assert.equal(world.cells.filter((cell) => cell.manifest.evidence.restricted).length, 1);
+  assert.equal(world.origin_memory_capsule.header.producer.power_house_version, "0.3.24");
+  assert.equal(world.origin_memory_capsule.header.producer.platform, null);
   assert.match(world.evidence_boundary, /physical truth is not claimed/i);
 });
 

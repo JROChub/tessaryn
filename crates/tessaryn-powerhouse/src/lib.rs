@@ -15,6 +15,9 @@ use thiserror::Error;
 /// Power House protocol projection for TESSARYN Cells.
 pub const CELL_PROTOCOL_V0: &str = "tessaryn/world-cell/v0";
 
+/// Exact Power House release used by this adapter's portable capsule profile.
+pub const POWER_HOUSE_COMPATIBILITY_VERSION: &str = "0.3.24";
+
 /// Portable proof and memory package for one Cell.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CellProofBundle {
@@ -90,7 +93,7 @@ pub fn prove_cell(
         .artifact
         .clone();
     let mut capsule_builder = MemoryCapsuleBuilder::new(format!("cell_{}", &id.as_str()[7..23]))
-        .producer("tessaryn-forge", env!("CARGO_PKG_VERSION"))
+        .producer("tessaryn-forge", POWER_HOUSE_COMPATIBILITY_VERSION)
         .with_pha(pha.clone())
         .with_rootprint(rootprint.clone())
         .with_replay_required()
@@ -109,7 +112,10 @@ pub fn prove_cell(
             packet,
         )?;
     }
-    let memory_capsule = capsule_builder.build()?;
+    let mut memory_capsule = capsule_builder.build()?;
+    memory_capsule.header.producer.platform = None;
+    memory_capsule.header.capsule_digest = None;
+    memory_capsule.header.capsule_digest = Some(memory_capsule.calculate_capsule_digest()?);
     Ok(CellProofBundle {
         manifest,
         cell_id: id,
@@ -378,6 +384,11 @@ mod tests {
         assert!(report.cell_identity_valid);
         assert!(report.memory_capsule_valid);
         assert!(!report.physical_truth_claimed);
+        assert_eq!(
+            bundle.memory_capsule.header.producer.power_house_version,
+            POWER_HOUSE_COMPATIBILITY_VERSION
+        );
+        assert_eq!(bundle.memory_capsule.header.producer.platform, None);
     }
 
     #[test]

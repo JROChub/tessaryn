@@ -22,6 +22,12 @@ The Power House adapter projects canonical Cell identity into
 `tessaryn/world-cell/v0`, creates Rootprint lineage, and packages a bounded Cell
 memory. It does not import rendering or capture code into Power House.
 
+The portable Cell Capsule profile declares the exact compatible Power House
+release and leaves optional host-platform metadata unset. OS, architecture, and
+hardware belong in non-identity reproduction receipts; allowing them into the
+Capsule digest would make one Cell produce different portable identities on
+Linux, macOS, and Windows.
+
 ## Stable Boundary
 
 The alpha kernel APIs are experimental but deterministic. GPU pixels are not

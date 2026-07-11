@@ -2,16 +2,106 @@
   "total": 10,
   "expected_rejections": 10,
   "mismatches": 0,
-  "layers": [
-    "capsule",
-    "header",
-    "core",
-    "core",
-    "rootprint",
-    "replay",
-    "sidecar",
-    "semantic",
-    "semantic",
-    "semantic"
+  "results": [
+    {
+      "id": "mut_capsule_digest_001",
+      "passed": true,
+      "expected_layer": "capsule",
+      "actual_layer": "capsule",
+      "expected_code": "CAPSULE_DIGEST_MISMATCH",
+      "actual_code": "CAPSULE_DIGEST_MISMATCH",
+      "core_valid_before_failure": false,
+      "detail": "capsule digest mismatch"
+    },
+    {
+      "id": "mut_schema_001",
+      "passed": true,
+      "expected_layer": "header",
+      "actual_layer": "header",
+      "expected_code": "UNSUPPORTED_SCHEMA",
+      "actual_code": "UNSUPPORTED_SCHEMA",
+      "core_valid_before_failure": false,
+      "detail": "unsupported Memory Capsule schema"
+    },
+    {
+      "id": "mut_core_digest_001",
+      "passed": true,
+      "expected_layer": "core",
+      "actual_layer": "core",
+      "expected_code": "CORE_DIGEST_MISMATCH",
+      "actual_code": "CORE_DIGEST_MISMATCH",
+      "core_valid_before_failure": false,
+      "detail": "core digest mismatch"
+    },
+    {
+      "id": "mut_core_fingerprint_001",
+      "passed": true,
+      "expected_layer": "core",
+      "actual_layer": "core",
+      "expected_code": "PHA_CORE_INVALID",
+      "actual_code": "PHA_CORE_INVALID",
+      "core_valid_before_failure": false,
+      "detail": "PHA core fingerprint mismatch: expected sha256:19c5da96493d2bf6c1d79dca40d4585655a423d108744383fb805340dc437f9e, found sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "id": "mut_rootprint_root_001",
+      "passed": true,
+      "expected_layer": "rootprint",
+      "actual_layer": "rootprint",
+      "expected_code": "ROOTPRINT_INVALID",
+      "actual_code": "ROOTPRINT_INVALID",
+      "core_valid_before_failure": true,
+      "detail": "branch not found: sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    {
+      "id": "mut_replay_fingerprint_001",
+      "passed": true,
+      "expected_layer": "replay",
+      "actual_layer": "replay",
+      "expected_code": "REPLAY_FINGERPRINT_MISMATCH",
+      "actual_code": "REPLAY_FINGERPRINT_MISMATCH",
+      "core_valid_before_failure": true,
+      "detail": "replay fingerprint mismatch"
+    },
+    {
+      "id": "mut_sidecar_digest_001",
+      "passed": true,
+      "expected_layer": "sidecar",
+      "actual_layer": "sidecar",
+      "expected_code": "SIDECAR_INVALID",
+      "actual_code": "SIDECAR_INVALID",
+      "core_valid_before_failure": true,
+      "detail": "Observatory sidecar digest mismatch: expected sha256:2ee98644657a9563bce2e48037dfa4d0ad7ebac0e9d933f9eb0fe8f4f68b0f28, found sha256:5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    {
+      "id": "mut_semantic_digest_001",
+      "passed": true,
+      "expected_layer": "semantic",
+      "actual_layer": "semantic",
+      "expected_code": "PACKET_DIGEST_MISMATCH",
+      "actual_code": "PACKET_DIGEST_MISMATCH",
+      "core_valid_before_failure": true,
+      "detail": "semantic packet digest mismatch"
+    },
+    {
+      "id": "mut_semantic_branch_001",
+      "passed": true,
+      "expected_layer": "semantic",
+      "actual_layer": "semantic",
+      "expected_code": "SEMANTIC_BRANCH_BINDING_MISMATCH",
+      "actual_code": "SEMANTIC_BRANCH_BINDING_MISMATCH",
+      "core_valid_before_failure": true,
+      "detail": "semantic packet is bound to an unknown branch"
+    },
+    {
+      "id": "mut_semantic_replay_001",
+      "passed": true,
+      "expected_layer": "semantic",
+      "actual_layer": "semantic",
+      "expected_code": "SEMANTIC_REPLAY_BINDING_MISMATCH",
+      "actual_code": "SEMANTIC_REPLAY_BINDING_MISMATCH",
+      "core_valid_before_failure": true,
+      "detail": "semantic packet replay binding does not match Rootprint replay"
+    }
   ]
 }

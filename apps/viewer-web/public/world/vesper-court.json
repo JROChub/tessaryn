@@ -3082,15 +3082,15 @@
     "header": {
       "schema": "power-house/memory-capsule/v1",
       "capsule_id": "phm_cell_dd91b3eef5dc24a1",
-      "capsule_digest": "sha256:888cd4ee66a2ec784bd7d54726797d98b24a11d34828e05b91526855cae0a016",
+      "capsule_digest": "sha256:45074407ea441daa1bc0ad5e4f7d5e7af2c70b9e69063b0ff6acdcc82284e70a",
       "created_at_unix_ms": 0,
       "producer": {
         "name": "tessaryn-forge",
         "tool": "julian",
-        "power_house_version": "0.1.0-alpha.1",
+        "power_house_version": "0.3.24",
         "slbit_version": null,
         "rustc": null,
-        "platform": "linux-x86_64"
+        "platform": null
       },
       "critical_extensions": [],
       "noncritical_extensions": []

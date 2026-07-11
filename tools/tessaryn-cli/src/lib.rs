@@ -151,6 +151,16 @@ pub struct DemoVerificationReport {
     pub memory_capsule_valid: bool,
     /// Physical truth is intentionally not claimed by this synthetic fixture.
     pub physical_truth_claimed: bool,
+    /// Origin Anchor committed by the first Cell.
+    pub anchor_id: Digest,
+    /// First Cell identity in canonical fixture order.
+    pub first_cell_id: Digest,
+    /// Root branch of the world lineage.
+    pub rootprint_root: String,
+    /// Deterministic world-lineage replay identity.
+    pub replay_fingerprint: String,
+    /// Portable Origin Memory Capsule identity.
+    pub capsule_digest: String,
 }
 
 /// Generates the bounded synthetic Vesper Court Origin.
@@ -674,6 +684,9 @@ pub fn verify_demo_world(world: &DemoWorld) -> Result<DemoVerificationReport, De
     if !memory_report.core_valid || !memory_report.rootprint_valid || !memory_report.replay_valid {
         return Err(DemoError::MemoryMismatch);
     }
+    let first_cell = world.cells.first().ok_or_else(|| {
+        DemoError::InvalidFixture("the Origin requires at least one Cell".to_string())
+    })?;
     Ok(DemoVerificationReport {
         cells_valid,
         pha_valid,
@@ -684,6 +697,11 @@ pub fn verify_demo_world(world: &DemoWorld) -> Result<DemoVerificationReport, De
         replay_valid: true,
         memory_capsule_valid: true,
         physical_truth_claimed: false,
+        anchor_id: first_cell.manifest.anchor_id.clone(),
+        first_cell_id: first_cell.cell_id.clone(),
+        rootprint_root: world.lineage.rootprint.root_branch.clone(),
+        replay_fingerprint: replay.state_fingerprint,
+        capsule_digest: memory_report.capsule_digest,
     })
 }
 
