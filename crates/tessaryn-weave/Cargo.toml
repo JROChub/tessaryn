@@ -1,0 +1,19 @@
+[package]
+name = "tessaryn-weave"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Conflict-preserving Locus selection and materialization for TESSARYN"
+
+[dependencies]
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tessaryn-canonical = { path = "../tessaryn-canonical" }
+tessaryn-schema = { path = "../tessaryn-schema" }
+thiserror.workspace = true
+

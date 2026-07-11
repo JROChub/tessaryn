@@ -213,6 +213,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tessaryn-weave"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tessaryn-canonical",
+ "tessaryn-schema",
+ "thiserror",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
