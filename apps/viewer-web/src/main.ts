@@ -258,6 +258,7 @@ function updateCondensation(progress: number, phase: string): void {
 function finishCondensation(): void {
   if (condensationComplete) return;
   condensationComplete = true;
+  document.body.dataset.materialized = "true";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
   elements.originStatus.textContent = "VESPER COURT CONSTRUCTED LOCALLY";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";

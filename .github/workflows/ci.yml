@@ -12,15 +12,16 @@ jobs:
   supply-chain:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: EmbarkStudios/cargo-deny-action@6c8f9facfa5047ec02d8485b6bf52b587b7777d1 # v2.0.18
 
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
+          toolchain: stable
           components: rustfmt, clippy
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
@@ -29,7 +30,10 @@ jobs:
       - run: cargo run --locked -q -p tessaryn-cli -- generate-demo /tmp/vesper-court.json
       - run: diff -u apps/viewer-web/public/world/vesper-court.json /tmp/vesper-court.json
       - run: sha256sum -c conformance/SHA256SUMS
-      - run: cargo run --locked -q -p tessaryn-cli -- challenge-demo apps/viewer-web/public/world/vesper-court.json
+      - run: cargo run --locked -q -p tessaryn-cli -- verify-demo apps/viewer-web/public/world/vesper-court.json > /tmp/vesper-court.verify.json
+      - run: diff -u conformance/expected/vesper-court.verify.json /tmp/vesper-court.verify.json
+      - run: cargo run --locked -q -p tessaryn-cli -- challenge-demo apps/viewer-web/public/world/vesper-court.json > /tmp/vesper-court.challenge.json
+      - run: diff -u conformance/expected/vesper-court.challenge.json /tmp/vesper-court.challenge.json
       - run: ./scripts/check-no-map-substrate.sh
 
   reproducibility:
@@ -39,8 +43,10 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: stable
       - name: Regenerate the canonical Origin
         run: cargo run --locked -q -p tessaryn-cli -- generate-demo generated-vesper-court.json
       - name: Require byte-identical canonical state
@@ -54,10 +60,10 @@ jobs:
       run:
         working-directory: apps/viewer-web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: apps/viewer-web/package-lock.json
       - run: npm ci

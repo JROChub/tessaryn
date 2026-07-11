@@ -46,6 +46,7 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
     memoryValid: true,
     errors: [],
   });
+  await page.locator('body[data-materialized="true"]').waitFor();
 
   const screenshot = await page.locator("#world-canvas").screenshot();
   const image = PNG.sync.read(screenshot);

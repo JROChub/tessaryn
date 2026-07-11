@@ -95,6 +95,8 @@ Pages. It contains no runtime map dependency, analytics SDK, remote world model,
 or upload endpoint. `tessaryn.com` must not be attached until its DNS points to
 the deployed origin and HTTPS is verified; see [deployment.md](docs/deployment.md).
 
+[Open the experimental synthetic Origin](https://jrochub.github.io/tessaryn/)
+
 ## License
 
 AGPL-3.0-only. See [LICENSE](LICENSE).

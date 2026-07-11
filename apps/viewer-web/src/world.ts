@@ -1131,7 +1131,7 @@ export class TessarynWorld {
       progress,
       progress < 0.34 ? "STRUCTURE" : progress < 0.72 ? "APPEARANCE" : "EVIDENCE",
     );
-    if (progress === 1 && elapsed < 4_500) this.callbacks.onCondensationComplete();
+    if (progress === 1) this.callbacks.onCondensationComplete();
 
     for (const shader of this.animatedShaders) {
       const time = shader.uniforms.time;
