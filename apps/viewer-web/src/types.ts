@@ -242,6 +242,12 @@ export interface SurfelPoint {
   radiusUm: number;
 }
 
+export interface SdfVoxelPoint {
+  coordinate: [number, number, number];
+  signedDistanceUm: number;
+  weight: number;
+}
+
 export interface ReconstructionBrowserReport {
   cellsValid: number;
   phaValid: number;
@@ -251,6 +257,67 @@ export interface ReconstructionBrowserReport {
   reportValid: boolean;
   rawFramesAbsent: boolean;
   surfels: SurfelPoint[];
+  sdfVoxels: SdfVoxelPoint[];
+  voxelSizeUm: number;
   voxels: number;
+  errors: string[];
+}
+
+export interface TemporalSourceView {
+  dataset: string;
+  sequence_url: string;
+  homepage: string;
+  license: string;
+  citation: string;
+  archive_sha256: Digest;
+  selection_manifest: Digest;
+  source_manifest: Digest;
+  selected_frames: number;
+  selections: Array<{
+    id: string;
+    frame_ids: Digest[];
+    captured_at_unix_us: number[];
+  }>;
+}
+
+export interface TemporalReconstructionMomentView {
+  id: string;
+  label: string;
+  captured_at_unix_us: number;
+  artifact: ReconstructionArtifactView;
+}
+
+export interface TemporalLocusArtifactView {
+  schema: "tessaryn/temporal-locus-artifact/v0";
+  origin: string;
+  source: TemporalSourceView;
+  source_proof: CellProofBundleView;
+  source_proof_report: Record<string, boolean | number>;
+  moments: TemporalReconstructionMomentView[];
+  alternate: TemporalReconstructionMomentView;
+  lineage: {
+    rootprint: Rootprint;
+    branches: Record<string, Digest>;
+    replay_fingerprint: Digest;
+  };
+  lineage_report: Record<string, boolean | number>;
+}
+
+export interface VerifiedTemporalMoment {
+  id: string;
+  label: string;
+  capturedAtUnixUs: number;
+  verification: ReconstructionBrowserReport;
+}
+
+export interface TemporalLocusBrowserReport {
+  cellsValid: number;
+  phaValid: number;
+  rootprintValid: boolean;
+  replayValid: boolean;
+  memoryValid: boolean;
+  moments: VerifiedTemporalMoment[];
+  alternate: VerifiedTemporalMoment | null;
+  sourceManifest: Digest;
   errors: string[];
 }

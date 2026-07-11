@@ -8,11 +8,11 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.1.1`. It contains the tested World Cell kernel,
+This repository is `0.2.0`. It contains the tested World Cell kernel,
 capture-to-Cell reconstruction, authenticated private Locus exchange, signed
 witness receipts, Power House packaging, a browser-local verifier, and the
-Vesper Court reference Origin. See [STATUS.md](STATUS.md) for the software
-release contract.
+real TUM Freiburg desk temporal Origin. Vesper Court remains a deterministic
+protocol vector. See [STATUS.md](STATUS.md) for the software release contract.
 
 The release implements:
 
@@ -29,11 +29,15 @@ The release implements:
 - signed witness receipts with explicit attestation classes and independence
   groups that never acquire core proof authority;
 - Power House `.pha`, Rootprint, replay, Memory Capsule, and SLBIT bindings;
-- three branch-aware Moments and one unresolved reconstruction dispute;
+- a reproducible real RGB-D Origin with 48 source-bound frames, 174,972
+  verified surfels, and 131,808 verified sparse-SDF voxels;
+- three branch-aware captured Moments and one unresolved reconstruction branch;
 - a restricted region whose protected geometry is absent;
 - strict local browser import, verification, rendering, and exact-layer
   mutation rejection for portable reconstruction artifacts;
-- full-bleed native Three.js construction, Condensation, Scale Breathing,
+- worker-isolated verification of real temporal artifacts with explicit source
+  selection manifests and exact mutation rejection;
+- full-bleed native Three.js construction, Condensation, continuous Scale Breathing,
   Chronofold, provenance Lens, and inside-out Cell Trace inspection;
 - identity-derived matter, branching memory architecture, Cell condensation,
   Rootprint currents, living SLBIT constellations, temporal manifolds, and an
@@ -46,6 +50,8 @@ The release implements:
 cargo run -p tessaryn-cli -- generate-demo
 cargo run -p tessaryn-cli -- verify-demo
 cargo run -p tessaryn-cli -- challenge-demo
+cargo run -p tessaryn-cli -- verify-temporal-locus \
+  apps/viewer-web/public/world/freiburg-desk-locus.json
 cd apps/viewer-web
 npm ci
 npm run dev
@@ -72,6 +78,18 @@ cargo run -p tessaryn-cli -- \
 ```
 
 The browser `OPEN` control imports the same artifact without uploading it.
+
+## Reproduce The Real Origin
+
+The committed real Origin is derived from the official TUM RGB-D Benchmark
+`freiburg1_desk` sequence under CC BY 4.0. Exact source, citation, frame
+selection, and reproduction details are in
+[docs/real-origin.md](docs/real-origin.md) and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+```bash
+./scripts/reproduce-real-origin.sh
+```
 
 ## Verify The Kernel
 

@@ -1542,6 +1542,68 @@ body {
   background: #eef0e7;
 }
 
+.scale-control {
+  position: relative;
+  padding-bottom: 4px;
+}
+
+#scale-breath {
+  position: absolute;
+  right: 8px;
+  bottom: 2px;
+  left: 8px;
+  width: auto;
+  height: 8px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: ew-resize;
+}
+
+#scale-breath::-webkit-slider-runnable-track {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(146, 215, 203, 0.82) 0 var(--scale-position, 50%),
+    rgba(205, 228, 221, 0.14) var(--scale-position, 50%) 100%
+  );
+}
+
+#scale-breath::-webkit-slider-thumb {
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  appearance: none;
+  border: 1px solid #dce9dd;
+  border-radius: 0;
+  background: #81c9bf;
+  transform: rotate(45deg);
+}
+
+#scale-breath::-moz-range-track {
+  height: 1px;
+  background: rgba(205, 228, 221, 0.14);
+}
+
+#scale-breath::-moz-range-progress {
+  height: 1px;
+  background: rgba(146, 215, 203, 0.82);
+}
+
+#scale-breath::-moz-range-thumb {
+  width: 7px;
+  height: 7px;
+  border: 1px solid #dce9dd;
+  border-radius: 0;
+  background: #81c9bf;
+  transform: rotate(45deg);
+}
+
+#scale-breath:focus-visible {
+  outline: 1px solid rgba(206, 239, 229, 0.72);
+  outline-offset: 2px;
+}
+
 .trace-drawer,
 .challenge-drawer {
   top: 16px;

@@ -1,7 +1,13 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import type { DemoCell, DemoMoment, DemoWorld, SurfelPoint } from "./types";
+import type {
+  DemoCell,
+  DemoMoment,
+  DemoWorld,
+  SdfVoxelPoint,
+  SurfelPoint,
+} from "./types";
 
 export type ScaleMode = "object" | "room" | "site";
 
@@ -25,7 +31,20 @@ export interface WorldDiagnostics {
   assemblyPoints: number;
   continuumLayers: number;
   scale: ScaleMode;
+  scaleDepth: number;
   chronofold: boolean;
+  temporalObservations: number;
+  sdfVoxels: number;
+}
+
+export interface TemporalObservation {
+  id: string;
+  label: string;
+  cell: DemoCell;
+  surfels: SurfelPoint[];
+  sdfVoxels: SdfVoxelPoint[];
+  voxelSizeUm: number;
+  alternate: boolean;
 }
 
 interface CellNode {
@@ -58,11 +77,18 @@ interface WeaveLink {
   to: CellNode;
 }
 
+interface ImportedLink {
+  line: THREE.Line;
+  from: CellNode;
+  to: CellNode;
+}
+
 interface WorldCallbacks {
   onCellSelected: (cell: DemoCell) => void;
   onCondensationProgress: (value: number, label: string) => void;
   onCondensationComplete: () => void;
   onScaleChanged: (scale: ScaleMode) => void;
+  onScaleDepthChanged: (value: number) => void;
 }
 
 const ALL_MOMENTS = 3;
@@ -88,6 +114,7 @@ export class TessarynWorld {
   private readonly cellsById = new Map<string, CellNode>();
   private readonly interactive: THREE.Object3D[] = [];
   private readonly weaveLinks: WeaveLink[] = [];
+  private readonly importedLinks: ImportedLink[] = [];
   private readonly textureCache = new Map<string, THREE.CanvasTexture>();
   private readonly animatedShaders: THREE.ShaderMaterial[] = [];
   private readonly aggregateMaterials: THREE.Material[] = [];
@@ -114,6 +141,8 @@ export class TessarynWorld {
   private targetDistance = 16;
   private distance = 16;
   private scale: ScaleMode = "room";
+  private scaleDepth = 0.5;
+  private targetScaleDepth = 0.5;
   private moment = "moment-c";
   private chronofold = false;
   private evidence = true;
@@ -134,6 +163,15 @@ export class TessarynWorld {
   private importedFrame: { focus: THREE.Vector3; radius: number } | null = null;
   private readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   private constrainedWeave: THREE.LineSegments | null = null;
+  private importedTemporal = false;
+  private importedSdfVoxelCount = 0;
+  private importedProvenanceLinks = 0;
+  private materializedCellCount = 0;
+  private inspectionLayer: "state" | "lineage" | "meaning" | null = null;
+  private lastScaleTargetUpdate = -1;
+  private lastScaleDepthCallback = -1;
+  private adaptivePixelRatio = 1;
+  private lastResolutionAdjustmentMs = 0;
 
   constructor(canvas: HTMLCanvasElement, world: DemoWorld, callbacks: WorldCallbacks) {
     this.canvas = canvas;
@@ -148,9 +186,8 @@ export class TessarynWorld {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.14;
-    this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.55 : innerWidth <= 680 ? 1 : 1.4),
-    );
+    this.adaptivePixelRatio = this.preferredPixelRatio(innerWidth);
+    this.renderer.setPixelRatio(this.adaptivePixelRatio);
     this.renderer.shadowMap.enabled = innerWidth > 680 && !this.constrainedRenderer;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene.background = new THREE.Color("#03070a");
@@ -186,6 +223,7 @@ export class TessarynWorld {
     this.sun.shadow.camera.top = 18;
     this.sun.shadow.camera.bottom = -18;
     this.buildWorld();
+    this.materializedCellCount = this.world.cells.length;
     this.selected = this.nodes.get("archive-c") ?? this.findVisibleArchive();
     this.highlightSelection();
     this.setScale("object");
@@ -204,11 +242,21 @@ export class TessarynWorld {
     this.moment = moment;
     const environment = this.world.moments.find((candidate) => candidate.id === moment);
     if (environment) this.applyEnvironment(environment);
+    if (this.importedTemporal) {
+      const node = [...this.nodes.values()].find(
+        (candidate) => candidate.group.userData.temporalMoment === moment,
+      );
+      if (node) {
+        this.selected = node;
+        this.highlightSelection();
+      }
+    }
     this.updateCellTargets();
   }
 
   setScale(scale: ScaleMode): void {
     this.scale = scale;
+    this.targetScaleDepth = scale === "object" ? 0 : scale === "room" ? 0.5 : 1;
     if (this.importedFrame) {
       this.targetFocus.copy(this.importedFrame.focus);
       const multiplier = scale === "object" ? 0.72 : scale === "site" ? 3.1 : 1.65;
@@ -236,9 +284,44 @@ export class TessarynWorld {
     this.callbacks.onScaleChanged(scale);
   }
 
+  setScaleDepth(value: number): void {
+    this.targetScaleDepth = THREE.MathUtils.clamp(value, 0, 1);
+    const next: ScaleMode =
+      this.targetScaleDepth < 0.28
+        ? "object"
+        : this.targetScaleDepth > 0.74
+          ? "site"
+          : "room";
+    if (next !== this.scale) {
+      this.scale = next;
+      if (next === "object" && this.selected) {
+        this.targetFocus.copy(this.selected.group.position);
+      } else if (next !== "object") {
+        this.targetFocus.copy(this.importedFrame?.focus ?? new THREE.Vector3(0, 1.1, 0));
+      }
+      this.callbacks.onScaleChanged(next);
+    }
+  }
+
+  setInspectionLayer(layer: "state" | "lineage" | "meaning" | null): void {
+    this.inspectionLayer = layer;
+    for (const node of this.nodes.values()) {
+      const rootprint = node.group.getObjectByName("rootprint-memory");
+      if (rootprint) rootprint.visible = layer === "lineage" && node === this.selected;
+    }
+    this.updateMeaningFields();
+  }
+
+  pullSelection(): void {
+    if (!this.selected) return;
+    this.targetFocus.copy(this.selected.group.position);
+    this.setScaleDepth(0);
+    this.prepareInspection(this.selected);
+  }
+
   setChronofold(active: boolean): void {
     this.chronofold = active;
-    this.targetTemporalOpacity = active && !this.importedFrame ? 1 : 0;
+    this.targetTemporalOpacity = active && !this.importedTemporal ? 1 : 0;
     this.updateCellTargets();
   }
 
@@ -265,6 +348,7 @@ export class TessarynWorld {
     this.callbacks.onCellSelected(node.cell);
     this.updateCellTargets();
     this.updateMeaningFields();
+    this.setInspectionLayer(this.inspectionLayer);
     if (this.scale === "object") {
       this.targetFocus.copy(node.group.position);
     }
@@ -283,6 +367,10 @@ export class TessarynWorld {
   loadSurfelObservation(cell: DemoCell, surfels: SurfelPoint[]): void {
     if (surfels.length === 0) throw new Error("imported observation contains no surfels");
     this.disposeImportedRoot();
+    this.importedTemporal = false;
+    this.importedSdfVoxelCount = 0;
+    this.importedProvenanceLinks = 0;
+    this.materializedCellCount = 2;
     this.root.visible = false;
     this.aggregateRoot.visible = false;
     this.importedRoot.visible = true;
@@ -336,7 +424,6 @@ export class TessarynWorld {
     geometry.computeBoundingSphere();
     const material = new THREE.ShaderMaterial({
       transparent: true,
-      vertexColors: true,
       depthWrite: true,
       uniforms: {
         opacity: { value: 1 },
@@ -422,6 +509,379 @@ export class TessarynWorld {
     this.callbacks.onCellSelected(cell);
   }
 
+  loadTemporalObservations(observations: TemporalObservation[]): void {
+    if (observations.length < 3 || observations.some((observation) => observation.surfels.length === 0)) {
+      throw new Error("temporal Locus requires at least three nonempty observations");
+    }
+    this.disposeImportedRoot();
+    this.root.visible = false;
+    this.aggregateRoot.visible = false;
+    this.importedRoot.visible = true;
+    this.importedTemporal = true;
+    this.nodes.clear();
+    this.cellsById.clear();
+    this.interactive.length = 0;
+    this.weaveLinks.length = 0;
+    this.constrainedWeave = null;
+
+    const bounds = new THREE.Box3();
+    const point = new THREE.Vector3();
+    for (const observation of observations) {
+      for (const surfel of observation.surfels) {
+        point.set(
+          surfel.positionUm[0] / 1_000_000,
+          surfel.positionUm[2] / 1_000_000,
+          -surfel.positionUm[1] / 1_000_000,
+        );
+        bounds.expandByPoint(point);
+      }
+    }
+    if (bounds.isEmpty()) throw new Error("temporal Locus has no finite geometry");
+    const sourceCenter = bounds.getCenter(new THREE.Vector3());
+    const localBounds = bounds.clone().translate(sourceCenter.clone().multiplyScalar(-1));
+    const size = localBounds.getSize(new THREE.Vector3());
+    const radius = Math.max(0.8, size.length() * 0.5);
+    const focus = new THREE.Vector3(0, 1.15, 0);
+    const momentColors = ["#8fd8cf", "#d9ba76", "#e7e0cf", "#db806d"];
+    const canonicalObservations = observations.filter((observation) => !observation.alternate);
+    const stableVoxelKeys = canonicalObservations
+      .map(
+        (observation) =>
+          new Set(
+            observation.sdfVoxels
+              .filter(
+                (voxel) => Math.abs(voxel.signedDistanceUm) <= observation.voxelSizeUm,
+              )
+              .map((voxel) => voxel.coordinate.join(",")),
+          ),
+      )
+      .reduce<Set<string>>((shared, current, index) => {
+        if (index === 0) return current;
+        return new Set([...shared].filter((key) => current.has(key)));
+      }, new Set());
+
+    observations.forEach((observation, observationIndex) => {
+      const surfelLimit = this.constrainedRenderer
+        ? innerWidth <= 680
+          ? 18_000
+          : 24_000
+        : observation.surfels.length;
+      const surfelStride = Math.max(1, Math.ceil(observation.surfels.length / surfelLimit));
+      const renderedSurfels = observation.surfels.filter(
+        (_surfel, index) => index % surfelStride === 0,
+      );
+      const positions = new Float32Array(renderedSurfels.length * 3);
+      const normals = new Float32Array(renderedSurfels.length * 3);
+      const colors = new Float32Array(renderedSurfels.length * 3);
+      let radiusSum = 0;
+      renderedSurfels.forEach((surfel, index) => {
+        positions.set(
+          [
+            surfel.positionUm[0] / 1_000_000 - sourceCenter.x,
+            surfel.positionUm[2] / 1_000_000 - sourceCenter.y,
+            -surfel.positionUm[1] / 1_000_000 - sourceCenter.z,
+          ],
+          index * 3,
+        );
+        normals.set(
+          [
+            surfel.normalQ15[0] / 32_767,
+            surfel.normalQ15[2] / 32_767,
+            -surfel.normalQ15[1] / 32_767,
+          ],
+          index * 3,
+        );
+        colors.set(
+          [surfel.color[0] / 255, surfel.color[1] / 255, surfel.color[2] / 255],
+          index * 3,
+        );
+        radiusSum += surfel.radiusUm / 1_000_000;
+      });
+      const surfelGeometry = new THREE.BufferGeometry();
+      surfelGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      surfelGeometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+      surfelGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      surfelGeometry.computeBoundingSphere();
+      const surfelMaterial = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: true,
+        uniforms: {
+          opacity: { value: 1 },
+          pointSize: {
+            value: THREE.MathUtils.clamp(
+              (radiusSum / renderedSurfels.length) * 1_800,
+              4.2,
+              34,
+            ),
+          },
+          pixelRatio: { value: this.renderer.getPixelRatio() },
+        },
+        vertexShader: [
+          "attribute vec3 color;",
+          "varying vec3 vColor;",
+          "varying vec3 vNormal;",
+          "uniform float pointSize;",
+          "uniform float pixelRatio;",
+          "void main(){",
+          "vec4 viewPosition=modelViewMatrix*vec4(position,1.0);",
+          "vColor=color;",
+          "vNormal=normalize(normalMatrix*normal);",
+          "gl_PointSize=clamp(pointSize*pixelRatio/max(0.25,-viewPosition.z),2.8,42.0);",
+          "gl_Position=projectionMatrix*viewPosition;",
+          "}",
+        ].join("\n"),
+        fragmentShader: [
+          "varying vec3 vColor;",
+          "varying vec3 vNormal;",
+          "uniform float opacity;",
+          "void main(){",
+          "vec2 p=gl_PointCoord-vec2(0.5);",
+          "float radius=length(p);",
+          "if(radius>0.48) discard;",
+          "vec3 lightDirection=normalize(vec3(-0.28,0.78,0.46));",
+          "float diffuse=0.38+0.62*abs(dot(normalize(vNormal),lightDirection));",
+          "float edge=1.0-smoothstep(0.34,0.48,radius);",
+          "float core=1.0-smoothstep(0.0,0.46,radius);",
+          "vec3 matter=vColor*diffuse+vec3(0.08,0.13,0.12)*core;",
+          "gl_FragColor=vec4(matter,opacity*edge);",
+          "}",
+        ].join("\n"),
+      });
+      const surfelPoints = new THREE.Points(surfelGeometry, surfelMaterial);
+      surfelPoints.name = "observed-surfel-field";
+      surfelPoints.userData.cellKey = observation.cell.key;
+
+      const group = new THREE.Group();
+      group.name = observation.cell.key;
+      group.position.copy(focus);
+      group.userData.temporalMoment = observation.id;
+      group.userData.alternate = observation.alternate;
+      group.add(surfelPoints);
+
+      const nearSurface = observation.sdfVoxels.filter(
+        (voxel) => Math.abs(voxel.signedDistanceUm) <= observation.voxelSizeUm,
+      );
+      const temporalDelta = nearSurface.filter(
+        (voxel) => !stableVoxelKeys.has(voxel.coordinate.join(",")),
+      );
+      const voxelSource =
+        temporalDelta.length > 0
+          ? temporalDelta
+          : nearSurface.length > 0
+            ? nearSurface
+            : observation.sdfVoxels;
+      const maxInstances = this.constrainedRenderer
+        ? innerWidth <= 680
+          ? 480
+          : 700
+        : 16_000;
+      const stride = Math.max(1, Math.ceil(voxelSource.length / maxInstances));
+      const instanceCount = Math.ceil(voxelSource.length / stride);
+      const voxelMeters = observation.voxelSizeUm / 1_000_000;
+      const voxelGeometry = new THREE.BoxGeometry(
+        voxelMeters * 0.66,
+        voxelMeters * 0.66,
+        voxelMeters * 0.66,
+      );
+      const voxelMaterial = new THREE.MeshStandardMaterial({
+        color: momentColors[observationIndex] ?? "#8fd8cf",
+        roughness: 0.68,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.48,
+        depthWrite: true,
+        vertexColors: true,
+      });
+      voxelMaterial.userData.baseOpacity = observation.alternate ? 0.34 : 0.48;
+      const sdfMatter = new THREE.InstancedMesh(voxelGeometry, voxelMaterial, instanceCount);
+      sdfMatter.name = "verified-sdf-matter";
+      sdfMatter.userData.cellKey = observation.cell.key;
+      const matrix = new THREE.Matrix4();
+      const baseColor = new THREE.Color(momentColors[observationIndex] ?? "#8fd8cf");
+      let instanceIndex = 0;
+      for (let index = 0; index < voxelSource.length; index += stride) {
+        const voxel = voxelSource[index];
+        if (!voxel) continue;
+        const x = (voxel.coordinate[0] + 0.5) * voxelMeters - sourceCenter.x;
+        const y = (voxel.coordinate[2] + 0.5) * voxelMeters - sourceCenter.y;
+        const z = -(voxel.coordinate[1] + 0.5) * voxelMeters - sourceCenter.z;
+        const confidence = THREE.MathUtils.clamp(Math.log2(voxel.weight + 1) / 18, 0.55, 1);
+        matrix.makeScale(confidence, confidence, confidence);
+        matrix.setPosition(x, y, z);
+        sdfMatter.setMatrixAt(instanceIndex, matrix);
+        const distance = THREE.MathUtils.clamp(
+          Math.abs(voxel.signedDistanceUm) / Math.max(1, observation.voxelSizeUm),
+          0,
+          1,
+        );
+        sdfMatter.setColorAt(
+          instanceIndex,
+          baseColor.clone().lerp(new THREE.Color("#f2eee3"), (1 - distance) * 0.34),
+        );
+        instanceIndex += 1;
+      }
+      sdfMatter.instanceMatrix.needsUpdate = true;
+      if (sdfMatter.instanceColor) sdfMatter.instanceColor.needsUpdate = true;
+      sdfMatter.computeBoundingSphere();
+      group.add(sdfMatter);
+
+      const boundary = new THREE.LineSegments(
+        new THREE.EdgesGeometry(
+          new THREE.BoxGeometry(
+            Math.max(0.1, size.x),
+            Math.max(0.1, size.y),
+            Math.max(0.1, size.z),
+          ),
+        ),
+        new THREE.LineBasicMaterial({
+          color: momentColors[observationIndex] ?? "#8fd8cf",
+          transparent: true,
+          opacity: observation.alternate ? 0.22 : 0.12,
+        }),
+      );
+      boundary.name = "cell-boundary";
+      group.add(boundary);
+      this.createTemporalTraceLayers(
+        group,
+        observation.cell,
+        [size.x, size.y, size.z],
+        momentColors[observationIndex] ?? "#8fd8cf",
+      );
+      this.createSemanticConstellation(
+        group,
+        observation.cell,
+        true,
+        [size.x, size.y, size.z],
+      );
+      this.importedRoot.add(group);
+
+      const node: CellNode = {
+        cell: observation.cell,
+        group,
+        materials: this.collectMaterials(group),
+        basePosition: focus.clone(),
+        targetPosition: focus.clone(),
+        baseQuaternion: group.quaternion.clone(),
+        assemblyQuaternion: group.quaternion.clone(),
+        halo: null,
+        haloMaterial: null,
+        meaning: group.getObjectByName("slbit-constellation") as THREE.Group | null,
+        currentOpacity: observation.id === "moment-c" ? 1 : 0,
+        targetOpacity: observation.id === "moment-c" ? 1 : 0,
+        condensed: true,
+        condenseAt: 0,
+        assembledAt: 0,
+        momentIndex: observation.alternate ? 2 : Math.max(0, observationIndex),
+      };
+      this.nodes.set(observation.cell.key, node);
+      this.cellsById.set(observation.cell.cell_id, node);
+      this.interactive.push(surfelPoints, sdfMatter);
+      this.setOpacity(node, node.currentOpacity);
+    });
+
+    const sharedReference = canonicalObservations.at(-1);
+    if (sharedReference && stableVoxelKeys.size > 0) {
+      const stableSource = sharedReference.sdfVoxels.filter((voxel) =>
+        stableVoxelKeys.has(voxel.coordinate.join(",")),
+      );
+      const stableLimit = this.constrainedRenderer
+        ? innerWidth <= 680
+          ? 400
+          : 600
+        : stableSource.length;
+      const stableStride = Math.max(1, Math.ceil(stableSource.length / stableLimit));
+      const stableVoxels = stableSource.filter(
+        (_voxel, index) => index % stableStride === 0,
+      );
+      const voxelMeters = sharedReference.voxelSizeUm / 1_000_000;
+      const geometry = new THREE.BoxGeometry(
+        voxelMeters * 0.72,
+        voxelMeters * 0.72,
+        voxelMeters * 0.72,
+      );
+      const material = new THREE.MeshStandardMaterial({
+        color: "#d9e5d4",
+        emissive: "#16231d",
+        emissiveIntensity: 0.16,
+        roughness: 0.62,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.64,
+      });
+      const sharedMatter = new THREE.InstancedMesh(
+        geometry,
+        material,
+        stableVoxels.length,
+      );
+      sharedMatter.name = "shared-temporal-structure";
+      const matrix = new THREE.Matrix4();
+      stableVoxels.forEach((voxel, index) => {
+        matrix.makeTranslation(
+          (voxel.coordinate[0] + 0.5) * voxelMeters - sourceCenter.x,
+          (voxel.coordinate[2] + 0.5) * voxelMeters - sourceCenter.y,
+          -(voxel.coordinate[1] + 0.5) * voxelMeters - sourceCenter.z,
+        );
+        sharedMatter.setMatrixAt(index, matrix);
+      });
+      sharedMatter.instanceMatrix.needsUpdate = true;
+      sharedMatter.computeBoundingSphere();
+      const sharedRoot = new THREE.Group();
+      sharedRoot.name = "chronofold-shared-structure";
+      sharedRoot.position.copy(focus);
+      sharedRoot.add(sharedMatter);
+      this.importedRoot.add(sharedRoot);
+    }
+
+    const byMoment = (id: string) =>
+      [...this.nodes.values()].find((node) => node.group.userData.temporalMoment === id);
+    for (const [fromId, toId] of [
+      ["moment-a", "moment-b"],
+      ["moment-b", "moment-c"],
+      ["moment-b", "alternate-c"],
+    ] as const) {
+      const from = byMoment(fromId);
+      const to = byMoment(toId);
+      if (!from || !to) continue;
+      const geometry = new THREE.BufferGeometry().setFromPoints([
+        from.group.position.clone(),
+        from.group.position.clone(),
+        to.group.position.clone(),
+      ]);
+      const line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({
+          color: toId === "alternate-c" ? "#db806d" : "#8fd8cf",
+          transparent: true,
+          opacity: toId === "alternate-c" ? 0.52 : 0.34,
+          depthWrite: false,
+        }),
+      );
+      line.visible = false;
+      this.importedRoot.add(line);
+      this.importedLinks.push({ line, from, to });
+    }
+
+    this.raycaster.params.Points = { threshold: Math.max(0.025, radius * 0.012) };
+    this.importedFrame = { focus, radius };
+    this.importedSdfVoxelCount = observations.reduce(
+      (total, observation) => total + observation.sdfVoxels.length,
+      0,
+    );
+    this.assemblyPointCount = observations.reduce(
+      (total, observation) => total + observation.surfels.length,
+      0,
+    );
+    this.importedProvenanceLinks = this.importedLinks.length;
+    this.materializedCellCount = observations.length * 2;
+    this.firstStructureMs ??= performance.now() - this.startedAt;
+    this.moment = "moment-c";
+    this.selected = byMoment("moment-c") ?? [...this.nodes.values()][0] ?? null;
+    this.setChronofold(false);
+    this.setScale("room");
+    this.updateCellTargets();
+    this.highlightSelection();
+  }
+
   selectedScreenPosition(): { x: number; y: number; visible: boolean } | null {
     if (!this.selected) return null;
     this.selected.group.getWorldPosition(this.selectedWorld);
@@ -462,18 +922,25 @@ export class TessarynWorld {
       renderer,
       firstStructureMs: this.firstStructureMs,
       materializationMs: this.materializationMs,
-      cellCount: this.nodes.size,
-      provenanceLinks: this.weaveLinks.length,
-      temporalManifolds: this.world.moments.length,
+      cellCount: this.materializedCellCount || this.nodes.size,
+      provenanceLinks: this.importedTemporal
+        ? this.importedProvenanceLinks
+        : this.weaveLinks.length,
+      temporalManifolds: this.importedTemporal ? this.nodes.size : this.world.moments.length,
       semanticConstellations: [...this.nodes.values()].filter((node) =>
         Boolean(node.meaning),
       ).length,
       activeMeaningFields: [...this.nodes.values()].filter((node) => node.meaning?.visible)
         .length,
       assemblyPoints: this.assemblyPointCount,
-      continuumLayers: this.continuumRoot.children.length,
+      continuumLayers: this.importedTemporal
+        ? this.importedRoot.children.length
+        : this.continuumRoot.children.length,
       scale: this.scale,
+      scaleDepth: this.scaleDepth,
       chronofold: this.chronofold,
+      temporalObservations: this.importedTemporal ? this.nodes.size : 0,
+      sdfVoxels: this.importedSdfVoxelCount,
     };
   }
 
@@ -516,6 +983,17 @@ export class TessarynWorld {
     return /swiftshader|llvmpipe|software rasterizer/i.test(renderer);
   }
 
+  private preferredPixelRatio(width: number): number {
+    const cap = this.constrainedRenderer
+      ? width <= 680
+        ? 0.58
+        : 0.46
+      : width <= 680
+        ? 1
+        : 1.4;
+    return Math.min(devicePixelRatio, cap);
+  }
+
   private disposeImportedRoot(): void {
     this.importedRoot.traverse((object) => {
       const renderable = object as THREE.Mesh;
@@ -527,6 +1005,7 @@ export class TessarynWorld {
       materials.forEach((material) => material.dispose());
     });
     this.importedRoot.clear();
+    this.importedLinks.length = 0;
   }
 
   private buildWorld(): void {
@@ -1784,6 +2263,75 @@ export class TessarynWorld {
     group.add(constellationRoot);
   }
 
+  private createTemporalTraceLayers(
+    group: THREE.Group,
+    cell: DemoCell,
+    size: [number, number, number],
+    color: string,
+  ): void {
+    const rootprint = new THREE.Group();
+    rootprint.name = "rootprint-memory";
+    rootprint.visible = false;
+    rootprint.position.set(0, -size[1] * 0.42, size[2] * 0.46);
+    const radius = THREE.MathUtils.clamp(Math.hypot(size[0], size[2]) * 0.055, 0.16, 0.44);
+    const random = seededRandom(cell.visual.seed ^ Number.parseInt(cell.cell_id.slice(-8), 16));
+    const count = Math.max(4, Math.min(8, cell.manifest.parents.length + 5));
+    const points = Array.from({ length: count }, (_, index) => {
+      const phase = (index / Math.max(1, count - 1) - 0.5) * Math.PI * 1.28;
+      return new THREE.Vector3(
+        Math.sin(phase) * radius * 1.8,
+        Math.cos(phase) * radius * 0.72 + (random() - 0.5) * radius * 0.2,
+        (random() - 0.5) * radius * 0.5,
+      );
+    });
+    const nodeMaterial = this.constrainedRenderer
+      ? new THREE.MeshBasicMaterial({ color })
+      : new THREE.MeshStandardMaterial({
+          color,
+          emissive: new THREE.Color(color).multiplyScalar(0.18),
+          emissiveIntensity: 0.28,
+          roughness: 0.42,
+          metalness: 0.16,
+        });
+    const nodes = new THREE.InstancedMesh(
+      new THREE.DodecahedronGeometry(radius * 0.11, 0),
+      nodeMaterial,
+      count,
+    );
+    const matrix = new THREE.Matrix4();
+    points.forEach((position, index) => {
+      matrix.makeTranslation(position.x, position.y, position.z);
+      nodes.setMatrixAt(index, matrix);
+    });
+    nodes.instanceMatrix.needsUpdate = true;
+    nodes.name = "rootprint-nodes";
+    rootprint.add(nodes);
+    const segments: number[] = [];
+    for (let index = 1; index < points.length; index += 1) {
+      const from = points[index - 1];
+      const to = points[index];
+      if (!from || !to) continue;
+      segments.push(from.x, from.y, from.z, to.x, to.y, to.z);
+    }
+    const lineGeometry = new THREE.BufferGeometry();
+    lineGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(segments, 3),
+    );
+    rootprint.add(
+      new THREE.LineSegments(
+        lineGeometry,
+        new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.62,
+          depthWrite: false,
+        }),
+      ),
+    );
+    group.add(rootprint);
+  }
+
   private addMesh(
     group: THREE.Group,
     geometry: THREE.BufferGeometry,
@@ -2481,8 +3029,37 @@ export class TessarynWorld {
     this.targetAggregateOpacity = !this.importedFrame && this.scale === "site" ? 1 : 0;
     for (const node of this.nodes.values()) {
       if (this.importedFrame) {
-        node.targetOpacity = 1;
         node.targetPosition.copy(node.basePosition);
+        if (!this.importedTemporal) {
+          node.targetOpacity = 1;
+          continue;
+        }
+        const temporalMoment = String(node.group.userData.temporalMoment ?? "");
+        const alternate = Boolean(node.group.userData.alternate);
+        const active = temporalMoment === this.moment && !alternate;
+        const scaleVisibility =
+          this.scaleDepth < 0.3 && node !== this.selected ? 0.06 : 1;
+        node.targetOpacity =
+          (this.chronofold ? (alternate ? 0.52 : active ? 1 : 0.34) : active ? 1 : 0) *
+          scaleVisibility;
+        if (this.chronofold) {
+          const separation = THREE.MathUtils.clamp(this.importedFrame.radius * 1.35, 2.8, 7.5);
+          const phase = temporalMoment === "moment-a" ? -1 : temporalMoment === "moment-b" ? 0 : 1;
+          node.targetPosition.x += phase * separation;
+          node.targetPosition.z += phase * 0.42;
+          if (alternate) {
+            node.targetPosition.y += separation * 0.32;
+            node.targetPosition.z += separation * 0.5;
+          }
+        }
+        node.group.traverse((object) => {
+          if (object.name === "cell-boundary") {
+            object.visible = this.evidence && (node === this.selected || this.chronofold);
+          }
+          if (object.name === "verified-sdf-matter") {
+            object.visible = this.scaleDepth >= 0.14 || node === this.selected;
+          }
+        });
         continue;
       }
       const shared = node.cell.visual.moments.length === ALL_MOMENTS;
@@ -2718,10 +3295,8 @@ export class TessarynWorld {
       "wheel",
       (event) => {
         event.preventDefault();
-        const order: ScaleMode[] = ["object", "room", "site"];
-        const index = order.indexOf(this.scale);
-        const next = THREE.MathUtils.clamp(index + (event.deltaY > 0 ? 1 : -1), 0, 2);
-        this.setScale(order[next] ?? "room");
+        const normalized = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
+        this.setScaleDepth(this.targetScaleDepth + normalized * 0.00072);
       },
       { passive: false },
     );
@@ -2754,9 +3329,11 @@ export class TessarynWorld {
   private resize(): void {
     const width = Math.max(1, this.canvas.clientWidth);
     const height = Math.max(1, this.canvas.clientHeight);
-    this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, this.constrainedRenderer ? 0.55 : width <= 680 ? 1 : 1.4),
+    this.adaptivePixelRatio = Math.min(
+      this.adaptivePixelRatio,
+      this.preferredPixelRatio(width),
     );
+    this.renderer.setPixelRatio(this.adaptivePixelRatio);
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.fov = height < 500 ? 62 : width <= 680 ? 58 : 52;
@@ -2852,6 +3429,25 @@ export class TessarynWorld {
           child.rotation.y += delta * (index % 2 === 0 ? 0.055 : -0.055);
         });
       }
+    }
+    for (const link of this.importedLinks) {
+      const positions = link.line.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const from = link.from.group.position;
+      const to = link.to.group.position;
+      positions.setXYZ(0, from.x, from.y, from.z);
+      positions.setXYZ(
+        1,
+        (from.x + to.x) * 0.5,
+        Math.max(from.y, to.y) + 0.72,
+        (from.z + to.z) * 0.5,
+      );
+      positions.setXYZ(2, to.x, to.y, to.z);
+      positions.needsUpdate = true;
+      link.line.visible =
+        this.evidence &&
+        this.chronofold &&
+        link.from.currentOpacity > 0.03 &&
+        link.to.currentOpacity > 0.03;
     }
     if (!this.reducedMotion) {
       this.fieldRoot.children.forEach((child) => {
@@ -3039,6 +3635,8 @@ export class TessarynWorld {
         });
       }
     }
+    this.updateScaleBreathing(delta);
+    this.updateInspection(delta);
     this.updateMovement(delta);
     this.focus.lerp(this.targetFocus, 1 - Math.exp(-delta * 4.5));
     this.distance = THREE.MathUtils.damp(this.distance, this.targetDistance, 4.5, delta);
@@ -3052,8 +3650,120 @@ export class TessarynWorld {
     if (this.scene.background instanceof THREE.Color) {
       this.scene.background.lerp(this.targetBackground, 1 - Math.exp(-delta * 2.5));
     }
+    this.updateAdaptiveResolution(timestamp);
     this.renderer.render(this.scene, this.camera);
   };
+
+  private updateAdaptiveResolution(timestamp: number): void {
+    if (
+      this.reducedMotion ||
+      timestamp - this.lastResolutionAdjustmentMs < 3_000 ||
+      this.frameDurations.length < 45
+    ) {
+      return;
+    }
+    this.lastResolutionAdjustmentMs = timestamp;
+    const samples = [...this.frameDurations].sort((left, right) => left - right);
+    const median = samples[Math.floor(samples.length / 2)] ?? 0;
+    const mobile = this.canvas.clientWidth <= 680;
+    const targetMs = mobile ? 33.4 : 20;
+    const cap = this.preferredPixelRatio(this.canvas.clientWidth);
+    const floor = this.constrainedRenderer ? (mobile ? 0.46 : 0.36) : mobile ? 0.72 : 0.64;
+    let next = this.adaptivePixelRatio;
+    if (median > targetMs * 1.35) next = Math.max(floor, next - 0.08);
+    else if (median < targetMs * 0.72) next = Math.min(cap, next + 0.05);
+    if (Math.abs(next - this.adaptivePixelRatio) < 0.001) return;
+    this.adaptivePixelRatio = next;
+    this.renderer.setPixelRatio(next);
+    this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
+    for (const shader of this.animatedShaders) {
+      if (shader.uniforms.pixelRatio) shader.uniforms.pixelRatio.value = next;
+    }
+    for (const node of this.nodes.values()) {
+      for (const material of node.materials) {
+        if (material instanceof THREE.ShaderMaterial && material.uniforms.pixelRatio) {
+          material.uniforms.pixelRatio.value = next;
+        }
+      }
+    }
+  }
+
+  private updateScaleBreathing(delta: number): void {
+    const next = THREE.MathUtils.damp(
+      this.scaleDepth,
+      this.targetScaleDepth,
+      this.reducedMotion ? 30 : 5.8,
+      delta,
+    );
+    this.scaleDepth = Math.abs(next - this.targetScaleDepth) < 0.0005
+      ? this.targetScaleDepth
+      : next;
+    const objectDistance = this.importedFrame
+      ? Math.max(0.8, this.importedFrame.radius * 0.72)
+      : innerWidth <= 680
+        ? 4.15
+        : 3.05;
+    const roomDistance = this.importedFrame
+      ? Math.max(1.4, this.importedFrame.radius * 1.65)
+      : 14.5;
+    const siteDistance = this.importedFrame
+      ? Math.max(2.6, this.importedFrame.radius * 3.1)
+      : 25;
+    if (this.scaleDepth <= 0.5) {
+      this.targetDistance = THREE.MathUtils.lerp(
+        objectDistance,
+        roomDistance,
+        smoothstep01(this.scaleDepth * 2),
+      );
+    } else {
+      this.targetDistance = THREE.MathUtils.lerp(
+        roomDistance,
+        siteDistance,
+        smoothstep01((this.scaleDepth - 0.5) * 2),
+      );
+    }
+    if (Math.abs(this.scaleDepth - this.lastScaleTargetUpdate) >= 0.012) {
+      this.lastScaleTargetUpdate = this.scaleDepth;
+      this.updateCellTargets();
+    }
+    if (Math.abs(this.scaleDepth - this.lastScaleDepthCallback) >= 0.004) {
+      this.lastScaleDepthCallback = this.scaleDepth;
+      this.callbacks.onScaleDepthChanged(this.scaleDepth);
+    }
+  }
+
+  private prepareInspection(node: CellNode): void {
+    node.group.traverse((object) => {
+      if (!object.userData.inspectionBase) {
+        object.userData.inspectionBase = object.position.toArray();
+      }
+    });
+  }
+
+  private updateInspection(delta: number): void {
+    if (!this.selected) return;
+    this.prepareInspection(this.selected);
+    const factor = this.inspectionLayer ? 1 : 0;
+    this.selected.group.traverse((object) => {
+      const base = object.userData.inspectionBase as [number, number, number] | undefined;
+      if (!base || object === this.selected?.group) return;
+      const target = new THREE.Vector3(base[0], base[1], base[2]);
+      const name = object.name;
+      if (this.inspectionLayer === "state" && /boundary|sdf-matter|cell-lattice/.test(name)) {
+        target.multiplyScalar(1.08).add(new THREE.Vector3(0, 0.08, 0));
+      } else if (
+        this.inspectionLayer === "lineage" &&
+        /memory|rootprint|growth-current/.test(name)
+      ) {
+        target.multiplyScalar(1.16).add(new THREE.Vector3(0, 0.26, 0));
+      } else if (this.inspectionLayer === "meaning" && /slbit/.test(name)) {
+        target.multiplyScalar(1.22).add(new THREE.Vector3(0, 0.48, 0));
+      } else if (factor > 0 && name === "observed-surfel-field") {
+        target.add(new THREE.Vector3(0, -0.04, 0));
+      }
+      object.position.lerp(target, 1 - Math.exp(-delta * 7.5));
+    });
+  }
 
   private updateMovement(delta: number): void {
     const speed = (this.scale === "site" ? 8 : this.scale === "room" ? 4 : 1.8) * delta;
@@ -3085,4 +3795,9 @@ function seededRandom(seed: number): () => number {
     output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
     return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
   };
+}
+
+function smoothstep01(value: number): number {
+  const clamped = THREE.MathUtils.clamp(value, 0, 1);
+  return clamped * clamped * (3 - 2 * clamped);
 }

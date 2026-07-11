@@ -7,7 +7,7 @@
     "timestamp": "1970-01-01T00:00:00.000Z",
     "lifecycles": [
       {
-        "phase": "build"
+        "phase": "pre-build"
       }
     ],
     "tools": [
@@ -18,12 +18,12 @@
       }
     ],
     "component": {
-      "bom-ref": "@tessaryn/viewer-web@0.1.1",
+      "bom-ref": "@tessaryn/viewer-web@0.2.0",
       "type": "application",
       "name": "viewer-web",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "scope": "required",
-      "purl": "pkg:npm/%40tessaryn/viewer-web@0.1.1",
+      "purl": "pkg:npm/%40tessaryn/viewer-web@0.2.0",
       "properties": [
         {
           "name": "cdx:npm:package:private",
@@ -40,7 +40,6 @@
       "name": "@dimforge/rapier3d-compat",
       "version": "0.12.0",
       "scope": "optional",
-      "description": "3-dimensional physics engine in Rust - official JS bindings. Compatibility package with inlined webassembly as base64.",
       "purl": "pkg:npm/%40dimforge/rapier3d-compat@0.12.0",
       "properties": [
         {
@@ -52,18 +51,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@dimforge/rapier3d-compat/-/rapier3d-compat-0.12.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/dimforge/rapier.js.git"
-        },
-        {
-          "type": "website",
-          "url": "https://rapier.rs"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/dimforge/rapier.js/issues"
         }
       ],
       "hashes": [
@@ -81,13 +68,143 @@
       ]
     },
     {
+      "bom-ref": "@emnapi/core@1.11.1",
+      "type": "library",
+      "name": "@emnapi/core",
+      "version": "1.11.1",
+      "scope": "optional",
+      "purl": "pkg:npm/%40emnapi/core@1.11.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@emnapi/core/-/core-1.11.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "452bdb4261f374accdb0b61aff01eb6dcdca378b182ca01d3d9c6a88cd87013aaffd2064dbf10d487a6f5c668b38c72c032cf4a68106aa49a62981b739688911"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@emnapi/runtime@1.11.1",
+      "type": "library",
+      "name": "@emnapi/runtime",
+      "version": "1.11.1",
+      "scope": "optional",
+      "purl": "pkg:npm/%40emnapi/runtime@1.11.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.11.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "be08fb477cb75a0c76e0841a18f03f47a6055cb1d530e674b951322103da5acfab7750337c43179400b6d856303b55e4291e8d3ecabb9946a7747f2821175917"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@emnapi/wasi-threads@1.2.2",
+      "type": "library",
+      "name": "@emnapi/wasi-threads",
+      "version": "1.2.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40emnapi/wasi-threads@1.2.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.2.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "73de6a39790777274d2a1b1c05379ba840b5095019a72a8e7d57c1cd0d6a833ca5de07de95d5232208036c86600cab072e09ec33e8a01fb4c9fde01ab1a56e30"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@napi-rs/wasm-runtime@1.1.6",
+      "type": "library",
+      "name": "@napi-rs/wasm-runtime",
+      "version": "1.1.6",
+      "scope": "optional",
+      "purl": "pkg:npm/%40napi-rs/wasm-runtime@1.1.6",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.1.6.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "64bbff25d51f92f3b2f5e0a79c16867e23be5e299b8de6c078ef8c450a83fc1f85475b6744dd2da4a4891d16c4f2c15f4ba6aab1767aed34237f07ecc542d56e"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "@oxc-project/types@0.139.0",
       "type": "library",
       "name": "@oxc-project/types",
       "version": "0.139.0",
       "scope": "optional",
-      "author": "Boshen and oxc contributors",
-      "description": "Types for Oxc AST nodes",
       "purl": "pkg:npm/%40oxc-project/types@0.139.0",
       "properties": [
         {
@@ -99,18 +216,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@oxc-project/types/-/types-0.139.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/oxc-project/oxc.git"
-        },
-        {
-          "type": "website",
-          "url": "https://oxc.rs"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/oxc-project/oxc/issues"
         }
       ],
       "hashes": [
@@ -133,8 +238,6 @@
       "name": "@playwright/test",
       "version": "1.61.1",
       "scope": "optional",
-      "author": "Microsoft Corporation",
-      "description": "A high-level API to automate web browsers",
       "purl": "pkg:npm/%40playwright/test@1.61.1",
       "properties": [
         {
@@ -146,18 +249,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@playwright/test/-/test-1.61.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/microsoft/playwright.git"
-        },
-        {
-          "type": "website",
-          "url": "https://playwright.dev"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/microsoft/playwright/issues"
         }
       ],
       "hashes": [
@@ -175,12 +266,308 @@
       ]
     },
     {
+      "bom-ref": "@rolldown/binding-android-arm64@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-android-arm64",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-android-arm64@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-android-arm64/-/binding-android-arm64-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "95983c7ea22fdafec5176dfb6f0320cc664426f18befdfece649c9fe2e859ac185e175e5cdc719e236fe4eb148c6d492c45b48a5db20acf65e324d48f4015cc9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-darwin-arm64@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-darwin-arm64",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-darwin-arm64@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-darwin-arm64/-/binding-darwin-arm64-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e75067c7da4d88c44a49436d05fc9290d27dbcc53d1e1dc8d68cc377a8323cf63369709f9e9b547046715c66059feba5d9db5c3148aa191d586a2d8ad74ba84f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-darwin-x64@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-darwin-x64",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-darwin-x64@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-darwin-x64/-/binding-darwin-x64-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4e6fa06df0b4687bb5b4103f26f290877d92d0ae988021e4880178fd6eb15f42b446636e73de1578ae35f5d26813ae51e5a4719a8fa7a194125ab00c17ac9bea"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-freebsd-x64@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-freebsd-x64",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-freebsd-x64@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-freebsd-x64/-/binding-freebsd-x64-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "24ccc3282097abddd871c1b9833de1bceb35a1744a01fd176297ce4bcf1efb066b0bc22e823ea3ebcf3aeefad8664be90c3a4a9ff2a828e45386672132917a4c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-linux-arm-gnueabihf@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-linux-arm-gnueabihf",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-linux-arm-gnueabihf@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-linux-arm-gnueabihf/-/binding-linux-arm-gnueabihf-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b8c2f6d63d8ae537cf1aeb4ac6e6fe33e9cb8d922b5a35d0e46af1e2509efe78a64e3f41e0beb7cc7a635cb978cb42f799c9b686d11021bd3aa021bfb337ab37"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-linux-arm64-gnu@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-linux-arm64-gnu",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-linux-arm64-gnu@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-linux-arm64-gnu/-/binding-linux-arm64-gnu-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9dabd28ae4cca20be742866833fbfe977656a39d3f353c121d2ce1780071fd10a79943da2b0abda92a3806bd8e611b36d7e173f2e16a21364cdc7e28a4e074fd"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-linux-arm64-musl@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-linux-arm64-musl",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-linux-arm64-musl@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-linux-arm64-musl/-/binding-linux-arm64-musl-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "940af2a87ec8b5eced9825d05e4d1eb4a8f8c0143b1b1e52e8b8ca86c829f736fc2396ecbaf53fda5947d610d0723b057aa22ca2f315377dfdffca540c3057c4"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-linux-ppc64-gnu@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-linux-ppc64-gnu",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-linux-ppc64-gnu@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-linux-ppc64-gnu/-/binding-linux-ppc64-gnu-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "7ec2bfb0d067c730652f83b524dad96a4550c4fb29aa9103e5d2ed36c652f6838a9ad4a974d233c47da49289791d84d624de3bb04db4ced3093f17d9f3da863a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-linux-s390x-gnu@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-linux-s390x-gnu",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-linux-s390x-gnu@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-linux-s390x-gnu/-/binding-linux-s390x-gnu-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "80b61be0121a7657d33984f980ee74de7f334235df960ce90f415cc8a874333c77aea0992a71e825657dc5ed4a5d4279971d897dc487aff9a1cd2d0f0bf31c00"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "@rolldown/binding-linux-x64-gnu@1.1.5",
       "type": "library",
       "name": "@rolldown/binding-linux-x64-gnu",
       "version": "1.1.5",
       "scope": "optional",
-      "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
       "purl": "pkg:npm/%40rolldown/binding-linux-x64-gnu@1.1.5",
       "properties": [
         {
@@ -192,18 +579,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@rolldown/binding-linux-x64-gnu/-/binding-linux-x64-gnu-1.1.5.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/rolldown/rolldown.git"
-        },
-        {
-          "type": "website",
-          "url": "https://rolldown.rs/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/rolldown/rolldown/issues"
         }
       ],
       "hashes": [
@@ -226,7 +601,6 @@
       "name": "@rolldown/binding-linux-x64-musl",
       "version": "1.1.5",
       "scope": "optional",
-      "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
       "purl": "pkg:npm/%40rolldown/binding-linux-x64-musl@1.1.5",
       "properties": [
         {
@@ -238,18 +612,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@rolldown/binding-linux-x64-musl/-/binding-linux-x64-musl-1.1.5.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/rolldown/rolldown.git"
-        },
-        {
-          "type": "website",
-          "url": "https://rolldown.rs/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/rolldown/rolldown/issues"
         }
       ],
       "hashes": [
@@ -267,12 +629,143 @@
       ]
     },
     {
+      "bom-ref": "@rolldown/binding-openharmony-arm64@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-openharmony-arm64",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-openharmony-arm64@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-openharmony-arm64/-/binding-openharmony-arm64-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c9ce56acbcd792ceb30907e7f4ec6bf293912b297fa45f908c7996fd0c77aaed28cabacd0becb624b4d4d44dab7166009b3967aa78165c7423cb9d55cd6ef457"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-wasm32-wasi@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-wasm32-wasi",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-wasm32-wasi@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-wasm32-wasi/-/binding-wasm32-wasi-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "55b4063d7d9be2be3c4c0308336723825b883351d8bad9b8a5c4c426c95eee210feec075745aad3cb0556dd2c0642c72d6dc4270fc5fe1015fe2ff2ebe5b4fa8"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-win32-arm64-msvc@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-win32-arm64-msvc",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-win32-arm64-msvc@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-win32-arm64-msvc/-/binding-win32-arm64-msvc-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "807bfcda4eb7cf8aa9579f90d72ff5d8aacad25b5606e9150c8f2765c6d3ed3b7f665388570a696b39deab417dde80f14e8dc88003040c8a108771369fa995b3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@rolldown/binding-win32-x64-msvc@1.1.5",
+      "type": "library",
+      "name": "@rolldown/binding-win32-x64-msvc",
+      "version": "1.1.5",
+      "scope": "optional",
+      "purl": "pkg:npm/%40rolldown/binding-win32-x64-msvc@1.1.5",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@rolldown/binding-win32-x64-msvc/-/binding-win32-x64-msvc-1.1.5.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b5366e0c13f0f39b443793d08b5a67101cc3cb4678f47b5270b01b0f9b7a872794f7603de69456692330d466598bf470812814225d31ad2957213ffd433bd848"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "@rolldown/pluginutils@1.0.1",
       "type": "library",
       "name": "@rolldown/pluginutils",
       "version": "1.0.1",
       "scope": "optional",
-      "description": "Plugin utilities for Rolldown",
       "purl": "pkg:npm/%40rolldown/pluginutils@1.0.1",
       "properties": [
         {
@@ -284,18 +777,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/rolldown/plugins.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/rolldown/plugins/issues"
         }
       ],
       "hashes": [
@@ -318,8 +799,6 @@
       "name": "@tweenjs/tween.js",
       "version": "23.1.3",
       "scope": "optional",
-      "author": "tween.js contributors",
-      "description": "Simple and fast tweening engine with optimised Robert Penner's equations.",
       "purl": "pkg:npm/%40tweenjs/tween.js@23.1.3",
       "properties": [
         {
@@ -331,18 +810,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@tweenjs/tween.js/-/tween.js-23.1.3.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/tweenjs/tween.js.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/tweenjs/tween.js"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/tweenjs/tween.js/issues"
         }
       ],
       "hashes": [
@@ -360,12 +827,44 @@
       ]
     },
     {
+      "bom-ref": "@tybys/wasm-util@0.10.3",
+      "type": "library",
+      "name": "@tybys/wasm-util",
+      "version": "0.10.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40tybys/wasm-util@0.10.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1777e8d4c62b44960bdf3111d0e50e9a4bad8ebd55a76de6eceb12829ee7ab848fe8ea97e82ff9e971483c09796eddf3681463996ed21b3deeffa2f016961c3a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "@types/node@26.1.1",
       "type": "library",
       "name": "@types/node",
       "version": "26.1.1",
       "scope": "optional",
-      "description": "TypeScript definitions for node",
       "purl": "pkg:npm/%40types/node@26.1.1",
       "properties": [
         {
@@ -377,18 +876,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@types/node/-/node-26.1.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
         }
       ],
       "hashes": [
@@ -411,7 +898,6 @@
       "name": "@types/pngjs",
       "version": "6.0.5",
       "scope": "optional",
-      "description": "TypeScript definitions for pngjs",
       "purl": "pkg:npm/%40types/pngjs@6.0.5",
       "properties": [
         {
@@ -423,18 +909,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@types/pngjs/-/pngjs-6.0.5.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pngjs"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
         }
       ],
       "hashes": [
@@ -457,7 +931,6 @@
       "name": "@types/stats.js",
       "version": "0.17.4",
       "scope": "optional",
-      "description": "TypeScript definitions for stats.js",
       "purl": "pkg:npm/%40types/stats.js@0.17.4",
       "properties": [
         {
@@ -469,18 +942,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@types/stats.js/-/stats.js-0.17.4.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/stats.js"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
         }
       ],
       "hashes": [
@@ -503,7 +964,6 @@
       "name": "@types/three",
       "version": "0.185.1",
       "scope": "optional",
-      "description": "TypeScript definitions for three",
       "purl": "pkg:npm/%40types/three@0.185.1",
       "properties": [
         {
@@ -515,18 +975,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@types/three/-/three-0.185.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/three"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
         }
       ],
       "hashes": [
@@ -549,7 +997,6 @@
       "name": "@types/webxr",
       "version": "0.5.24",
       "scope": "optional",
-      "description": "TypeScript definitions for webxr",
       "purl": "pkg:npm/%40types/webxr@0.5.24",
       "properties": [
         {
@@ -561,18 +1008,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@types/webxr/-/webxr-0.5.24.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/webxr"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/issues"
         }
       ],
       "hashes": [
@@ -590,13 +1025,407 @@
       ]
     },
     {
+      "bom-ref": "@typescript/typescript-aix-ppc64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-aix-ppc64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-aix-ppc64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-aix-ppc64/-/typescript-aix-ppc64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "31328a91607ba7fd04f718b5775b47b59e4f88b90610c22af3ca4ad82b9b6633ac2ed6132ea8602208bacdea456bef461d9ea1d3934c0a443118a88f5ccc57b5"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-darwin-arm64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-darwin-arm64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-darwin-arm64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-darwin-arm64/-/typescript-darwin-arm64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "828c336abf4cc12fda456a7a7f76b8294ab34630198ceb2618d08ce8b713817ba6f9d05f82c05530df8082f38209b82e5f289c93a2c986906ccf131e6c9f2cc8"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-darwin-x64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-darwin-x64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-darwin-x64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-darwin-x64/-/typescript-darwin-x64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "499f716489ea02936534673db345b5552b24b5848e7bd705a8d388aa63751acf129a48ca65816dd35ec6e15c0fc404889ce0ee01d6d35bbb1788551ff3ddd180"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-freebsd-arm64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-freebsd-arm64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-freebsd-arm64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-freebsd-arm64/-/typescript-freebsd-arm64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5b9347e32fc9d29948212e5bdb1bd312453b245c72a9d3003a07fe225865d2f1d05ca3b9759a3177e0bf8c4b6ae7a738177c24ef5441e013114365dd23e6f061"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-freebsd-x64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-freebsd-x64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-freebsd-x64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-freebsd-x64/-/typescript-freebsd-x64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "50c183c79b13a73370dd688f79b1fb97dd0859f26080477e7a01edfeaea9eff0a6df3aa857b5719065edfb70f13c8c3c09c9af001d23dec5557db857f8ce13a7"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-arm@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-arm",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-arm@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-arm/-/typescript-linux-arm-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "81f7d3df13f3f6c47b8ff6091319323e7b6b2343f610ff576cec96ced876fc6b3446cb4afbdd1105c3b49dc5e85f2fdb798965d525f0f38e8d7f6cdd9c4cf441"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-arm64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-arm64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-arm64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-arm64/-/typescript-linux-arm64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "421e1e538ff2df20e39df8e3c8f62284c8f9fce0c8966b7e073bb5ece23e7e24910d6e7b4265394a237addec4f44d24f294cdc73520d6b535776b27e32a1e351"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-loong64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-loong64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-loong64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-loong64/-/typescript-linux-loong64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b841dc93d8bc8680335cf8984626f53bb9a23a7cf6dd2c4879597a1782d7a31faaa2fd4adf98c77045ba5472af648fa9caf97b7d910fe0c094e4b62f22ad46b9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-mips64el@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-mips64el",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-mips64el@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-mips64el/-/typescript-linux-mips64el-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4782af00c9c4e375b941ea9bd0bcb9e8ede658c588020b0ccb3dfa0c26b271de676e0ffd9339b4962c3726871f46ac8963428f9b31636ecc28cd7c96d039c860"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-ppc64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-ppc64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-ppc64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-ppc64/-/typescript-linux-ppc64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0ce471e5bdec77fe12ede6b2c66e0542ff80ec2ae45081916878b023ca221d3008d5f00f5a1178274bc09640bc6e20251d2555c31310ded8d9dbf0d56e742288"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-riscv64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-riscv64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-riscv64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-riscv64/-/typescript-linux-riscv64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c1fd23a840ce8eb3d19cac18472c890d1a35d4a31bbcc16b53eab8cea2b20a1383073be591b84d41f2af2f14027304e974369748765356e8742680ab28250c1d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-linux-s390x@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-linux-s390x",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-linux-s390x@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-linux-s390x/-/typescript-linux-s390x-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "224c097372fbca1cad59dfdec23cb13437ce9acc029bd1963094ffb9efdd53869935bc1979801eb6ae365722e6b264a3be85fbcfbe17e996980adcc0af412e1b"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "@typescript/typescript-linux-x64@7.0.2",
       "type": "library",
       "name": "@typescript/typescript-linux-x64",
       "version": "7.0.2",
       "scope": "optional",
-      "author": "Microsoft Corp.",
-      "description": "TypeScript is a language for application scale JavaScript development",
       "purl": "pkg:npm/%40typescript/typescript-linux-x64@7.0.2",
       "properties": [
         {
@@ -608,18 +1437,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/@typescript/typescript-linux-x64/-/typescript-linux-x64-7.0.2.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/microsoft/TypeScript.git"
-        },
-        {
-          "type": "website",
-          "url": "https://www.typescriptlang.org/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/microsoft/TypeScript/issues"
         }
       ],
       "hashes": [
@@ -637,13 +1454,242 @@
       ]
     },
     {
+      "bom-ref": "@typescript/typescript-netbsd-arm64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-netbsd-arm64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-netbsd-arm64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-netbsd-arm64/-/typescript-netbsd-arm64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "fa9a25605e0c174e1a3e93b9153907ada9fdc94403497ab2e468920caa6c965e63cb7977fa0f502e1a5fdfd4fe78fb5e7e15cb386acb9744088e440fe959de94"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-netbsd-x64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-netbsd-x64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-netbsd-x64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-netbsd-x64/-/typescript-netbsd-x64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f18213d041ccff776ad7464e545fc0ee973f61232d6dc79c72de2b5ad7b1ae74821ce3dca42d8a4cb5df4c247abc3a674a2635da178d6f51a237fc2ef93fc5c8"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-openbsd-arm64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-openbsd-arm64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-openbsd-arm64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-openbsd-arm64/-/typescript-openbsd-arm64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "00f4fcf829589ee626d6ef7e920197a0c8f65735b37329b087680d4905724877e444318e4d592858b8c298e41268ef8fa2a439ec1d1f951a7d480fbb1a79e4cd"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-openbsd-x64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-openbsd-x64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-openbsd-x64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-openbsd-x64/-/typescript-openbsd-x64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c97eecf90d03967d03b7db44cd9b008d75d1ffecad04cec096095aab278c3f142ccc9d4986525d67a8cb03e23395d1ed7e55fcd5e9bb9436a8d715eef9a45192"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-sunos-x64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-sunos-x64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-sunos-x64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-sunos-x64/-/typescript-sunos-x64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "74b24319a2d9d43e073d09fadaed67f26043909444c0cb00902764c1de087aac3ec774d4c93b2a634622042b44e87e8ecf38069378ae677bc55914be13cfddd6"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-win32-arm64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-win32-arm64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-win32-arm64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-win32-arm64/-/typescript-win32-arm64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1b2975572e8eb167ac2f39aaf843f415bedbe0d89de76df602f700d9215c758ade95da4db58145a1f3e39edeb6cbd850cbb553699a7ae480898ee01045a55c21"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@typescript/typescript-win32-x64@7.0.2",
+      "type": "library",
+      "name": "@typescript/typescript-win32-x64",
+      "version": "7.0.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40typescript/typescript-win32-x64@7.0.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@typescript/typescript-win32-x64/-/typescript-win32-x64-7.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d014371e40071e528b4a9d6a46f7f7494846a46b03ba107f8e0170ef982ecaa6f126a11a4b40b0fd514ef22da71e094953340246d30c47f20100a137113302e2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "detect-libc@2.1.2",
       "type": "library",
       "name": "detect-libc",
       "version": "2.1.2",
       "scope": "optional",
-      "author": "Lovell Fuller",
-      "description": "Node.js module to detect the C standard library (libc) implementation family and version",
       "purl": "pkg:npm/detect-libc@2.1.2",
       "properties": [
         {
@@ -655,18 +1701,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git://github.com/lovell/detect-libc.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/lovell/detect-libc#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/lovell/detect-libc/issues"
         }
       ],
       "hashes": [
@@ -689,8 +1723,6 @@
       "name": "fdir",
       "version": "6.5.0",
       "scope": "optional",
-      "author": "thecodrr",
-      "description": "The fastest directory crawler & globbing alternative to glob, fast-glob, & tiny-glob. Crawls 1m files in < 1s",
       "purl": "pkg:npm/fdir@6.5.0",
       "properties": [
         {
@@ -702,18 +1734,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/thecodrr/fdir.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/thecodrr/fdir#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/thecodrr/fdir/issues"
         }
       ],
       "hashes": [
@@ -736,8 +1756,6 @@
       "name": "fflate",
       "version": "0.8.3",
       "scope": "optional",
-      "author": "Arjun Barrett",
-      "description": "High performance (de)compression in an 8kB package",
       "purl": "pkg:npm/fflate@0.8.3",
       "properties": [
         {
@@ -749,18 +1767,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/101arrowz/fflate.git"
-        },
-        {
-          "type": "website",
-          "url": "https://101arrowz.github.io/fflate"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/101arrowz/fflate/issues"
         }
       ],
       "hashes": [
@@ -778,12 +1784,44 @@
       ]
     },
     {
+      "bom-ref": "fsevents@2.3.3",
+      "type": "library",
+      "name": "fsevents",
+      "version": "2.3.3",
+      "scope": "optional",
+      "purl": "pkg:npm/fsevents@2.3.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e71a037d7f9f2fb7da0139da82658fa5b16dc21fd1efb5a630caaa1c64bae42defbc1d181eb805f81d58999df8e35b4c8f99fade4d36d765cda09c339617df43"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "lightningcss@1.32.0",
       "type": "library",
       "name": "lightningcss",
       "version": "1.32.0",
       "scope": "optional",
-      "description": "A CSS parser, transformer, and minifier written in Rust",
       "purl": "pkg:npm/lightningcss@1.32.0",
       "properties": [
         {
@@ -795,18 +1833,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/lightningcss/-/lightningcss-1.32.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/parcel-bundler/lightningcss.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/parcel-bundler/lightningcss#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/parcel-bundler/lightningcss/issues"
         }
       ],
       "hashes": [
@@ -824,12 +1850,242 @@
       ]
     },
     {
+      "bom-ref": "lightningcss-android-arm64@1.32.0",
+      "type": "library",
+      "name": "lightningcss-android-arm64",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-android-arm64@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-android-arm64/-/lightningcss-android-arm64-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "60aeff0a54ede2400ad2fa3ac375fe3e79b40f671fdaf3c76e139776836d8b519ad1a9753f84c1661c23013be33702c40429cabe325cda34201d71f4344c2502"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-darwin-arm64@1.32.0",
+      "type": "library",
+      "name": "lightningcss-darwin-arm64",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-darwin-arm64@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-darwin-arm64/-/lightningcss-darwin-arm64-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "473786f49bb96da83606fd7f97095526f044deae93b57b247592cb0b27e0e69b7e1cbcfd06a94808eecb64ced51cd4d39ffe4f4611c50528e4e65738726b1c3d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-darwin-x64@1.32.0",
+      "type": "library",
+      "name": "lightningcss-darwin-x64",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-darwin-x64@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-darwin-x64/-/lightningcss-darwin-x64-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "53e42c069da6fecdb0aa95184ffeb09e56a07596ed65d9dd4a6badfcd26a94270c2d35a9e66b82ac80fe2b9509ea3a83d8116c85e8c26179e23c36cd87bdd5f3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-freebsd-x64@1.32.0",
+      "type": "library",
+      "name": "lightningcss-freebsd-x64",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-freebsd-x64@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-freebsd-x64/-/lightningcss-freebsd-x64-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2424e281e74492c664ded1d34ed86731d55f19feb5164cbc262d84e188d44c4417d78c62cbf953cd79eed6fc2265eddb61ed2af92a6c487fc24de0d72ba5878a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-linux-arm-gnueabihf@1.32.0",
+      "type": "library",
+      "name": "lightningcss-linux-arm-gnueabihf",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-linux-arm-gnueabihf@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-linux-arm-gnueabihf/-/lightningcss-linux-arm-gnueabihf-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c7aae79e945ad862f4cd03a4b7aaedb376033f376e2e95afc0017a10c8571556570f8b4fac190416acc6a30cc2b085ac3e3a922beb723443835015de7951d293"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-linux-arm64-gnu@1.32.0",
+      "type": "library",
+      "name": "lightningcss-linux-arm64-gnu",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-linux-arm64-gnu@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-linux-arm64-gnu/-/lightningcss-linux-arm64-gnu-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d279ccca8c8e2d12577db30e8a569245c2c7dc9c39cfd1c33467d3fe0c023e06838e7c748bcc3bbc1cc52c54757fa08c2ca17c8156de6e69143777dafe4409a5"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-linux-arm64-musl@1.32.0",
+      "type": "library",
+      "name": "lightningcss-linux-arm64-musl",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-linux-arm64-musl@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-linux-arm64-musl/-/lightningcss-linux-arm64-musl-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "529424a1e9ebe14244ce054862923cd250c5bd198f560ea8a9ba0d1dfa07e024087cd03e1cead9ecca3b2993f4d9d0ba2e38213d025e06cbd7849a1dff09c806"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "lightningcss-linux-x64-gnu@1.32.0",
       "type": "library",
       "name": "lightningcss-linux-x64-gnu",
       "version": "1.32.0",
       "scope": "optional",
-      "description": "A CSS parser, transformer, and minifier written in Rust",
       "purl": "pkg:npm/lightningcss-linux-x64-gnu@1.32.0",
       "properties": [
         {
@@ -841,18 +2097,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.32.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/parcel-bundler/lightningcss.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/parcel-bundler/lightningcss#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/parcel-bundler/lightningcss/issues"
         }
       ],
       "hashes": [
@@ -875,7 +2119,6 @@
       "name": "lightningcss-linux-x64-musl",
       "version": "1.32.0",
       "scope": "optional",
-      "description": "A CSS parser, transformer, and minifier written in Rust",
       "purl": "pkg:npm/lightningcss-linux-x64-musl@1.32.0",
       "properties": [
         {
@@ -887,18 +2130,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.32.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/parcel-bundler/lightningcss.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/parcel-bundler/lightningcss#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/parcel-bundler/lightningcss/issues"
         }
       ],
       "hashes": [
@@ -916,30 +2147,83 @@
       ]
     },
     {
+      "bom-ref": "lightningcss-win32-arm64-msvc@1.32.0",
+      "type": "library",
+      "name": "lightningcss-win32-arm64-msvc",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-win32-arm64-msvc@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-win32-arm64-msvc/-/lightningcss-win32-arm64-msvc-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f126c2f01478d294ba6da08cf2c6ed6034b011541de099454ce95a0f78161877d385370006734305d6ba79365ea9ba1f6a5209845c74a8ace01c999c3d39c677"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lightningcss-win32-x64-msvc@1.32.0",
+      "type": "library",
+      "name": "lightningcss-win32-x64-msvc",
+      "version": "1.32.0",
+      "scope": "optional",
+      "purl": "pkg:npm/lightningcss-win32-x64-msvc@1.32.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.32.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "026abd07f4a86587438b5905ae88e7a2a3cbc58850e16a395e22fc11526b56c07c011a02d4f596e951ad4f458a09e9a3cbc682fa5a2e2678d2ed4d7cc776f4e9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "lucide@1.24.0",
       "type": "library",
       "name": "lucide",
       "version": "1.24.0",
       "scope": "required",
-      "description": "A Lucide icon library package for web and javascript applications.",
       "purl": "pkg:npm/lucide@1.24.0",
       "properties": [],
       "externalReferences": [
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/lucide/-/lucide-1.24.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/lucide-icons/lucide.git"
-        },
-        {
-          "type": "website",
-          "url": "https://lucide.dev"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/lucide-icons/lucide/issues"
         }
       ],
       "hashes": [
@@ -962,8 +2246,6 @@
       "name": "meshoptimizer",
       "version": "1.1.1",
       "scope": "optional",
-      "author": "Arseny Kapoulkine",
-      "description": "Mesh optimization library that makes meshes smaller and faster to render",
       "purl": "pkg:npm/meshoptimizer@1.1.1",
       "properties": [
         {
@@ -975,18 +2257,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/meshoptimizer/-/meshoptimizer-1.1.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/zeux/meshoptimizer.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/zeux/meshoptimizer"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/zeux/meshoptimizer/issues"
         }
       ],
       "hashes": [
@@ -1009,8 +2279,6 @@
       "name": "nanoid",
       "version": "3.3.15",
       "scope": "optional",
-      "author": "Andrey Sitnik",
-      "description": "A tiny (116 bytes), secure URL-friendly unique string ID generator",
       "purl": "pkg:npm/nanoid@3.3.15",
       "properties": [
         {
@@ -1022,18 +2290,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.15.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/ai/nanoid.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/ai/nanoid#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/ai/nanoid/issues"
         }
       ],
       "hashes": [
@@ -1056,8 +2312,6 @@
       "name": "picocolors",
       "version": "1.1.1",
       "scope": "optional",
-      "author": "Alexey Raspopov",
-      "description": "The tiniest and the fastest library for terminal output formatting with ANSI colors",
       "purl": "pkg:npm/picocolors@1.1.1",
       "properties": [
         {
@@ -1069,18 +2323,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/alexeyraspopov/picocolors.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/alexeyraspopov/picocolors#readme"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/alexeyraspopov/picocolors/issues"
         }
       ],
       "hashes": [
@@ -1103,8 +2345,6 @@
       "name": "picomatch",
       "version": "4.0.5",
       "scope": "optional",
-      "author": "Jon Schlinkert",
-      "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
       "purl": "pkg:npm/picomatch@4.0.5",
       "properties": [
         {
@@ -1116,18 +2356,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.5.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/micromatch/picomatch.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/micromatch/picomatch"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/micromatch/picomatch/issues"
         }
       ],
       "hashes": [
@@ -1150,8 +2378,6 @@
       "name": "playwright",
       "version": "1.61.1",
       "scope": "optional",
-      "author": "Microsoft Corporation",
-      "description": "A high-level API to automate web browsers",
       "purl": "pkg:npm/playwright@1.61.1",
       "properties": [
         {
@@ -1163,18 +2389,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/playwright/-/playwright-1.61.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/microsoft/playwright.git"
-        },
-        {
-          "type": "website",
-          "url": "https://playwright.dev"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/microsoft/playwright/issues"
         }
       ],
       "hashes": [
@@ -1197,8 +2411,6 @@
       "name": "playwright-core",
       "version": "1.61.1",
       "scope": "optional",
-      "author": "Microsoft Corporation",
-      "description": "A high-level API to automate web browsers",
       "purl": "pkg:npm/playwright-core@1.61.1",
       "properties": [
         {
@@ -1210,18 +2422,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.61.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/microsoft/playwright.git"
-        },
-        {
-          "type": "website",
-          "url": "https://playwright.dev"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/microsoft/playwright/issues"
         }
       ],
       "hashes": [
@@ -1239,12 +2439,44 @@
       ]
     },
     {
+      "bom-ref": "fsevents@2.3.2",
+      "type": "library",
+      "name": "fsevents",
+      "version": "2.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/fsevents@2.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c62a8c411e3101e1d3b81f6e5a6f9f1517083a02813223813fe7978b24fb8ec8150aad5b915ca0b74d28012a3007b11db6938769a3e02adf35d8ff5a6fe0c328"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "pngjs@7.0.0",
       "type": "library",
       "name": "pngjs",
       "version": "7.0.0",
       "scope": "optional",
-      "description": "PNG encoder/decoder in pure JS, supporting any bit size & interlace, async & sync with full test suite.",
       "purl": "pkg:npm/pngjs@7.0.0",
       "properties": [
         {
@@ -1256,18 +2488,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/pngjs/-/pngjs-7.0.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git://github.com/pngjs/pngjs.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/lukeapage/pngjs"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/pngjs/pngjs/issues"
         }
       ],
       "hashes": [
@@ -1290,8 +2510,6 @@
       "name": "postcss",
       "version": "8.5.16",
       "scope": "optional",
-      "author": "Andrey Sitnik",
-      "description": "Tool for transforming styles with JS plugins",
       "purl": "pkg:npm/postcss@8.5.16",
       "properties": [
         {
@@ -1303,18 +2521,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.16.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/postcss/postcss.git"
-        },
-        {
-          "type": "website",
-          "url": "https://postcss.org/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/postcss/postcss/issues"
         }
       ],
       "hashes": [
@@ -1337,7 +2543,6 @@
       "name": "rolldown",
       "version": "1.1.5",
       "scope": "optional",
-      "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
       "purl": "pkg:npm/rolldown@1.1.5",
       "properties": [
         {
@@ -1349,18 +2554,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/rolldown/-/rolldown-1.1.5.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/rolldown/rolldown.git"
-        },
-        {
-          "type": "website",
-          "url": "https://rolldown.rs/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/rolldown/rolldown/issues"
         }
       ],
       "hashes": [
@@ -1383,8 +2576,6 @@
       "name": "source-map-js",
       "version": "1.2.1",
       "scope": "optional",
-      "author": "Valentin 7rulnik Semirulnik",
-      "description": "Generates and consumes source maps",
       "purl": "pkg:npm/source-map-js@1.2.1",
       "properties": [
         {
@@ -1396,18 +2587,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/7rulnik/source-map-js.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/7rulnik/source-map-js"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/7rulnik/source-map-js/issues"
         }
       ],
       "hashes": [
@@ -1430,26 +2609,12 @@
       "name": "three",
       "version": "0.185.1",
       "scope": "required",
-      "author": "mrdoob",
-      "description": "JavaScript 3D library",
       "purl": "pkg:npm/three@0.185.1",
       "properties": [],
       "externalReferences": [
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/three/-/three-0.185.1.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/mrdoob/three.js.git"
-        },
-        {
-          "type": "website",
-          "url": "https://threejs.org/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/mrdoob/three.js/issues"
         }
       ],
       "hashes": [
@@ -1472,8 +2637,6 @@
       "name": "tinyglobby",
       "version": "0.2.17",
       "scope": "optional",
-      "author": "Superchupu",
-      "description": "A fast and minimal alternative to globby and fast-glob",
       "purl": "pkg:npm/tinyglobby@0.2.17",
       "properties": [
         {
@@ -1485,18 +2648,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/SuperchupuDev/tinyglobby.git"
-        },
-        {
-          "type": "website",
-          "url": "https://superchupu.dev/tinyglobby"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/SuperchupuDev/tinyglobby/issues"
         }
       ],
       "hashes": [
@@ -1514,13 +2665,44 @@
       ]
     },
     {
+      "bom-ref": "tslib@2.8.1",
+      "type": "library",
+      "name": "tslib",
+      "version": "2.8.1",
+      "scope": "optional",
+      "purl": "pkg:npm/tslib@2.8.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a0916ef781d06fe29576e49440bef09e99aa9df98bb0e03f9c087a6fa107d30084a0ad3f98f79753a737c0a0d5f373243ae1cf447b525ca294f7d2016b34bfdb"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "0BSD"
+          }
+        }
+      ]
+    },
+    {
       "bom-ref": "typescript@7.0.2",
       "type": "library",
       "name": "typescript",
       "version": "7.0.2",
       "scope": "optional",
-      "author": "Microsoft Corp.",
-      "description": "TypeScript is a language for application scale JavaScript development",
       "purl": "pkg:npm/typescript@7.0.2",
       "properties": [
         {
@@ -1532,18 +2714,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/typescript/-/typescript-7.0.2.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/microsoft/TypeScript.git"
-        },
-        {
-          "type": "website",
-          "url": "https://www.typescriptlang.org/"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/microsoft/TypeScript/issues"
         }
       ],
       "hashes": [
@@ -1566,7 +2736,6 @@
       "name": "undici-types",
       "version": "8.3.0",
       "scope": "optional",
-      "description": "A stand-alone types package for Undici",
       "purl": "pkg:npm/undici-types@8.3.0",
       "properties": [
         {
@@ -1578,18 +2747,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/undici-types/-/undici-types-8.3.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/nodejs/undici.git"
-        },
-        {
-          "type": "website",
-          "url": "https://undici.nodejs.org"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/nodejs/undici/issues"
         }
       ],
       "hashes": [
@@ -1612,8 +2769,6 @@
       "name": "vite",
       "version": "8.1.4",
       "scope": "optional",
-      "author": "Evan You",
-      "description": "Native-ESM powered web dev build tool",
       "purl": "pkg:npm/vite@8.1.4",
       "properties": [
         {
@@ -1625,18 +2780,6 @@
         {
           "type": "distribution",
           "url": "https://registry.npmjs.org/vite/-/vite-8.1.4.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/vitejs/vite.git"
-        },
-        {
-          "type": "website",
-          "url": "https://vite.dev"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/vitejs/vite/issues"
         }
       ],
       "hashes": [
@@ -1656,7 +2799,7 @@
   ],
   "dependencies": [
     {
-      "ref": "@tessaryn/viewer-web@0.1.1",
+      "ref": "@tessaryn/viewer-web@0.2.0",
       "dependsOn": [
         "lucide@1.24.0",
         "three@0.185.1",
@@ -1673,6 +2816,33 @@
       "dependsOn": []
     },
     {
+      "ref": "@emnapi/core@1.11.1",
+      "dependsOn": [
+        "@emnapi/wasi-threads@1.2.2",
+        "tslib@2.8.1"
+      ]
+    },
+    {
+      "ref": "@emnapi/runtime@1.11.1",
+      "dependsOn": [
+        "tslib@2.8.1"
+      ]
+    },
+    {
+      "ref": "@emnapi/wasi-threads@1.2.2",
+      "dependsOn": [
+        "tslib@2.8.1"
+      ]
+    },
+    {
+      "ref": "@napi-rs/wasm-runtime@1.1.6",
+      "dependsOn": [
+        "@emnapi/core@1.11.1",
+        "@emnapi/runtime@1.11.1",
+        "@tybys/wasm-util@0.10.3"
+      ]
+    },
+    {
       "ref": "@oxc-project/types@0.139.0",
       "dependsOn": []
     },
@@ -1683,11 +2853,67 @@
       ]
     },
     {
+      "ref": "@rolldown/binding-android-arm64@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-darwin-arm64@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-darwin-x64@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-freebsd-x64@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-linux-arm-gnueabihf@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-linux-arm64-gnu@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-linux-arm64-musl@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-linux-ppc64-gnu@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-linux-s390x-gnu@1.1.5",
+      "dependsOn": []
+    },
+    {
       "ref": "@rolldown/binding-linux-x64-gnu@1.1.5",
       "dependsOn": []
     },
     {
       "ref": "@rolldown/binding-linux-x64-musl@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-openharmony-arm64@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-wasm32-wasi@1.1.5",
+      "dependsOn": [
+        "@emnapi/core@1.11.1",
+        "@emnapi/runtime@1.11.1",
+        "@napi-rs/wasm-runtime@1.1.6"
+      ]
+    },
+    {
+      "ref": "@rolldown/binding-win32-arm64-msvc@1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "@rolldown/binding-win32-x64-msvc@1.1.5",
       "dependsOn": []
     },
     {
@@ -1697,6 +2923,12 @@
     {
       "ref": "@tweenjs/tween.js@23.1.3",
       "dependsOn": []
+    },
+    {
+      "ref": "@tybys/wasm-util@0.10.3",
+      "dependsOn": [
+        "tslib@2.8.1"
+      ]
     },
     {
       "ref": "@types/node@26.1.1",
@@ -1730,7 +2962,83 @@
       "dependsOn": []
     },
     {
+      "ref": "@typescript/typescript-aix-ppc64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-darwin-arm64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-darwin-x64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-freebsd-arm64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-freebsd-x64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-arm@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-arm64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-loong64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-mips64el@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-ppc64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-riscv64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-linux-s390x@7.0.2",
+      "dependsOn": []
+    },
+    {
       "ref": "@typescript/typescript-linux-x64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-netbsd-arm64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-netbsd-x64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-openbsd-arm64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-openbsd-x64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-sunos-x64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-win32-arm64@7.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@typescript/typescript-win32-x64@7.0.2",
       "dependsOn": []
     },
     {
@@ -1748,12 +3056,53 @@
       "dependsOn": []
     },
     {
+      "ref": "fsevents@2.3.3",
+      "dependsOn": []
+    },
+    {
       "ref": "lightningcss@1.32.0",
       "dependsOn": [
         "detect-libc@2.1.2",
+        "lightningcss-android-arm64@1.32.0",
+        "lightningcss-darwin-arm64@1.32.0",
+        "lightningcss-darwin-x64@1.32.0",
+        "lightningcss-freebsd-x64@1.32.0",
+        "lightningcss-linux-arm-gnueabihf@1.32.0",
+        "lightningcss-linux-arm64-gnu@1.32.0",
+        "lightningcss-linux-arm64-musl@1.32.0",
         "lightningcss-linux-x64-gnu@1.32.0",
-        "lightningcss-linux-x64-musl@1.32.0"
+        "lightningcss-linux-x64-musl@1.32.0",
+        "lightningcss-win32-arm64-msvc@1.32.0",
+        "lightningcss-win32-x64-msvc@1.32.0"
       ]
+    },
+    {
+      "ref": "lightningcss-android-arm64@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-darwin-arm64@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-darwin-x64@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-freebsd-x64@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-linux-arm-gnueabihf@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-linux-arm64-gnu@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-linux-arm64-musl@1.32.0",
+      "dependsOn": []
     },
     {
       "ref": "lightningcss-linux-x64-gnu@1.32.0",
@@ -1761,6 +3110,14 @@
     },
     {
       "ref": "lightningcss-linux-x64-musl@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-win32-arm64-msvc@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lightningcss-win32-x64-msvc@1.32.0",
       "dependsOn": []
     },
     {
@@ -1786,11 +3143,16 @@
     {
       "ref": "playwright@1.61.1",
       "dependsOn": [
-        "playwright-core@1.61.1"
+        "playwright-core@1.61.1",
+        "fsevents@2.3.2"
       ]
     },
     {
       "ref": "playwright-core@1.61.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "fsevents@2.3.2",
       "dependsOn": []
     },
     {
@@ -1810,8 +3172,21 @@
       "dependsOn": [
         "@oxc-project/types@0.139.0",
         "@rolldown/pluginutils@1.0.1",
+        "@rolldown/binding-android-arm64@1.1.5",
+        "@rolldown/binding-darwin-arm64@1.1.5",
+        "@rolldown/binding-darwin-x64@1.1.5",
+        "@rolldown/binding-freebsd-x64@1.1.5",
+        "@rolldown/binding-linux-arm-gnueabihf@1.1.5",
+        "@rolldown/binding-linux-arm64-gnu@1.1.5",
+        "@rolldown/binding-linux-arm64-musl@1.1.5",
+        "@rolldown/binding-linux-ppc64-gnu@1.1.5",
+        "@rolldown/binding-linux-s390x-gnu@1.1.5",
         "@rolldown/binding-linux-x64-gnu@1.1.5",
-        "@rolldown/binding-linux-x64-musl@1.1.5"
+        "@rolldown/binding-linux-x64-musl@1.1.5",
+        "@rolldown/binding-openharmony-arm64@1.1.5",
+        "@rolldown/binding-wasm32-wasi@1.1.5",
+        "@rolldown/binding-win32-arm64-msvc@1.1.5",
+        "@rolldown/binding-win32-x64-msvc@1.1.5"
       ]
     },
     {
@@ -1830,9 +3205,32 @@
       ]
     },
     {
+      "ref": "tslib@2.8.1",
+      "dependsOn": []
+    },
+    {
       "ref": "typescript@7.0.2",
       "dependsOn": [
-        "@typescript/typescript-linux-x64@7.0.2"
+        "@typescript/typescript-aix-ppc64@7.0.2",
+        "@typescript/typescript-darwin-arm64@7.0.2",
+        "@typescript/typescript-darwin-x64@7.0.2",
+        "@typescript/typescript-freebsd-arm64@7.0.2",
+        "@typescript/typescript-freebsd-x64@7.0.2",
+        "@typescript/typescript-linux-arm@7.0.2",
+        "@typescript/typescript-linux-arm64@7.0.2",
+        "@typescript/typescript-linux-loong64@7.0.2",
+        "@typescript/typescript-linux-mips64el@7.0.2",
+        "@typescript/typescript-linux-ppc64@7.0.2",
+        "@typescript/typescript-linux-riscv64@7.0.2",
+        "@typescript/typescript-linux-s390x@7.0.2",
+        "@typescript/typescript-linux-x64@7.0.2",
+        "@typescript/typescript-netbsd-arm64@7.0.2",
+        "@typescript/typescript-netbsd-x64@7.0.2",
+        "@typescript/typescript-openbsd-arm64@7.0.2",
+        "@typescript/typescript-openbsd-x64@7.0.2",
+        "@typescript/typescript-sunos-x64@7.0.2",
+        "@typescript/typescript-win32-arm64@7.0.2",
+        "@typescript/typescript-win32-x64@7.0.2"
       ]
     },
     {
@@ -1847,7 +3245,8 @@
         "picomatch@4.0.5",
         "postcss@8.5.16",
         "rolldown@1.1.5",
-        "tinyglobby@0.2.17"
+        "tinyglobby@0.2.17",
+        "fsevents@2.3.3"
       ]
     }
   ]

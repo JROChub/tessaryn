@@ -3,7 +3,7 @@
 The TESSARYN Origin is a static, same-origin application built from
 `apps/viewer-web`. GitHub Actions runs its contract tests and production build
 before GitHub Pages can deploy it. The browser fetches only versioned application
-assets and the bundled reference world fixture. A service worker retains those
+assets, the real temporal Origin, and the bundled protocol fixture. A service worker retains those
 assets for offline reconstruction after the first successful load.
 
 ## Published Origin
@@ -12,8 +12,8 @@ assets for offline reconstruction after the first successful load.
 - Canonical redirect: `https://www.tessaryn.com/` to the apex
 
 The first-party path is deployed as an exact copy of the tested
-`apps/viewer-web/dist` output. The release fixture at both origins must hash to
-the value recorded in `conformance/SHA256SUMS`. Neither distribution changes the
+`apps/viewer-web/dist` output. The release artifacts at both origins must hash to
+the values recorded in `conformance/SHA256SUMS`. Neither distribution changes the
 TESSARYN trust boundary or makes the MFENX website part of canonical Cell
 identity.
 

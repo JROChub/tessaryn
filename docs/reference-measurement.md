@@ -1,39 +1,80 @@
 # Reference Measurement
 
-Status: local reference measurement; informational, not a software-release gate.
+Status: local reference measurement; informational, not a universal hardware claim.
 
-Date: 2026-07-10
+Date: 2026-07-11
 
-Release: `0.1.1`
+Release: `0.2.0`
 
-Reference Origin SHA-256:
-`d88c0520f8d91d9c1884d1593e0dcde6e9c1da0a070115a63f42e395d7b90237`
+Artifacts:
 
-Reconstruction vector SHA-256:
-`7fa6c59ba414e8789d7039fe357aecaf30545f859f0e49f5f9792cfec3db6278`
+- real temporal Origin SHA-256:
+  `84b2a773b742d0c46ff91ee1fabbabe09e33efa7f56d15af4cef6df19e44028a`;
+- Vesper Court protocol vector SHA-256:
+  `7bf4ce649d832c218544d640d5e9c5eae6bae3e3c4bfe2fb35cebf63c82ec4e2`;
+- minimal reconstruction vector SHA-256:
+  `133cad826a95cf6530ecbb1b404adffae60e28dbd619dab5657c401009f03697`.
 
-Fixture: Vesper Court deterministic reference Origin, 18 Cells, 3 Moments, 2
-dispute Cells, 1 restricted Cell.
+The 13,019,318-byte real Origin contains 48 selected TUM Freiburg1 desk RGB-D
+frames, 174,972 verified surfels, 131,808 verified SDF voxels, three canonical
+Moments, one alternate branch, and nine proof-bound Cells.
 
 Host: Intel Core i5-2500S, 4 cores, Linux 6.19.14 x86_64.
 
-Browser harness: Chromium 149.0.7827.55 headless through Playwright 1.61.1 at
-1440 by 900 CSS pixels. The renderer reported `ANGLE (Google, Vulkan 1.3.0
-(SwiftShader Device (Subzero)), SwiftShader driver)`; therefore this run is a
-software-renderer diagnostic and is not a physical-GPU performance claim.
+Browser harness: Chrome for Testing 149.0.7827.55 through Playwright 1.61.1.
+The renderer reported `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device
+(Subzero)), SwiftShader driver)`. These frame measurements therefore describe
+the adaptive software-renderer fallback, not a physical GPU.
 
-Five clean production-build runs produced these medians:
+## Desktop Production Build
 
-- first structural Cell: 603 ms after scene construction began;
-- all reference Cells materialized: 1.98 seconds;
-- browser-local verification complete: 756 ms;
-- steady software-renderer frame median: 83.4 ms;
-- steady software-renderer frame p95 median: 266.6 ms;
-- draw calls after materialization: 40;
-- triangles after materialization: 14,754;
-- browser-local verification: 18 of 18 Cells, 18 of 18 PHA artifacts,
-  Rootprint valid, replay valid, Memory Capsule valid.
+Five fresh-browser runs at 1440 by 900 CSS pixels produced these medians:
 
-The optimized CLI verified the 38 KiB reconstruction conformance artifact ten
-times with a 0.02 second median. It generated and packaged the bounded 18-surfel,
-90-voxel vector five times with a 0.02 second median.
+- application ready after fetch, strict parse, verification, and construction:
+  3.582 seconds;
+- first meaningful structure from navigation start: 2.610 seconds;
+- complete browser-local temporal verification: 3.582 seconds;
+- live JavaScript heap after settling: 65.2 MB;
+- constrained frame median: 133.3 ms;
+- constrained frame p95 median: 216.6 ms;
+- adaptive pixel ratio: 0.46;
+- draw calls: 18;
+- triangles: 18,492;
+- browser-local verification: 9 of 9 Cells and PHA artifacts, Rootprint valid,
+  replay valid, all Memory Capsules valid, zero reported errors.
+
+## Mobile-Viewport Production Build
+
+Five fresh-browser runs at 390 by 844 CSS pixels produced these medians:
+
+- application ready: 3.434 seconds;
+- first meaningful structure: 2.615 seconds;
+- complete browser-local temporal verification: 3.434 seconds;
+- live JavaScript heap after settling: 80.2 MB;
+- constrained frame median: 66.8 ms;
+- constrained frame p95 median: 100.1 ms;
+- adaptive pixel ratio: 0.50;
+- draw calls: 18;
+- triangles: 13,824;
+- verification errors: zero.
+
+Final 96-by-96-grid screenshot sampling found 1,530 distinct colors and 38.4%
+nonblack canvas coverage on constrained desktop, 1,201 colors and 37.4%
+coverage on forced-full desktop, and 2,346 colors and 46.8% coverage in the
+portrait viewport. Full, constrained, Chronofold, desktop, and mobile captures
+produced no viewport overflow, page errors, or console errors. Forced full
+detail was visually checked under SwiftShader but is not reported as a
+performance result because that profile is intended for hardware GPUs.
+
+## Native Offline Verifier
+
+The optimized `target/release/tessaryn` binary was timed with Node's monotonic
+clock around ten independent child processes:
+
+- real temporal Origin verification median: 178.4 ms;
+- real temporal Origin p95: 186.8 ms;
+- minimal reconstruction verification median: 15.7 ms;
+- minimal reconstruction p95: 16.5 ms.
+
+Every measured process exited successfully. Browser and native measurements
+used local files and no map, analytics, upload, or remote world service.

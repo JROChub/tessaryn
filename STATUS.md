@@ -1,8 +1,8 @@
 # Development Status
 
-Version: `0.1.1`
+Version: `0.2.0`
 
-Capability states below describe the tested `0.1.1` release surface.
+Capability states below describe the tested `0.2.0` release surface.
 
 | Capability | State | Evidence |
 |---|---|---|
@@ -17,6 +17,9 @@ Capability states below describe the tested `0.1.1` release surface.
 | Per-pixel privacy masks | Implemented | Identity-bound and applied before normals, deprojection, surfels, and SDF |
 | Deterministic sparse SDF reconstruction | Implemented | Canonical codec, bounded fusion, report replay, mutation tests |
 | Public reconstruction reports without raw frames | Implemented | Independent report, Cell, chunk, PHA, lineage, and Capsule verification |
+| Real temporal RGB-D Origin | Implemented | 48 TUM source frames, 174,972 surfels, 131,808 SDF voxels, 4 observation states |
+| Explicit source-selection manifest | Implemented | Ordered frame IDs/timestamps, archive digest, mutation rejection, byte-identical reproduction workflow |
+| Source Aggregate Cell | Implemented | Source manifest has its own PHA, replay, Memory Capsule, SLBIT packet, and top Rootprint branch |
 | Bounded Locus compiler | Implemented | Deterministic 10,000-Cell test |
 | Power House bridge | Implemented | `.pha`, Rootprint, replay, Memory Capsule tests |
 | Browser-local verifier and capture import | Implemented | Fixture and reconstruction-artifact verification, rendering, mutation rejection |
@@ -27,16 +30,16 @@ Capability states below describe the tested `0.1.1` release surface.
 | Lock-bound CycloneDX SBOM | Implemented | Per-crate and browser inventories checked in CI |
 | Exact-layer mutation lab | Implemented | Cell, PHA core, binary, parser, and semantic rejection paths |
 | Condensation | Implemented | Progressive structural materialization with distinct state copy |
-| Scale Breathing | Implemented | Object, room, and site representations preserve selection |
-| Chronofold | Implemented | Three reference Moments and unresolved branch geometry |
+| Scale Breathing | Implemented | Continuous object-to-site depth preserves the selected spatial anchor |
+| Chronofold | Implemented | Three real captured Moments, shared SDF structure, and unresolved branch geometry |
 | Inside-out Trace | Implemented | Evidence, lineage, source, and removable meaning views |
 | Constructed continuum visual system | Implemented | Identity-derived materials, memory branching, assembly, Rootprint currents, SLBIT fields, adaptive renderer |
 | Custom domain and HTTPS | Implemented | Apex HTTPS and `www` canonical redirect verified 2026-07-10 |
 
 ## Release Contract
 
-TESSARYN `0.1.1` is complete when the versioned software, deterministic
-reference Origin, local verification paths, mutation suite, browser experience,
+TESSARYN `0.2.0` is complete when the versioned software, deterministic
+reference vectors, real temporal Origin, local verification paths, mutation suite, browser experience,
 offline path, supply-chain checks, and cross-platform conformance pass on the
-release commit. The bundled Vesper Court data is the canonical reference Origin
-used by those release gates.
+release commit. The TUM temporal Locus is the default visible Origin; Vesper
+Court and the minimal reconstruction remain deterministic protocol vectors.

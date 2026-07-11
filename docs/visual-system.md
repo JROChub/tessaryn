@@ -1,7 +1,7 @@
 # TESSARYN Visual System
 
 Version: `1.0`
-Release: `0.1.1`
+Release: `0.2.0`
 Principle: The world is not loaded. It is constructed.
 
 ## Constitution
@@ -32,6 +32,12 @@ Identity lattices live inside the matter and become visible on focus instead of
 covering the entire scene. The renderer changes representation at object,
 room, and site scales without changing the selected Cell or canonical state.
 
+The default Origin uses real RGB-D color surfels and near-surface sparse-SDF
+matter. A deterministic constrained profile selects evenly spaced verified
+samples for software renderers and mobile devices; the full profile retains the
+complete visible state. Both profiles verify the entire artifact before
+materialization.
+
 ### Branching memory architecture
 
 Archive Cells grow from a dark committed core into deterministic branching
@@ -55,10 +61,23 @@ altering Cell identity.
 
 ### Chronofold
 
-The three reference Moments occupy explicit temporal manifolds. Shared Cells
-remain continuous; moment-bound Cells separate by phase; conflicting branches
-separate laterally and remain unresolved. Observation, derivation, and dispute
-states are not merged for visual convenience.
+Three real captured Moments and one alternate Rootprint branch occupy explicit
+temporal manifolds. Exact near-surface SDF intersections remain in the shared
+center while temporal deltas separate by phase and the unresolved branch lifts
+away from the canonical sequence. Observation, derivation, and dispute states
+are not merged for visual convenience.
+
+### Continuous Scale Breathing
+
+Wheel, trackpad, buttons, and the compact scale rail drive one continuous scale
+depth. Camera distance, SDF visibility, temporal density, and interaction focus
+change without replacing the selected Cell or changing its identity.
+
+### Inside-out Trace
+
+Selection pulls a Locus into focus. State, lineage, and meaning modes then
+spatially reveal Cell boundaries, Rootprint memory, or the removable SLBIT
+constellation. These layers are presentation views of the same verified state.
 
 ### Privacy and unknown space
 

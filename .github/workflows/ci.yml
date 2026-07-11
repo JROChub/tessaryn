@@ -39,6 +39,22 @@ jobs:
       - run: diff -u conformance/reconstruction-v0/minimal-artifact.json /tmp/minimal-reconstruction.json
       - run: cargo run --locked -q -p tessaryn-cli -- verify-reconstruction /tmp/minimal-reconstruction.json > /tmp/minimal-reconstruction.verify.json
       - run: diff -u conformance/expected/minimal-reconstruction.verify.json /tmp/minimal-reconstruction.verify.json
+      - run: cargo run --locked -q -p tessaryn-cli -- verify-temporal-locus apps/viewer-web/public/world/freiburg-desk-locus.json > /tmp/freiburg-desk-locus.verify.json
+      - run: diff -u conformance/expected/freiburg-desk-locus.verify.json /tmp/freiburg-desk-locus.verify.json
+      - name: Require exact rejection of temporal source mutation
+        run: |
+          jq '.source.selections[0].captured_at_unix_us[1] += 1' apps/viewer-web/public/world/freiburg-desk-locus.json > /tmp/freiburg-mutated.json
+          if cargo run --locked -q -p tessaryn-cli -- verify-temporal-locus /tmp/freiburg-mutated.json; then
+            echo "mutated source selection was accepted" >&2
+            exit 1
+          fi
+      - name: Require exact rejection of source-lineage mutation
+        run: |
+          jq '.source_proof.manifest.parents[0] = "sha256:0000000000000000000000000000000000000000000000000000000000000000"' apps/viewer-web/public/world/freiburg-desk-locus.json > /tmp/freiburg-lineage-mutated.json
+          if cargo run --locked -q -p tessaryn-cli -- verify-temporal-locus /tmp/freiburg-lineage-mutated.json; then
+            echo "mutated source lineage was accepted" >&2
+            exit 1
+          fi
       - run: ./scripts/check-no-map-substrate.sh
       - run: node scripts/check-source-hygiene.mjs
       - run: node scripts/check-sbom.mjs
@@ -66,6 +82,8 @@ jobs:
         run: git diff --no-index --exit-code -- conformance/reconstruction-v0/minimal-artifact.json generated-reconstruction.json
       - name: Verify reconstruction and Power House bindings offline
         run: cargo run --locked -q -p tessaryn-cli -- verify-reconstruction generated-reconstruction.json
+      - name: Verify the real temporal Origin and source manifest offline
+        run: cargo run --locked -q -p tessaryn-cli -- verify-temporal-locus apps/viewer-web/public/world/freiburg-desk-locus.json
 
   viewer:
     runs-on: ubuntu-latest

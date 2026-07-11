@@ -51,8 +51,8 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   await openOrigin(page);
   const report = await page.evaluate(() => window.__tessaryn?.verification);
   expect(report).toMatchObject({
-    cellsValid: 18,
-    phaValid: 18,
+    cellsValid: 9,
+    phaValid: 9,
     rootprintValid: true,
     replayValid: true,
     memoryValid: true,
@@ -95,26 +95,41 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   await page.locator('body[data-materialized="true"]').waitFor();
 
   const diagnostics = await page.evaluate(() => window.__tessaryn?.scene.diagnostics());
-  expect(diagnostics?.cellCount).toBe(18);
-  expect(diagnostics?.provenanceLinks).toBeGreaterThan(0);
-  expect(diagnostics?.temporalManifolds).toBe(3);
-  expect(diagnostics?.semanticConstellations).toBe(17);
+  expect(diagnostics?.cellCount).toBe(8);
+  expect(diagnostics?.provenanceLinks).toBe(3);
+  expect(diagnostics?.temporalManifolds).toBe(4);
+  expect(diagnostics?.semanticConstellations).toBe(4);
   expect(diagnostics?.activeMeaningFields).toBeGreaterThan(0);
-  expect(diagnostics?.assemblyPoints).toBeGreaterThan(150);
-  expect(diagnostics?.continuumLayers).toBeGreaterThanOrEqual(6);
+  expect(diagnostics?.assemblyPoints).toBe(174_972);
+  expect(diagnostics?.continuumLayers).toBeGreaterThanOrEqual(8);
+  expect(diagnostics?.temporalObservations).toBe(4);
+  expect(diagnostics?.sdfVoxels).toBe(131_808);
   expect(diagnostics?.drawCalls).toBeLessThan(140);
-  expect(diagnostics?.materializationMs).toBeLessThan(4_000);
+  expect(diagnostics?.materializationMs).toBeLessThan(12_000);
+
+  await page.locator("#verify-button").click();
+  await expect(page.locator("#verify-title")).toHaveText("REAL 4D LOCUS ACCEPTED");
+  await expect(page.locator("#verify-cells")).toHaveText("9 / 9 VALID");
+  await expect(page.locator("#verify-pha")).toHaveText("9 / 9 VALID");
+  await expect(page.locator("#verify-detail")).toContainText("174972 sensor surfels");
+  await page.locator("#verify-close").click();
+
+  await page.locator("#scale-breath").fill("860");
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.scene.diagnostics().scaleDepth))
+    .toBeGreaterThan(0.8);
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().scale)).toBe("site");
 
   await page.locator("#chronofold-button").click();
   await expect(page.locator("#chronofold-button")).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().chronofold)).toBe(true);
 
-  await page.evaluate(() => window.__tessaryn?.scene.selectCell("meaning-layer"));
-  await expect(page.locator("#trace-title")).toHaveText("ORIGIN INTERPRETATION");
-  await page.locator('[data-trace-tab="meaning"]').click();
-  await expect(page.locator("#trace-summary")).toContainText(
-    "SLBIT meaning is independently bound",
+  await page.evaluate(() => window.__tessaryn?.scene.selectCell("real-moment-c"));
+  await expect(page.locator("#trace-title")).toHaveText(
+    "PRESENT OBSERVATION / VERIFIED SDF",
   );
+  await page.locator('[data-trace-tab="meaning"]').click();
+  await expect(page.locator("#trace-summary")).toContainText("TUM Freiburg1 desk RGB-D");
 
   await page.locator("#evidence-button").click();
   await expect(page.locator("#evidence-button")).toHaveAttribute("aria-pressed", "false");
@@ -209,6 +224,21 @@ test("rejects duplicate-key and binary mutations before materialization", async 
   await expect(page.locator("#app")).not.toHaveAttribute("data-source", "imported");
 });
 
+test("browser verifier rejects a substituted source-lineage parent", async ({ page }) => {
+  await openOrigin(page);
+  const report = await page.evaluate(async () => {
+    const runtime = window.__tessaryn;
+    if (!runtime?.temporalArtifact) throw new Error("temporal artifact unavailable");
+    const mutated = structuredClone(runtime.temporalArtifact);
+    mutated.source_proof.manifest.parents[0] =
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+    return runtime.verifyTemporalArtifact(mutated);
+  });
+  expect(report.cellsValid).toBe(0);
+  expect(report.errors).toContain("temporal source Cell or PHA binding mismatch");
+  expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
+});
+
 test("mobile import keeps verification and close controls reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openOrigin(page);
@@ -247,7 +277,7 @@ for (const [name, viewport] of [
       expect(intersects).toBe(false);
     }
 
-    await page.evaluate(() => window.__tessaryn?.scene.selectCell("archive-c"));
+    await page.evaluate(() => window.__tessaryn?.scene.selectCell("real-moment-c"));
     expectInsideViewport(await bounds(page, "#trace-drawer"));
     const traceClose = await bounds(page, "#trace-close");
     expectInsideViewport(traceClose);

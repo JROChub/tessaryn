@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.1",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.2.0",
       "author": "MFENX LLC",
       "name": "tessaryn-transport",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "description": "Canonical bounded transport encodings for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-transport@0.1.1?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-transport@0.2.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,10 +39,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.1 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.2.0 bin-target-0",
           "name": "tessaryn_transport",
-          "version": "0.1.1",
-          "purl": "pkg:cargo/tessaryn-transport@0.1.1?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/tessaryn-transport@0.2.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -317,7 +317,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.1.1",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228"

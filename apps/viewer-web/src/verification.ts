@@ -8,6 +8,8 @@ import type {
   RejectionResult,
   Rootprint,
   RootprintBranch,
+  TemporalLocusArtifactView,
+  TemporalLocusBrowserReport,
   VerificationReport,
 } from "./types";
 
@@ -24,6 +26,14 @@ const SIDECAR_DOMAIN = encoder.encode("power-house:observatory-sidecar:v1\0");
 const SEMANTIC_DOMAIN = encoder.encode("PHM-SEMANTIC-PACKET-v1\0");
 const SURFEL_MAGIC = encoder.encode("TESSARYN-SURFEL-v0\0");
 const SDF_MAGIC = encoder.encode("TESSARYN-SDF-v0\0");
+const TUM_DATASET = "TUM RGB-D Benchmark / freiburg1_desk";
+const TUM_HOME = "https://cvg.cit.tum.de/data/datasets/rgbd-dataset";
+const TUM_SEQUENCE =
+  "https://cvg.cit.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_desk.tgz";
+const TUM_ARCHIVE =
+  "sha256:e983d6830916e66dc4a46a71368046b149b283de87769690e7aa4e0b9483530c";
+const TUM_CITATION =
+  "J. Sturm, N. Engelhard, F. Endres, W. Burgard, and D. Cremers, A Benchmark for the Evaluation of RGB-D SLAM Systems, IROS 2012";
 
 export async function calculateCellId(manifest: CellManifest): Promise<string> {
   const canonical = canonicalizeManifest(manifest);
@@ -122,6 +132,8 @@ export async function verifyReconstructionArtifact(
     reportValid: false,
     rawFramesAbsent: false,
     surfels: [],
+    sdfVoxels: [],
+    voxelSizeUm: 0,
     voxels: 0,
     errors: [],
   };
@@ -171,7 +183,10 @@ export async function verifyReconstructionArtifact(
     result.cellsValid += 1;
 
     const sdfBytes = bytesFromBase64(report.sdf_chunk, "SDF chunk");
-    result.voxels = decodeSdfChunk(sdfBytes, artifact.reconstruction_policy.voxel_size_um);
+    const sdf = decodeSdfChunk(sdfBytes, artifact.reconstruction_policy.voxel_size_um);
+    result.sdfVoxels = sdf.voxels;
+    result.voxelSizeUm = sdf.voxelSizeUm;
+    result.voxels = sdf.voxels.length;
     const sdfChunkId = await hashDomain(CHUNK_DOMAIN, sdfBytes);
     const sdfRoot = await hashDomain(MERKLE_LEAF_DOMAIN, digestBytes(sdfChunkId));
     if (
@@ -272,6 +287,244 @@ export async function verifyReconstructionArtifact(
   return result;
 }
 
+export async function verifyTemporalLocusArtifact(
+  artifact: TemporalLocusArtifactView,
+): Promise<TemporalLocusBrowserReport> {
+  const result: TemporalLocusBrowserReport = {
+    cellsValid: 0,
+    phaValid: 0,
+    rootprintValid: false,
+    replayValid: false,
+    memoryValid: false,
+    moments: [],
+    alternate: null,
+    sourceManifest: artifact.source.source_manifest,
+    errors: [],
+  };
+  try {
+    assertIntegerJson(artifact);
+    if (
+      artifact.schema !== "tessaryn/temporal-locus-artifact/v0" ||
+      artifact.moments.length !== 3 ||
+      artifact.source.license !== "CC-BY-4.0" ||
+      artifact.source.dataset !== TUM_DATASET ||
+      artifact.source.homepage !== TUM_HOME ||
+      artifact.source.sequence_url !== TUM_SEQUENCE ||
+      artifact.source.archive_sha256 !== TUM_ARCHIVE ||
+      artifact.source.citation !== TUM_CITATION ||
+      artifact.source.selected_frames <= 0
+    ) {
+      throw new Error("invalid temporal Locus envelope");
+    }
+    const expectedMomentIds = ["moment-a", "moment-b", "moment-c"];
+    if (
+      artifact.moments.some((moment, index) => moment.id !== expectedMomentIds[index]) ||
+      artifact.alternate.id !== "alternate-c" ||
+      !artifact.moments
+        .slice(1)
+        .every(
+          (moment, index) =>
+            moment.captured_at_unix_us >
+            (artifact.moments[index]?.captured_at_unix_us ?? Number.MAX_SAFE_INTEGER),
+        )
+    ) {
+      throw new Error("temporal Moment ordering mismatch");
+    }
+
+    const temporalStates = [...artifact.moments, artifact.alternate];
+    const expectedSelectionIds = [...expectedMomentIds, "alternate-c"];
+    const selectedFrames = artifact.source.selections.reduce(
+      (total, selection) => total + selection.frame_ids.length,
+      0,
+    );
+    if (
+      artifact.source.selections.length !== expectedSelectionIds.length ||
+      selectedFrames !== artifact.source.selected_frames ||
+      artifact.source.selections.some((selection, index) => {
+        const expectedMoment = temporalStates[index];
+        return (
+          selection.id !== expectedSelectionIds[index] ||
+          selection.frame_ids.length < 3 ||
+          selection.frame_ids.length !== selection.captured_at_unix_us.length ||
+          selection.frame_ids.some((digest) => !/^sha256:[0-9a-f]{64}$/u.test(digest)) ||
+          selection.captured_at_unix_us.some(
+            (timestamp, timestampIndex) =>
+              timestampIndex > 0 &&
+              timestamp <= (selection.captured_at_unix_us[timestampIndex - 1] ?? timestamp),
+          ) ||
+          selection.captured_at_unix_us[0] !== expectedMoment?.captured_at_unix_us
+        );
+      })
+    ) {
+      throw new Error("temporal source selection mismatch");
+    }
+    const selectionProjection = {
+      citation: artifact.source.citation,
+      dataset: artifact.source.dataset,
+      homepage: artifact.source.homepage,
+      license: artifact.source.license,
+      selected: artifact.source.selections,
+      sequence: artifact.source.sequence_url,
+    };
+    const calculatedSelection = await hashDomain(
+      CHUNK_DOMAIN,
+      encoder.encode(canonicalStringify(selectionProjection)),
+    );
+    if (calculatedSelection !== artifact.source.selection_manifest) {
+      throw new Error("temporal selection manifest mismatch");
+    }
+
+    const sourceProjection = {
+      archive_sha256: artifact.source.archive_sha256,
+      citation: artifact.source.citation,
+      dataset: artifact.source.dataset,
+      homepage: artifact.source.homepage,
+      license: artifact.source.license,
+      moments: [...artifact.moments, artifact.alternate].map((moment) => ({
+        capture_commitment: moment.artifact.report.capture_commitment,
+        id: moment.id,
+        observation_cell: moment.artifact.report.observation.cell_id,
+        sdf_cell: moment.artifact.report.sdf_cell_id,
+      })),
+      selection_manifest: artifact.source.selection_manifest,
+      sequence_url: artifact.source.sequence_url,
+    };
+    const sourceBytes = encoder.encode(canonicalStringify(sourceProjection));
+    const calculatedSource = await hashDomain(
+      CHUNK_DOMAIN,
+      sourceBytes,
+    );
+    if (calculatedSource !== artifact.source.source_manifest) {
+      throw new Error("temporal source manifest mismatch");
+    }
+    const sourceRoot = await hashDomain(MERKLE_LEAF_DOMAIN, digestBytes(calculatedSource));
+    const sourceProof = artifact.source_proof;
+    const sourceChannel = sourceProof.manifest.channels[0];
+    const expectedSourceParents = [
+      artifact.moments[2]!.artifact.report.sdf_cell_id,
+      artifact.alternate.artifact.report.sdf_cell_id,
+    ].sort(compareUtf8);
+    if (
+      sourceProof.manifest.class !== "aggregate" ||
+      sourceProof.manifest.channels.length !== 1 ||
+      sourceChannel?.role !== "reconstruction/report" ||
+      sourceChannel.codec !== "tessaryn/temporal-source-manifest" ||
+      sourceChannel.codec_version !== "0" ||
+      sourceChannel.chunk_root !== sourceRoot ||
+      sourceChannel.uncompressed_bytes !== sourceBytes.length ||
+      sourceProof.manifest.chunk_merkle_root !== sourceRoot ||
+      canonicalStringify([...sourceProof.manifest.parents].sort(compareUtf8)) !==
+        canonicalStringify(expectedSourceParents) ||
+      (await calculateCellId(sourceProof.manifest)) !== sourceProof.cell_id ||
+      (await calculatePhaFingerprint(sourceProof.pha)) !== sourceProof.pha.phx_fingerprint ||
+      sourceProof.pha.embedded_proof.public_inputs.cell_manifest_digest !==
+        sourceProof.cell_id
+    ) {
+      throw new Error("temporal source Cell or PHA binding mismatch");
+    }
+    const sourceReplay = await verifyRootprint(sourceProof.rootprint);
+    if (sourceReplay !== sourceProof.replay_fingerprint) {
+      throw new Error("temporal source Cell replay mismatch");
+    }
+    const sourceMemoryValid = await verifyMemoryCapsule(sourceProof.memory_capsule);
+    if (
+      !sourceMemoryValid ||
+      artifact.source_proof_report.cell_identity_valid !== true ||
+      artifact.source_proof_report.pha_valid !== true ||
+      artifact.source_proof_report.rootprint_valid !== true ||
+      artifact.source_proof_report.replay_valid !== true ||
+      artifact.source_proof_report.memory_capsule_valid !== true ||
+      artifact.source_proof_report.physical_truth_claimed !== false
+    ) {
+      throw new Error("temporal source Cell verification report mismatch");
+    }
+    result.cellsValid += 1;
+    result.phaValid += 1;
+
+    const verified = [];
+    for (const moment of artifact.moments) {
+      const verification = await verifyReconstructionArtifact(moment.artifact);
+      if (verification.errors.length > 0) {
+        throw new Error(`${moment.id}: ${verification.errors.join(" / ")}`);
+      }
+      result.cellsValid += verification.cellsValid;
+      result.phaValid += verification.phaValid;
+      verified.push({
+        id: moment.id,
+        label: moment.label,
+        capturedAtUnixUs: moment.captured_at_unix_us,
+        verification,
+      });
+    }
+    const alternateVerification = await verifyReconstructionArtifact(
+      artifact.alternate.artifact,
+    );
+    if (alternateVerification.errors.length > 0) {
+      throw new Error(`alternate-c: ${alternateVerification.errors.join(" / ")}`);
+    }
+    result.cellsValid += alternateVerification.cellsValid;
+    result.phaValid += alternateVerification.phaValid;
+    result.moments = verified;
+    result.alternate = {
+      id: artifact.alternate.id,
+      label: artifact.alternate.label,
+      capturedAtUnixUs: artifact.alternate.captured_at_unix_us,
+      verification: alternateVerification,
+    };
+    result.memoryValid =
+      sourceMemoryValid &&
+      [...verified.map((moment) => moment.verification), alternateVerification].every(
+        (verification) => verification.memoryValid,
+      );
+
+    const replay = await verifyRootprint(artifact.lineage.rootprint);
+    result.rootprintValid = true;
+    result.replayValid = replay === artifact.lineage.replay_fingerprint;
+    if (!result.replayValid) throw new Error("temporal Rootprint replay mismatch");
+    const sourceBranchId = artifact.lineage.branches.source;
+    const sourceBranch = sourceBranchId
+      ? artifact.lineage.rootprint.branches[sourceBranchId]
+      : undefined;
+    const expectedSourceBranches = [
+      artifact.lineage.branches["moment-c-sdf"]!,
+      artifact.lineage.branches["alternate-c-sdf"]!,
+    ].sort(compareUtf8);
+    if (
+      !sourceBranch ||
+      canonicalStringify([...sourceBranch.parents].sort(compareUtf8)) !==
+        canonicalStringify(expectedSourceBranches)
+    ) {
+      throw new Error("temporal source branch merge mismatch");
+    }
+
+    const bindings = [
+      ["source", artifact.source_proof.cell_id] as const,
+      ...artifact.moments.flatMap((moment) => [
+        [`${moment.id}-observation`, moment.artifact.report.observation.cell_id] as const,
+        [`${moment.id}-sdf`, moment.artifact.report.sdf_cell_id] as const,
+      ]),
+      [
+        "alternate-c-observation",
+        artifact.alternate.artifact.report.observation.cell_id,
+      ] as const,
+      ["alternate-c-sdf", artifact.alternate.artifact.report.sdf_cell_id] as const,
+    ];
+    for (const [label, cellId] of bindings) {
+      const branchId = artifact.lineage.branches[label];
+      const branch = branchId ? artifact.lineage.rootprint.branches[branchId] : undefined;
+      if (
+        !branch ||
+        branch.artifact.embedded_proof.public_inputs.cell_manifest_digest !== cellId
+      ) {
+        throw new Error(`${label}: temporal lineage binding mismatch`);
+      }
+    }
+  } catch (error) {
+    result.errors.push(error instanceof Error ? error.message : String(error));
+  }
+  return result;
+}
+
 function decodeSurfelChunk(bytes: Uint8Array): ReconstructionBrowserReport["surfels"] {
   const header = SURFEL_MAGIC.length + 4;
   if (!hasMagic(bytes, SURFEL_MAGIC) || bytes.length < header) {
@@ -316,7 +569,10 @@ function decodeSurfelChunk(bytes: Uint8Array): ReconstructionBrowserReport["surf
   return surfels;
 }
 
-function decodeSdfChunk(bytes: Uint8Array, expectedVoxelSize: number): number {
+function decodeSdfChunk(
+  bytes: Uint8Array,
+  expectedVoxelSize: number,
+): { voxelSizeUm: number; voxels: ReconstructionBrowserReport["sdfVoxels"] } {
   const header = SDF_MAGIC.length + 8;
   if (!hasMagic(bytes, SDF_MAGIC) || bytes.length < header) {
     throw new Error("malformed sparse SDF chunk");
@@ -333,21 +589,25 @@ function decodeSdfChunk(bytes: Uint8Array, expectedVoxelSize: number): number {
   }
   let cursor = header;
   let previous: [number, number, number] | null = null;
+  const voxels: ReconstructionBrowserReport["sdfVoxels"] = [];
   for (let index = 0; index < count; index += 1) {
     const coordinate = [
       view.getInt32(cursor, true),
       view.getInt32(cursor + 4, true),
       view.getInt32(cursor + 8, true),
     ] as [number, number, number];
-    cursor += 16;
+    cursor += 12;
+    const signedDistanceUm = view.getInt32(cursor, true);
+    cursor += 4;
     const weight = view.getUint32(cursor, true);
     cursor += 4;
     if (weight === 0 || (previous && compareCoordinate(previous, coordinate) >= 0)) {
       throw new Error("noncanonical sparse SDF voxel");
     }
     previous = coordinate;
+    voxels.push({ coordinate, signedDistanceUm, weight });
   }
-  return count;
+  return { voxelSizeUm: voxelSize, voxels };
 }
 
 function compareCoordinate(

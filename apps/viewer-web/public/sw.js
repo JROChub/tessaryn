@@ -1,6 +1,7 @@
-const CACHE = "tessaryn-origin-v0-1-1-portable1";
+const CACHE = "tessaryn-origin-v0-2-0-real-locus1";
 const CORE = [
   "./",
+  "./world/freiburg-desk-locus.json",
   "./world/vesper-court.json",
   "./manifest.webmanifest",
   "./tessaryn-mark.svg",
@@ -24,7 +25,11 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
-  if (event.request.mode === "navigate" || url.pathname.endsWith("/world/vesper-court.json")) {
+  if (
+    event.request.mode === "navigate" ||
+    url.pathname.endsWith("/world/freiburg-desk-locus.json") ||
+    url.pathname.endsWith("/world/vesper-court.json")
+  ) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {

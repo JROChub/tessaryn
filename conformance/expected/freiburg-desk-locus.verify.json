@@ -1,0 +1,11 @@
+{
+  "alternate_branch_valid": true,
+  "cells_valid": 9,
+  "moments_valid": 3,
+  "rootprint_valid": true,
+  "schema": "tessaryn/temporal-locus-artifact/v0",
+  "selected_frames": 48,
+  "source_manifest": "sha256:a344f24beb0f9ffe4e137354e13e6f9b77229b119660570fd2e37061e7db2aca",
+  "surfels_valid": 174972,
+  "voxels_valid": 131808
+}
