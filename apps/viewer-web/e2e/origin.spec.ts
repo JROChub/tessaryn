@@ -300,6 +300,17 @@ test("renders GLB, GLTF, OBJ, PLY, and STL as local source geometry", async ({ p
 
   await page.locator("#import-input").setInputFiles(sourceGeometryCases[0]);
   await expect(page.locator("#app")).toHaveAttribute("data-source", "source-geometry");
+  await expect(page.locator("#identity-state")).toContainText("SOURCE ROOT ONLY");
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics())).toMatchObject({
+    cellCount: 0,
+    provenanceLinks: 0,
+    temporalManifolds: 0,
+    semanticConstellations: 0,
+    activeMeaningFields: 0,
+    assemblyPoints: 0,
+    temporalObservations: 0,
+    sdfVoxels: 0,
+  });
   await page.waitForTimeout(500);
   const screenshot = await page.locator("#world-canvas").screenshot();
   const image = PNG.sync.read(screenshot);

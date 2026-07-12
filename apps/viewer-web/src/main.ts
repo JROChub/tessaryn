@@ -147,6 +147,7 @@ interface ActiveLocalImport {
   previousAnchorShort: string;
   previousMomentShort: string;
   previousEvidenceShort: string;
+  previousIdentityState: string;
   previousCondensationWidth: string;
   error?: string;
 }
@@ -176,6 +177,7 @@ const elements = {
   originName: byId<HTMLElement>("origin-name"),
   cellCount: byId<HTMLElement>("cell-count"),
   networkState: byId<HTMLElement>("network-state"),
+  identityState: byId<HTMLElement>("identity-state"),
   momentRail: byId<HTMLElement>("moment-rail"),
   originPhase: byId<HTMLElement>("origin-phase"),
   originStatus: byId<HTMLElement>("origin-status"),
@@ -1474,6 +1476,7 @@ async function importReconstructionFile(
     elements.anchorShort.textContent = shortDigest(cell.manifest.anchor_id, 8);
     elements.momentShort.textContent = "CAPTURE";
     elements.evidenceShort.textContent = "FULLY REVERIFIED";
+    setTopIdentityState("ROOTPRINT VERIFIED");
     elements.originPhase.textContent = "ORIGIN / IMPORTED CAPTURE";
     elements.originStatus.textContent = "SURFEL + SDF LOCUS MATERIALIZED";
     elements.condensation.style.width = "100%";
@@ -1543,6 +1546,7 @@ async function importValidationLocusFile(
     elements.anchorShort.textContent = shortDigest(selected.manifest.anchor_id, 8);
     elements.momentShort.textContent = "MOMENT C";
     elements.evidenceShort.textContent = "LOCALLY VERIFIED";
+    setTopIdentityState("ROOTPRINT VERIFIED");
     elements.originPhase.textContent = "ORIGIN / IMPORTED 4D LOCUS";
     elements.originStatus.textContent = "FOUR MOMENTS / BRANCH RETAINED";
     elements.condensation.style.width = "100%";
@@ -1648,6 +1652,7 @@ async function importCinematicFile(
     );
     elements.momentShort.textContent = "ORIGIN";
     elements.evidenceShort.textContent = "POWER HOUSE ACCEPTED";
+    setTopIdentityState("ROOTPRINT VERIFIED");
     elements.originPhase.textContent = "OBJECT / CONSTRUCTED";
     elements.originStatus.textContent = "CONSTRUCTED MEMORY / TEMPORAL FIELD LIVE";
     elements.condensation.style.width = "100%";
@@ -1834,6 +1839,7 @@ async function importSourceGeometry(file: File, companions: readonly File[]): Pr
   elements.anchorShort.textContent = "UNBOUND";
   elements.momentShort.textContent = "STATIC SOURCE";
   elements.evidenceShort.textContent = "STREAM ROOT ONLY";
+  setTopIdentityState("SOURCE ROOT ONLY");
   elements.originPhase.textContent = "ORIGIN / SOURCE GEOMETRY";
   elements.originStatus.textContent = "GEOMETRY STAGED / WORLD CELL NOT ATTACHED";
   elements.condensation.style.width = "100%";
@@ -1883,6 +1889,8 @@ async function openFileBackedArtifact(
     activeLocalImport?.previousMomentShort ?? elements.momentShort.textContent ?? "";
   const previousEvidenceShort =
     activeLocalImport?.previousEvidenceShort ?? elements.evidenceShort.textContent ?? "";
+  const previousIdentityState =
+    activeLocalImport?.previousIdentityState ?? elements.identityState.textContent?.trim() ?? "";
   const previousCondensationWidth =
     activeLocalImport?.previousCondensationWidth ?? elements.condensation.style.width;
   closeLocalFile(false);
@@ -1900,6 +1908,7 @@ async function openFileBackedArtifact(
     previousAnchorShort,
     previousMomentShort,
     previousEvidenceShort,
+    previousIdentityState,
     previousCondensationWidth,
   };
   activeLocalImport = state;
@@ -1914,6 +1923,7 @@ async function openFileBackedArtifact(
   elements.anchorShort.textContent = "UNBOUND";
   elements.momentShort.textContent = "LOCAL FILE";
   elements.evidenceShort.textContent = "STREAM ROOT PENDING";
+  setTopIdentityState("SOURCE ROOT ONLY");
   elements.condensation.style.width = "0%";
   elements.localKind.textContent = localFileKindLabel(state.kind);
   elements.localStatus.textContent = "INDEXING LOCAL BYTES";
@@ -2005,6 +2015,7 @@ function closeLocalFile(restoreSource = true): void {
     elements.anchorShort.textContent = active.previousAnchorShort;
     elements.momentShort.textContent = active.previousMomentShort;
     elements.evidenceShort.textContent = active.previousEvidenceShort;
+    setTopIdentityState(active.previousIdentityState);
     elements.condensation.style.width = active.previousCondensationWidth;
   }
   elements.chronofoldButton.disabled = importedArtifact !== null;
@@ -2613,6 +2624,7 @@ function openValidationOrigin(notify = true): void {
   elements.anchorShort.textContent = shortDigest(selected.manifest.anchor_id, 8);
   elements.momentShort.textContent = "MOMENT C";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
+  setTopIdentityState("ROOTPRINT VERIFIED");
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
   elements.originStatus.textContent = "GROUND-TRUTH LAB / CONTINUUM STABLE";
   elements.condensation.style.width = "100%";
@@ -2648,6 +2660,7 @@ function restoreReferenceOrigin(notify = true): void {
   elements.anchorShort.textContent = shortDigest(worldData.anchor_id, 8);
   elements.momentShort.textContent = "REFERENCE";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
+  setTopIdentityState("ROOTPRINT LIVE");
   elements.originPhase.textContent = "PRIVATE ORIGIN / READY";
   elements.originStatus.textContent = "PRIVATE ORIGIN READY / ADD YOUR CAPTURE";
   elements.condensation.style.width = "100%";
@@ -2729,6 +2742,11 @@ function updateNetworkState(): void {
   elements.networkState.innerHTML = "";
   const signal = document.createElement("i");
   elements.networkState.append(signal, document.createTextNode(navigator.onLine ? "LOCAL" : "OFFLINE READY"));
+}
+
+function setTopIdentityState(label: string): void {
+  const signal = document.createElement("i");
+  elements.identityState.replaceChildren(signal, document.createTextNode(label));
 }
 
 function registerServiceWorker(): void {

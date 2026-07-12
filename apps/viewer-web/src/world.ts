@@ -1176,24 +1176,36 @@ export class TessarynWorld {
       firstStructureMs: this.firstStructureMs,
       materializationMs: this.materializationMs,
       cellCount: this.materializedCellCount || this.nodes.size,
-      provenanceLinks: this.cinematicVisual
+      provenanceLinks: this.sourceGeometryFrame
+        ? 0
+        : this.cinematicVisual
         ? this.importedProvenanceLinks
         : this.importedTemporal
         ? this.importedProvenanceLinks
         : this.weaveLinks.length,
-      temporalManifolds: this.cinematicVisual
+      temporalManifolds: this.sourceGeometryFrame
+        ? 0
+        : this.cinematicVisual
         ? this.cinematicVisual.phaseCount
         : this.importedTemporal
           ? this.nodes.size
           : this.world.moments.length,
-      semanticConstellations: this.cinematicVisual
+      semanticConstellations: this.sourceGeometryFrame
+        ? 0
+        : this.cinematicVisual
         ? this.cinematicVisual.semanticCount
         : [...this.nodes.values()].filter((node) => Boolean(node.meaning)).length,
-      activeMeaningFields: this.cinematicVisual
+      activeMeaningFields: this.sourceGeometryFrame
+        ? 0
+        : this.cinematicVisual
         ? this.cinematicVisual.activeSemanticCount
         : [...this.nodes.values()].filter((node) => node.meaning?.visible).length,
-      assemblyPoints: this.cinematicVisual ? this.materializedCellCount : this.assemblyPointCount,
-      continuumLayers: this.cinematicVisual || this.importedTemporal
+      assemblyPoints: this.sourceGeometryFrame
+        ? 0
+        : this.cinematicVisual
+          ? this.materializedCellCount
+          : this.assemblyPointCount,
+      continuumLayers: this.sourceGeometryFrame || this.cinematicVisual || this.importedTemporal
         ? this.importedRoot.children.length
         : this.continuumRoot.children.length,
       scale: this.scale,
