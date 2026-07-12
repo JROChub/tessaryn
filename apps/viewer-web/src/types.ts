@@ -138,7 +138,7 @@ export interface DemoCell {
 
 export interface DemoWorld {
   schema: "tessaryn/demo-world/v0";
-  status: "reference-origin";
+  status: "reference-origin" | "local-reconstruction";
   product: string;
   origin: string;
   verification_profile: string;

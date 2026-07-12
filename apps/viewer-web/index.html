@@ -20,32 +20,30 @@
         tabindex="0"
       ></canvas>
 
-      <section id="local-stage" class="local-stage" aria-label="Local file stream" hidden>
-        <video id="local-video" controls muted loop playsinline preload="metadata" hidden></video>
-        <img id="local-image" alt="Locally opened artifact" hidden>
-        <div id="local-field" class="local-field" aria-hidden="true" hidden>
-          <i></i><i></i><i></i><i></i><i></i><i></i>
-        </div>
+      <section id="local-stage" class="local-stage" aria-label="Local construction process" hidden>
         <header class="local-stage-heading">
-          <span><small id="local-kind">LOCAL FILE</small><b id="local-name">--</b></span>
+          <span>
+            <small id="local-kind">SOURCE / LOCAL ONLY</small>
+            <b id="local-name">--</b>
+          </span>
           <div class="local-stage-actions">
             <button
               id="local-export"
               class="icon-button"
               type="button"
-              title="Export local stream index"
+              title="Export constructed Locus"
               disabled
             >
               <i data-lucide="download"></i>
             </button>
-            <button id="local-close" class="icon-button" type="button" title="Close local file">
+            <button id="local-close" class="icon-button" type="button" title="Cancel or close local Locus">
               <i data-lucide="x"></i>
             </button>
           </div>
         </header>
         <footer class="local-stage-identity" aria-live="polite">
           <span>
-            <small id="local-status">AWAITING LOCAL STREAM</small><b id="local-size">--</b>
+            <small id="local-status">AWAITING SOURCE</small><b id="local-size">--</b>
           </span>
           <code id="local-root">STREAM ROOT PENDING</code>
           <div class="local-stream-progress"><i id="local-progress"></i></div>

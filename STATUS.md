@@ -26,7 +26,8 @@ Capability states below describe the tested `0.3.0` release surface.
 | Bounded Locus compiler | Implemented | Deterministic 10,000-Cell test |
 | Power House bridge | Implemented | `.pha`, Rootprint, replay, Memory Capsule tests |
 | Browser-local verifier and capture import | Implemented | Fixture and reconstruction-artifact verification, rendering, mutation rejection |
-| Unbounded file-backed browser index | Implemented | No total application cap; 4 MiB worker windows, O(log n) stream root, progress, cancellation, local media playback |
+| Browser video-to-Locus construction | Implemented | Same-origin pinned depth model, nine-frame decode, shot-aware registration, three organized temporal radiance surfaces, six Cell/PHA bindings, Rootprint replay, Capsule export and strict re-import |
+| Unbounded file-backed browser index | Implemented | No total application cap; 4 MiB worker windows, O(log n) stream root, progress, cancellation, source commitment |
 | Authenticated private Loci | Implemented | XChaCha20-Poly1305, X25519/HKDF wrapping, revocation, tamper/property tests |
 | Private multi-device Weave | Implemented | Ed25519 packets, chain/replay checks, branch preservation, local installation |
 | Witness receipts | Implemented | Signed scoped statements, expiry, independence groups, no core authority |

@@ -32,6 +32,7 @@ const reviewedExtensions = new Set([
 const generatedLongLineFiles = new Set([
   "Cargo.lock",
   "apps/viewer-web/package-lock.json",
+  "apps/viewer-web/public/runtime/ort-wasm-simd-threaded.jsep.mjs",
   "apps/viewer-web/public/world/archviz-tiny-house-locus.json",
   "apps/viewer-web/public/world/vesper-court.json",
   "conformance/reconstruction-v0/minimal-artifact.json",

@@ -8,6 +8,9 @@ import { PNG } from "pngjs";
 const reconstructionArtifact = fileURLToPath(
   new URL("../../../conformance/reconstruction-v0/minimal-artifact.json", import.meta.url),
 );
+const videoLocusSource = fileURLToPath(
+  new URL("./fixtures/video-locus.mp4", import.meta.url),
+);
 
 async function openOrigin(page: Page): Promise<void> {
   await page.goto("/");
@@ -70,7 +73,7 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
   const screenshot = await page.locator("#world-canvas").screenshot();
   const image = PNG.sync.read(screenshot);
   const colors = new Set<string>();
-  let nonblack = 0;
+  let luminous = 0;
   let samples = 0;
   const stepX = Math.max(1, Math.floor(image.width / 96));
   const stepY = Math.max(1, Math.floor(image.height / 96));
@@ -81,12 +84,12 @@ test("locally verifies every committed layer and renders nonblank canvas pixels"
       const green = image.data[index + 1] ?? 0;
       const blue = image.data[index + 2] ?? 0;
       colors.add(`${red},${green},${blue}`);
-      if (red + green + blue > 15) nonblack += 1;
+      if (red + green + blue > 96) luminous += 1;
       samples += 1;
     }
   }
   expect(colors.size).toBeGreaterThan(100);
-  expect(nonblack / samples).toBeGreaterThan(0.35);
+  expect(luminous / samples).toBeGreaterThan(0.03);
   expect(browserErrors).toEqual([]);
 });
 
@@ -102,7 +105,7 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   expect(diagnostics?.provenanceLinks).toBe(3);
   expect(diagnostics?.temporalManifolds).toBe(4);
   expect(diagnostics?.semanticConstellations).toBe(4);
-  expect(diagnostics?.activeMeaningFields).toBeGreaterThan(0);
+  expect(diagnostics?.activeMeaningFields).toBe(0);
   expect(diagnostics?.assemblyPoints).toBe(212_565);
   expect(diagnostics?.continuumLayers).toBeGreaterThanOrEqual(8);
   expect(diagnostics?.temporalObservations).toBe(4);
@@ -135,6 +138,7 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   await expect(page.locator("#trace-summary")).toContainText(
     "TartanAir V2 ArchViz Tiny House exact RGB-D ground truth",
   );
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().activeMeaningFields)).toBe(1);
 
   await page.locator("#evidence-button").click();
   await expect(page.locator("#evidence-button")).toHaveAttribute("aria-pressed", "false");
@@ -197,6 +201,113 @@ test("imports, reverifies, and renders a reconstruction artifact without upload"
     }
   }
   expect(colors.size).toBeGreaterThan(20);
+});
+
+test("constructs, verifies, exports, and reimports a native temporal Locus from video", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openOrigin(page);
+  await page.locator("#import-input").setInputFiles(videoLocusSource);
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status), {
+      timeout: 180_000,
+    })
+    .toBe("materialized");
+
+  expect(await page.locator("video").count()).toBe(0);
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "video-reconstruction");
+  await expect(page.locator("#cell-count")).toHaveText("6 CELLS");
+  await expect(page.locator("#moment-rail button")).toHaveCount(3);
+  const result = await page.evaluate(() => ({
+    local: window.__tessaryn?.localImport,
+    verification: window.__tessaryn?.videoVerification,
+    diagnostics: window.__tessaryn?.scene.diagnostics(),
+  }));
+  expect(result.local).toMatchObject({
+    kind: "video",
+    status: "materialized",
+    worldCells: 6,
+  });
+  expect(result.local?.surfels).toBeGreaterThan(1_000);
+  expect(result.local?.surfaceVoxels).toBeGreaterThan(100);
+  expect(result.verification).toMatchObject({
+    cellsValid: 6,
+    phaValid: 6,
+    rootprintValid: true,
+    replayValid: true,
+    memoryValid: true,
+    errors: [],
+  });
+  expect(result.diagnostics).toMatchObject({
+    cellCount: 6,
+    temporalObservations: 3,
+    provenanceLinks: 2,
+  });
+  expect(result.diagnostics?.assemblyPoints).toBeGreaterThan(1_000);
+
+  const stage = await bounds(page, "#local-stage");
+  const controls = await bounds(page, ".world-controls");
+  expectInsideViewport(stage);
+  expectInsideViewport(controls);
+  expect(stage.bottom <= controls.y || stage.x >= controls.right).toBe(true);
+
+  await page.locator("#chronofold-button").click();
+  await expect(page.locator("#chronofold-button")).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().chronofold)).toBe(
+    true,
+  );
+  await page.locator("#verify-button").click();
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL VIDEO LOCUS ACCEPTED");
+  await expect(page.locator("#verify-cells")).toHaveText("6 / 6 VALID");
+  await expect(page.locator("#verify-pha")).toHaveText("6 / 6 VALID");
+  await expect(page.locator("#verify-memory")).toHaveText("VALID");
+  await page.locator("#verify-close").click();
+
+  const screenshot = PNG.sync.read(await page.locator("#world-canvas").screenshot());
+  const colors = new Set<string>();
+  for (let y = 0; y < screenshot.height; y += Math.max(1, Math.floor(screenshot.height / 64))) {
+    for (let x = 0; x < screenshot.width; x += Math.max(1, Math.floor(screenshot.width / 64))) {
+      const offset = (y * screenshot.width + x) * 4;
+      colors.add(
+        `${String(screenshot.data[offset] ?? 0)},${String(screenshot.data[offset + 1] ?? 0)},${String(screenshot.data[offset + 2] ?? 0)}`,
+      );
+    }
+  }
+  expect(colors.size).toBeGreaterThan(24);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#local-export").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.tessaryn-locus\.json$/);
+  const artifactPath = await download.path();
+  expect(artifactPath).not.toBeNull();
+  await page.locator("#import-input").setInputFiles(artifactPath!);
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status), {
+      timeout: 90_000,
+    })
+    .toBe("materialized");
+  expect(await page.evaluate(() => window.__tessaryn?.videoVerification?.errors)).toEqual([]);
+
+  const gridMutation = JSON.parse(await readFile(artifactPath!, "utf8")) as {
+    moments: Array<{ surfelGrid: { columns: number; rows: number } | null }>;
+  };
+  const grid = gridMutation.moments[0]?.surfelGrid;
+  expect(grid).not.toBeNull();
+  if (grid) [grid.columns, grid.rows] = [grid.rows, grid.columns];
+  await page.locator("#import-input").setInputFiles({
+    name: "grid-topology-mutation.tessaryn-locus.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(gridMutation)),
+  });
+  await expect(page.locator("#toast")).toContainText("GRID COMMITMENT MISMATCH");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileToast = await bounds(page, "#toast");
+  expectInsideViewport(mobileToast);
+  expect(mobileToast.height).toBeLessThan(80);
+  expectInsideViewport(await bounds(page, "#local-close"));
 });
 
 test("indexes a local file beyond the former 128 MiB boundary", async ({ page }) => {

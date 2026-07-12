@@ -20,6 +20,23 @@ and local verification reports. TartanAir is synthetic simulator data. The
 artifact declares `synthetic_ground_truth` and is not represented as a physical
 sensor capture.
 
+## Depth Anything V2 Small
+
+The browser video-Locus path includes the Q4 ONNX conversion of Depth Anything
+V2 Small and executes it locally through Transformers.js and ONNX Runtime Web.
+
+- Model: <https://huggingface.co/onnx-community/depth-anything-v2-small>
+- Pinned revision: `413ce838e669ab7dfc01a6a396bf3d4397286d7f`
+- Q4 model SHA-256: `5d55b02762e1907589158af3e366bd61ddf648155852a07bbf5e3a074639fcf8`
+- Model license: Apache License 2.0
+- Transformers.js license: Apache License 2.0
+- ONNX Runtime license: MIT
+
+The model files and runtime are served from the TESSARYN origin. Remote model
+loading is disabled in application code. Inference does not upload source
+frames. Depth Anything V2 produces relative monocular depth; TESSARYN records
+that profile explicitly and does not relabel it as calibrated metric depth.
+
 ## Optional Real-Sensor Adapters
 
 TESSARYN contains local layout-inspection adapters for EuRoC MAV, KITTI raw,

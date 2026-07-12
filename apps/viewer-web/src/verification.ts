@@ -93,6 +93,57 @@ export async function calculatePhaFingerprint(artifact: PhaArtifact): Promise<st
   return hashDomain(PHA_DOMAIN, encoder.encode(canonicalStringify(core)));
 }
 
+export async function calculateJsonChunkCommitment(
+  payload: Record<string, unknown>,
+): Promise<{ chunkId: string; chunkRoot: string; canonicalBytes: number }> {
+  const canonical = encoder.encode(canonicalStringify(payload));
+  const chunkId = await hashDomain(CHUNK_DOMAIN, canonical);
+  const chunkRoot = await hashDomain(MERKLE_LEAF_DOMAIN, digestBytes(chunkId));
+  return { chunkId, chunkRoot, canonicalBytes: canonical.byteLength };
+}
+
+export async function calculateRootprintBranchId(
+  branch: RootprintBranch,
+): Promise<string> {
+  return calculateBranchId(branch);
+}
+
+export async function calculateRootprintReplay(graph: Rootprint): Promise<string> {
+  return verifyRootprint(graph);
+}
+
+export async function calculateMemoryCoreDigest(
+  coreProjection: Record<string, unknown>,
+): Promise<string> {
+  return hashDomain(CORE_DOMAIN, encoder.encode(canonicalStringify(coreProjection)));
+}
+
+export async function calculateMemoryCapsuleDigest(
+  capsule: Record<string, any>,
+): Promise<string> {
+  const projection = structuredClone(capsule);
+  projection.header.capsule_digest = null;
+  return hashDomain(CAPSULE_DOMAIN, encoder.encode(canonicalStringify(projection)));
+}
+
+export async function calculateSidecarDigest(
+  sidecarProjection: Record<string, unknown>,
+): Promise<string> {
+  return hashDomain(SIDECAR_DOMAIN, encoder.encode(canonicalStringify(sidecarProjection)));
+}
+
+export async function calculateSemanticDigest(
+  packet: Record<string, any>,
+): Promise<string> {
+  return semanticPacketDigest(packet);
+}
+
+export async function verifyGeneratedMemoryCapsule(
+  capsule: Record<string, any>,
+): Promise<boolean> {
+  return verifyMemoryCapsule(capsule);
+}
+
 export async function verifyWorld(world: DemoWorld): Promise<VerificationReport> {
   const errors: string[] = [];
   let cellsValid = 0;

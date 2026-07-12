@@ -6,7 +6,7 @@
   },
   "inputs": {
     "Cargo.lock": "bd93b136b4ee5b81532d14bf88571e7d1ddb0e3b02eed0325e0747b4f01b7c94",
-    "apps/viewer-web/package-lock.json": "0a2d4b6589de12f1b94f392b4d003d9582d93a8bb8c4232b332d0cbc277e2cd2"
+    "apps/viewer-web/package-lock.json": "2e1b24194295004c3af9cee719eb2a55c551789c0e163178d4c2dd60718db899"
   },
   "files": {
     "sbom/rust/tessaryn-anchor.cdx.json": "e670b1d2fe76a3d83bdf14c24b47abde27a883f33b55479c9caea4ed178b0ba0",
@@ -22,6 +22,6 @@
     "sbom/rust/tessaryn-weave.cdx.json": "e67ebf82316410680aa52e1789c41d152f25c981a4bdb59b2c7b42d05ad3b4ab",
     "sbom/rust/tessaryn-witness.cdx.json": "13e92844ba671b3bccc4b303c3855b4cdc590717902361a33a49e389752e3a07",
     "sbom/rust/tessaryn-cli.cdx.json": "b65dc8edf42cf3a9d5f3b724b05324ebcfb96e1fb4241ddfa35da96ce5e61b57",
-    "sbom/viewer-web.cdx.json": "f0d5cfa76a53d1cf69ec63b0e4b6cdaa950b6d7d70f583c7aaee21034b61386f"
+    "sbom/viewer-web.cdx.json": "47c884d306c182464c18a7d6fe2ac2cb86398587f07658b9bdbf10fba3de7176"
   }
 }
