@@ -20,17 +20,26 @@ cargo run --locked -p tessaryn-cli -- \
 The resulting artifact is public-shareable only if its policy permits
 publication. It contains the filtered surfel and SDF chunks, Cell manifests,
 Power House bundles, Rootprint lineage, SLBIT packets, and Memory Capsules. It
-does not contain raw frame arrays. Import it with the viewer's `OPEN` control to
-reverify and render it locally.
+does not contain raw frame arrays. Import it with the viewer's `CONSTRUCT A
+PLACE` or `ADD` control to reverify and render it locally.
 
-The same control opens arbitrary local media and binary artifacts through the
-file-backed local index profile. There is no application-level total-size cap:
-the browser reads fixed 4 MiB windows in a dedicated worker and retains only an
-`O(log n)` stream-root accumulator. Video and image presentation uses a local
-object URL and does not wait for the complete file or upload it. Very large
-reconstruction channels must remain external file-backed chunks referenced by a
-compact strict JSON manifest; they must not be embedded into a single enormous
-JSON string. See `specs/local-file-index-v1.md`.
+The intake also accepts complete validation-Locus JSON, `.tessaryn` temporal
+objects, and GLB/GLTF/OBJ/PLY/STL source geometry. Source geometry is staged in
+the traversable renderer and receives a local stream root, but it is not called
+a World Cell and does not receive invented PHA or Rootprint state. GLTF
+dependencies must be selected as local companion files; network dependencies
+are rejected.
+
+Arbitrary local media and binary artifacts use the file-backed local index
+profile. There is no application-level total-size cap for indexing: the browser
+reads fixed 4 MiB windows in a dedicated worker and retains only an `O(log n)`
+stream-root accumulator. Raw video, image, and audio remain source evidence and
+are not presented as reconstructed geometry or as a media player. Interactive
+source-geometry decoding has a separate 512 MiB browser safety profile; larger
+models are still indexed. Very large reconstruction channels must remain
+external file-backed chunks referenced by a compact strict JSON manifest; they
+must not be embedded into a single enormous JSON string. See
+`specs/local-file-index-v1.md`.
 
 Before physical capture, obtain site authorization, show a visible recording
 state, define exclusion volumes, inspect the public derivative, test aggregate

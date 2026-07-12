@@ -2,10 +2,11 @@
 
 Schema: `tessaryn/local-file-index/v1`
 
-The browser `OPEN` path may index a local file without copying the complete file
-into JavaScript memory and without sending bytes over the network. The profile
-has no application-level total file-size ceiling. Browser, operating-system,
-filesystem, storage throughput, and available time remain physical constraints.
+The browser local construction intake may index a file without copying the
+complete file into JavaScript memory and without sending bytes over the network.
+The profile has no application-level total file-size ceiling. Browser,
+operating-system, filesystem, storage throughput, and available time remain
+physical constraints.
 
 The index uses 4 MiB leaves and an ordered Merkle mountain range so working
 memory is bounded by one leaf plus `O(log n)` peak digests.
@@ -54,5 +55,8 @@ Raw media is index-only. Selecting a video, image, or audio file does not claim
 spatial reconstruction and does not create a visible media player. Closing the
 file cancels unfinished indexing. Reconstruction JSON remains a strict manifest
 profile; a native temporal object must use its separate versioned package and
-authored geometry descriptor. Large channel data belongs in file-backed chunks
-rather than one enormous JSON string.
+authored geometry descriptor. GLB, GLTF, OBJ, PLY, and STL files may be rendered
+as source geometry after indexing. That presentation does not create a Cell,
+PHA, Rootprint, or temporal claim. Missing GLTF companions and network resource
+references reject. Large channel data belongs in file-backed chunks rather than
+one enormous JSON string.

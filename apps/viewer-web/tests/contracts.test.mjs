@@ -15,6 +15,7 @@ const mainUrl = new URL("../src/main.ts", import.meta.url);
 const localIdentityUrl = new URL("../src/local-file-identity.ts", import.meta.url);
 const localWorkerUrl = new URL("../src/local-ingest-worker.ts", import.meta.url);
 const cinematicObjectUrl = new URL("../src/cinematic-object.ts", import.meta.url);
+const sourceGeometryUrl = new URL("../src/source-geometry.ts", import.meta.url);
 const weaveClientUrl = new URL("../src/weave-client.ts", import.meta.url);
 
 test("the bounded Origin declares its local verification profile", async () => {
@@ -72,6 +73,10 @@ test("the viewer has no remote script or map substrate dependency", async () => 
     lock,
     /mapbox|maplibre|leaflet|openlayers|cesium|google.maps|street.?view|arcgis/i,
   );
+  const input = html.match(/<input\s+id="import-input"[\s\S]*?>/u)?.[0] ?? "";
+  assert.match(input, /\bmultiple\b/u);
+  assert.doesNotMatch(input, /\baccept=/u);
+  assert.match(html, /\.GLB \.GLTF \.OBJ \.PLY \.STL/u);
 });
 
 test("the offline cache includes the local world fixture", async () => {
@@ -79,7 +84,7 @@ test("the offline cache includes the local world fixture", async () => {
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-write-weave1";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-write-weave2-intake";`),
   );
   assert.match(worker, /\.\/world\/archviz-tiny-house-locus\.json/);
   assert.match(worker, /\.\/world\/vesper-court\.json/);
@@ -103,11 +108,12 @@ test("publication is product-native, resumable, signed, and device-persistent", 
 });
 
 test("local file indexing and cinematic objects remain file-backed and chunk bounded", async () => {
-  const [main, identity, localWorker, cinematic] = await Promise.all([
+  const [main, identity, localWorker, cinematic, sourceGeometry] = await Promise.all([
     readFile(mainUrl, "utf8"),
     readFile(localIdentityUrl, "utf8"),
     readFile(localWorkerUrl, "utf8"),
     readFile(cinematicObjectUrl, "utf8"),
+    readFile(sourceGeometryUrl, "utf8"),
   ]);
   assert.doesNotMatch(main, /MAX_IMPORT_BYTES|EXCEEDS 128 MIB/);
   assert.doesNotMatch(main, /localVideo|<video|presentLocalMedia/);
@@ -118,4 +124,9 @@ test("local file indexing and cinematic objects remain file-backed and chunk bou
   assert.match(cinematic, /\.slice\(payloadOffset \+ offset/);
   assert.match(cinematic, /calculateChunkMerkleRoot/);
   assert.match(cinematic, /verifyCellProofBundle/);
+  assert.match(sourceGeometry, /GLTFLoader/);
+  assert.match(sourceGeometry, /OBJLoader/);
+  assert.match(sourceGeometry, /PLYLoader/);
+  assert.match(sourceGeometry, /STLLoader/);
+  assert.match(sourceGeometry, /validateFinitePositions/);
 });

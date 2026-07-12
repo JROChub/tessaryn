@@ -55,6 +55,12 @@ import {
 } from "./local-ingest-client";
 import type { LocalFileIdentity, LocalFileProgress } from "./local-file-identity";
 import { parseStrictIntegerJson } from "./strict-json";
+import {
+  disposeSourceGeometry,
+  parseSourceGeometry,
+  sourceGeometryFormat,
+  type SourceGeometryStats,
+} from "./source-geometry";
 import { runMutation } from "./verification";
 import {
   destroyVerificationWorker,
@@ -95,6 +101,7 @@ declare global {
       validationArtifact?: ValidationLocusArtifactView;
       validationVerification?: ValidationLocusBrowserReport;
       localImport?: LocalImportView;
+      sourceGeometry?: SourceGeometryView;
       cinematicObject?: CinematicObjectEnvelopeView;
       cinematicVerification?: CinematicObjectBrowserReport;
       publicObjectCatalog?: PublicObjectCatalog;
@@ -112,7 +119,7 @@ interface RuntimeMetrics {
   verificationMs?: number;
 }
 
-type LocalFileKind = "video" | "image" | "audio" | "binary";
+type LocalFileKind = "geometry" | "video" | "image" | "audio" | "binary";
 type LocalImportStatus = "indexing" | "indexed" | "error";
 
 interface LocalImportView {
@@ -135,6 +142,12 @@ interface ActiveLocalImport {
   previousSource?: string;
   previousOriginName: string;
   previousCellCount: string;
+  previousOriginPhase: string;
+  previousOriginStatus: string;
+  previousAnchorShort: string;
+  previousMomentShort: string;
+  previousEvidenceShort: string;
+  previousCondensationWidth: string;
   error?: string;
 }
 
@@ -143,6 +156,18 @@ interface ActiveCinematicObject {
   envelope: CinematicObjectEnvelopeView;
   verification: CinematicObjectBrowserReport;
   publicEntry: PublicObjectCatalogEntry | null;
+}
+
+interface ActiveValidationLocus {
+  file: File;
+  artifact: ValidationLocusArtifactView;
+  verification: ValidationLocusBrowserReport;
+}
+
+interface SourceGeometryView extends SourceGeometryStats {
+  name: string;
+  streamRoot: string;
+  displayScale: number;
 }
 
 const elements = {
@@ -190,6 +215,13 @@ const elements = {
   importButton: byId<HTMLButtonElement>("import-button"),
   constructButton: byId<HTMLButtonElement>("construct-button"),
   importInput: byId<HTMLInputElement>("import-input"),
+  intakeDialog: byId<HTMLDialogElement>("intake-dialog"),
+  intakeClose: byId<HTMLButtonElement>("intake-close"),
+  intakeDrop: byId<HTMLButtonElement>("intake-drop"),
+  intakeResult: byId<HTMLElement>("intake-result"),
+  intakeState: byId<HTMLElement>("intake-state"),
+  intakeFile: byId<HTMLElement>("intake-file"),
+  intakeDetail: byId<HTMLElement>("intake-detail"),
   verifyClose: byId<HTMLButtonElement>("verify-close"),
   fullscreenButton: byId<HTMLButtonElement>("fullscreen-button"),
   chronofoldButton: byId<HTMLButtonElement>("chronofold-button"),
@@ -286,6 +318,8 @@ let toastTimer = 0;
 let activeLocalImport: ActiveLocalImport | null = null;
 let activeLocalTask: LocalIngestTask | null = null;
 let activeCinematicObject: ActiveCinematicObject | null = null;
+let activeSourceGeometry: SourceGeometryView | null = null;
+let activeValidationLocus: ActiveValidationLocus | null = null;
 let publicObjectCatalog: PublicObjectCatalog | null = null;
 let bundledObjectCatalog: PublicObjectCatalog | null = null;
 let weaveConfig: WeaveClientConfig | null = null;
@@ -296,6 +330,8 @@ let activePublicEntry: PublicObjectCatalogEntry | null = null;
 let publishAbort: AbortController | null = null;
 let cinematicScrubbing = false;
 const MAX_INLINE_RECONSTRUCTION_BYTES = 64 * 1024 * 1024;
+const NATIVE_RECONSTRUCTION_SCHEMA = "tessaryn/reconstruction-artifact/v0";
+const NATIVE_VALIDATION_SCHEMA = "tessaryn/validation-locus-artifact/v1";
 const runtimeMetrics: RuntimeMetrics = {
   bootStartedAtMs: performance.now(),
 };
@@ -500,11 +536,19 @@ function bindControls(): void {
       renderWeaveScope();
     });
   });
-  elements.importButton.addEventListener("click", () => elements.importInput.click());
-  elements.constructButton.addEventListener("click", () => elements.importInput.click());
-  elements.importInput.addEventListener("change", () => void importLocalFile());
+  elements.importButton.addEventListener("click", openIntakeDialog);
+  elements.constructButton.addEventListener("click", openIntakeDialog);
+  elements.intakeClose.addEventListener("click", () => elements.intakeDialog.close());
+  elements.intakeDrop.addEventListener("click", () => elements.importInput.click());
+  elements.importInput.addEventListener("change", () => void importLocalFiles());
+  bindIntakeDrop();
   elements.localClose.addEventListener("click", () => {
-    if (activeCinematicObject || importedArtifact) restoreReferenceOrigin();
+    if (
+      activeCinematicObject ||
+      activeSourceGeometry ||
+      activeValidationLocus ||
+      importedArtifact
+    ) restoreReferenceOrigin();
     else closeLocalFile();
   });
   elements.localExport.addEventListener("click", () => {
@@ -524,11 +568,15 @@ function bindControls(): void {
   elements.challengeButton.addEventListener("click", openChallenge);
   elements.exportButton.addEventListener("click", exportCapsule);
   elements.resetButton.addEventListener("click", () => {
-    if (activeCinematicObject) {
+    if (activeCinematicObject || activeSourceGeometry) {
       restoreReferenceOrigin();
       return;
     }
     if (importedArtifact) {
+      restoreReferenceOrigin();
+      return;
+    }
+    if (activeValidationLocus) {
       restoreReferenceOrigin();
       return;
     }
@@ -1168,8 +1216,20 @@ async function showVerification(): Promise<void> {
   ]) {
     element.textContent = "PENDING";
   }
+  if (activeLocalImport && elements.app.dataset.source === "local-file") {
+    renderLocalFileVerification(activeLocalImport);
+    return;
+  }
   if (activeCinematicObject) {
     renderCinematicVerification(activeCinematicObject);
+    return;
+  }
+  if (activeValidationLocus) {
+    renderValidationVerification(activeValidationLocus.verification);
+    return;
+  }
+  if (activeSourceGeometry && activeLocalImport) {
+    renderSourceGeometryVerification(activeSourceGeometry, activeLocalImport);
     return;
   }
   if (activeLocalImport) {
@@ -1237,29 +1297,144 @@ function renderValidationVerification(report: ValidationLocusBrowserReport): voi
       : report.errors.join(" / ");
 }
 
-async function importLocalFile(): Promise<void> {
-  const file = elements.importInput.files?.[0];
+function openIntakeDialog(): void {
+  elements.intakeResult.hidden = true;
+  delete elements.intakeResult.dataset.state;
+  delete elements.intakeDialog.dataset.drag;
+  if (!elements.intakeDialog.open) elements.intakeDialog.showModal();
+  elements.intakeDrop.focus();
+}
+
+function bindIntakeDrop(): void {
+  const hasFiles = (event: DragEvent): boolean =>
+    Array.from(event.dataTransfer?.types ?? []).includes("Files");
+  window.addEventListener("dragenter", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    if (!elements.intakeDialog.open) openIntakeDialog();
+    elements.intakeDialog.dataset.drag = "true";
+  });
+  window.addEventListener("dragover", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  });
+  window.addEventListener("dragleave", (event) => {
+    if (event.clientX > 0 && event.clientY > 0) return;
+    delete elements.intakeDialog.dataset.drag;
+  });
+  window.addEventListener("drop", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    delete elements.intakeDialog.dataset.drag;
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length > 0) void routeLocalFiles(files);
+  });
+  elements.intakeDialog.addEventListener("close", () => {
+    delete elements.intakeDialog.dataset.drag;
+  });
+}
+
+async function importLocalFiles(): Promise<void> {
+  const files = Array.from(elements.importInput.files ?? []);
   elements.importInput.value = "";
+  if (files.length === 0) return;
+  await routeLocalFiles(files);
+}
+
+async function routeLocalFiles(files: readonly File[]): Promise<void> {
+  const file = primaryIntakeFile(files);
   if (!file) return;
-  if (file.name.toLowerCase().endsWith(".tessaryn")) {
-    await importCinematicFile(file);
-    return;
+  presentIntakeResult("working", file.name, "INSPECTING LOCAL BYTES");
+  try {
+    if (isCinematicFile(file)) {
+      elements.intakeDialog.close();
+      await importCinematicFile(file);
+      return;
+    }
+    if (sourceGeometryFormat(file)) {
+      elements.intakeDialog.close();
+      await importSourceGeometry(file, files);
+      return;
+    }
+    if (isJsonFile(file) && file.size <= MAX_INLINE_RECONSTRUCTION_BYTES) {
+      const source = await file.text();
+      let parsed: unknown;
+      try {
+        parsed = parseStrictIntegerJson(source);
+      } catch (error) {
+        if (containsNativeSchema(source)) throw error;
+        elements.intakeDialog.close();
+        await openFileBackedArtifact(file);
+        return;
+      }
+      if (isReconstructionArtifact(parsed)) {
+        elements.intakeDialog.close();
+        await importReconstructionFile(file, null, parsed);
+        return;
+      }
+      if (isValidationLocusArtifact(parsed)) {
+        elements.intakeDialog.close();
+        await importValidationLocusFile(file, parsed);
+        return;
+      }
+    }
+    elements.intakeDialog.close();
+    await openFileBackedArtifact(file);
+  } catch (error) {
+    console.error(error);
+    presentIntakeFailure(file, error);
   }
-  if (isJsonFile(file) && file.size <= MAX_INLINE_RECONSTRUCTION_BYTES) {
-    await importReconstructionFile(file);
-    return;
-  }
-  await openFileBackedArtifact(file);
+}
+
+function primaryIntakeFile(files: readonly File[]): File | undefined {
+  return (
+    files.find(isCinematicFile) ??
+    files.find((file) => sourceGeometryFormat(file) !== null) ??
+    files.find(isJsonFile) ??
+    files[0]
+  );
+}
+
+function isCinematicFile(file: File): boolean {
+  return (
+    file.name.toLowerCase().endsWith(".tessaryn") ||
+    file.type.toLowerCase() === "application/vnd.tessaryn.object"
+  );
+}
+
+function containsNativeSchema(source: string): boolean {
+  return source.includes(NATIVE_RECONSTRUCTION_SCHEMA) || source.includes(NATIVE_VALIDATION_SCHEMA);
+}
+
+function presentIntakeResult(
+  state: "working" | "accepted" | "indexed" | "rejected",
+  file: string,
+  detail: string,
+): void {
+  elements.intakeResult.hidden = false;
+  elements.intakeResult.dataset.state = state;
+  elements.intakeState.textContent = state.toUpperCase();
+  elements.intakeFile.textContent = file || "UNNAMED LOCAL FILE";
+  elements.intakeDetail.textContent = detail;
+}
+
+function presentIntakeFailure(file: File, error: unknown): void {
+  if (!elements.intakeDialog.open) elements.intakeDialog.showModal();
+  const detail = error instanceof Error ? error.message : String(error);
+  presentIntakeResult("rejected", file.name, detail.toUpperCase());
+  showToast(detail.toUpperCase());
 }
 
 async function importReconstructionFile(
   file: File,
   requestedEntry: PublicObjectCatalogEntry | null = null,
+  preparedArtifact: ReconstructionArtifactView | null = null,
 ): Promise<void> {
   elements.importButton.disabled = true;
   elements.importButton.querySelector("span")!.textContent = "READING";
   try {
-    const parsed = parseStrictIntegerJson(await file.text());
+    const parsed = preparedArtifact ?? parseStrictIntegerJson(await file.text());
     if (!isReconstructionArtifact(parsed)) {
       throw new Error("unsupported reconstruction artifact");
     }
@@ -1267,7 +1442,7 @@ async function importReconstructionFile(
     if (verification.errors.length > 0) {
       throw new Error(verification.errors.join(" / "));
     }
-    closeLocalFile(false);
+    clearActiveConstruction();
     const cell = reconstructionCell(parsed);
     importedArtifact = parsed;
     importedVerification = verification;
@@ -1318,7 +1493,75 @@ async function importReconstructionFile(
     await showVerification();
   } catch (error) {
     console.error(error);
-    showToast(error instanceof Error ? error.message.toUpperCase() : "IMPORT REJECTED");
+    if (requestedEntry) {
+      showToast(error instanceof Error ? error.message.toUpperCase() : "IMPORT REJECTED");
+    } else {
+      presentIntakeFailure(file, error);
+    }
+  } finally {
+    elements.importButton.disabled = false;
+    elements.importButton.querySelector("span")!.textContent = "ADD";
+  }
+}
+
+async function importValidationLocusFile(
+  file: File,
+  artifact: ValidationLocusArtifactView,
+): Promise<void> {
+  elements.importButton.disabled = true;
+  elements.importButton.querySelector("span")!.textContent = "VERIFYING";
+  try {
+    const verification = await verifyValidationOffThread(artifact);
+    if (verification.errors.length > 0 || !verification.alternate) {
+      throw new Error(verification.errors.join(" / ") || "validation Locus rejected");
+    }
+    clearActiveConstruction();
+    const observations = temporalObservations(verification, artifact);
+    scene.loadTemporalObservations(observations);
+    scene.setMoment("moment-c");
+    activeValidationLocus = { file, artifact, verification };
+    activeArtifactFile = file;
+    selected =
+      observations.find((observation) => observation.id === "moment-c")?.cell ??
+      observations[0]?.cell ??
+      selected;
+    latestVerification = validationVerificationReport(verification);
+    if (window.__tessaryn) window.__tessaryn.verification = latestVerification;
+    elements.app.dataset.source = "imported-validation";
+    elements.localStage.hidden = false;
+    elements.localStage.dataset.kind = "reconstruction";
+    elements.localKind.textContent = "PORTABLE 4D LOCUS / LOCALLY VERIFIED";
+    elements.localName.textContent = artifact.origin || file.name;
+    elements.localStatus.textContent = `${String(verification.cellsValid)} CELLS + POWER HOUSE ACCEPTED`;
+    elements.localSize.textContent = `${formatBytes(file.size)} / FOUR MOMENTS`;
+    elements.localRoot.textContent = shortDigest(artifact.source_proof.cell_id, 24);
+    elements.localProgress.style.width = "100%";
+    elements.localExport.disabled = true;
+    elements.localShare.disabled = true;
+    elements.originName.textContent = artifact.origin;
+    elements.cellCount.textContent = `${String(verification.cellsValid)} CELLS`;
+    elements.anchorShort.textContent = shortDigest(selected.manifest.anchor_id, 8);
+    elements.momentShort.textContent = "MOMENT C";
+    elements.evidenceShort.textContent = "LOCALLY VERIFIED";
+    elements.originPhase.textContent = "ORIGIN / IMPORTED 4D LOCUS";
+    elements.originStatus.textContent = "FOUR MOMENTS / BRANCH RETAINED";
+    elements.condensation.style.width = "100%";
+    elements.chronofoldButton.disabled = false;
+    elements.challengeButton.disabled = false;
+    elements.exportButton.disabled = false;
+    elements.scaleBreath.disabled = false;
+    populateTemporalMoments(verification);
+    const route = new URL(location.href);
+    route.searchParams.delete("object");
+    route.searchParams.delete("publication");
+    route.searchParams.delete("origin");
+    history.replaceState(null, "", route);
+    showToast("PORTABLE 4D LOCUS VERIFIED / CONSTRUCTED");
+    await showVerification();
+  } catch (error) {
+    console.error(error);
+    restoreReferenceOrigin(false);
+    presentIntakeFailure(file, error);
   } finally {
     elements.importButton.disabled = false;
     elements.importButton.querySelector("span")!.textContent = "ADD";
@@ -1331,6 +1574,7 @@ async function importCinematicFile(
 ): Promise<void> {
   elements.importButton.disabled = true;
   elements.importButton.querySelector("span")!.textContent = "VERIFYING";
+  clearActiveConstruction();
   elements.app.dataset.source = "cinematic-loading";
   elements.cinematicControls.hidden = true;
   scene.prepareCinematicLoad();
@@ -1431,7 +1675,11 @@ async function importCinematicFile(
     activeLocalTask?.cancel();
     await indexing;
     restoreReferenceOrigin(false);
-    showToast(error instanceof Error ? error.message.toUpperCase() : "OBJECT REJECTED");
+    if (requestedEntry) {
+      showToast(error instanceof Error ? error.message.toUpperCase() : "OBJECT REJECTED");
+    } else {
+      presentIntakeFailure(file, error);
+    }
   } finally {
     elements.importButton.disabled = false;
     elements.importButton.querySelector("span")!.textContent = "ADD";
@@ -1520,25 +1768,139 @@ function renderCinematicVerification(active: ActiveCinematicObject): void {
     : "OBJECT REJECTED";
   elements.verifyDetail.textContent = report.accepted
     ? `${envelope.descriptor.title}: authored geometry, ${String(report.verifiedMediaChunks)} cinematic chunks, Cell identity, PHA, Rootprint replay, Memory Capsule, and SLBIT binding verified from local bytes.`
-    : report.errors.join(" / ");
+      : report.errors.join(" / ");
 }
 
-async function openFileBackedArtifact(file: File): Promise<void> {
+async function importSourceGeometry(file: File, companions: readonly File[]): Promise<void> {
+  elements.importButton.disabled = true;
+  elements.importButton.querySelector("span")!.textContent = "READING";
+  clearActiveConstruction();
+  const indexing = openFileBackedArtifact(file, "geometry");
+  const parsing = parseSourceGeometry(file, companions);
+  const [indexed, parsed] = await Promise.allSettled([indexing, parsing]);
+  elements.importButton.disabled = false;
+  elements.importButton.querySelector("span")!.textContent = "ADD";
+
+  if (indexed.status === "rejected") {
+    if (parsed.status === "fulfilled") disposeSourceGeometry(parsed.value);
+    presentIntakeFailure(file, indexed.reason);
+    return;
+  }
+  if (parsed.status === "rejected") {
+    presentIntakeFailure(file, parsed.reason);
+    return;
+  }
+  const state = indexed.value;
+  if (!state.identity || state.status !== "indexed") {
+    disposeSourceGeometry(parsed.value);
+    presentIntakeFailure(file, new Error(state.error ?? "source stream identity failed"));
+    return;
+  }
+
+  const displayScale = scene.loadSourceGeometry(parsed.value);
+  activeSourceGeometry = {
+    ...parsed.value.stats,
+    name: file.name,
+    streamRoot: state.identity.streamRoot,
+    displayScale,
+  };
+  activeArtifactFile = null;
+  activePublicEntry = null;
+  activeCinematicObject = null;
+  importedArtifact = null;
+  importedVerification = null;
+  activeValidationLocus = null;
+  if (window.__tessaryn) {
+    window.__tessaryn.sourceGeometry = activeSourceGeometry;
+    delete window.__tessaryn.cinematicObject;
+    delete window.__tessaryn.cinematicVerification;
+    delete window.__tessaryn.importedArtifact;
+    delete window.__tessaryn.importedVerification;
+  }
+  const stats = parsed.value.stats;
+  const drawables = stats.meshes + stats.pointClouds;
+  elements.app.dataset.source = "source-geometry";
+  elements.localStage.dataset.kind = "geometry";
+  elements.localKind.textContent = "SOURCE GEOMETRY / LOCAL BYTE IDENTITY";
+  elements.localName.textContent = file.name;
+  elements.localStatus.textContent = `${String(drawables)} DRAWABLES / ${String(stats.vertices)} VERTICES`;
+  elements.localSize.textContent = `${formatBytes(file.size)} / ${stats.format.toUpperCase()} / INDEXED`;
+  elements.localRoot.textContent = state.identity.streamRoot;
+  elements.localProgress.style.width = "100%";
+  elements.localExport.disabled = false;
+  elements.localShare.disabled = true;
+  elements.originName.textContent = file.name;
+  elements.cellCount.textContent = `${String(drawables)} SOURCE DRAWABLES`;
+  elements.anchorShort.textContent = "UNBOUND";
+  elements.momentShort.textContent = "STATIC SOURCE";
+  elements.evidenceShort.textContent = "STREAM ROOT ONLY";
+  elements.originPhase.textContent = "ORIGIN / SOURCE GEOMETRY";
+  elements.originStatus.textContent = "GEOMETRY STAGED / WORLD CELL NOT ATTACHED";
+  elements.condensation.style.width = "100%";
+  elements.chronofoldButton.disabled = true;
+  elements.challengeButton.disabled = true;
+  elements.exportButton.disabled = false;
+  elements.scaleBreath.disabled = false;
+  populateSourceGeometryMoment(stats);
+  const route = new URL(location.href);
+  route.searchParams.delete("object");
+  route.searchParams.delete("publication");
+  route.searchParams.delete("origin");
+  history.replaceState(null, "", route);
+  showToast("SOURCE GEOMETRY STAGED / LOCAL STREAM ROOT COMPLETE");
+}
+
+function populateSourceGeometryMoment(stats: SourceGeometryStats): void {
+  elements.momentRail.replaceChildren();
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "active";
+  button.setAttribute("aria-pressed", "true");
+  const label = document.createElement("b");
+  const state = document.createElement("small");
+  label.textContent = `01 / ${stats.format.toUpperCase()} SOURCE`;
+  state.textContent = `${String(stats.vertices)} VERTICES`;
+  button.append(label, state);
+  elements.momentRail.append(button);
+}
+
+async function openFileBackedArtifact(
+  file: File,
+  kindOverride?: LocalFileKind,
+): Promise<ActiveLocalImport> {
   const previousSource = activeLocalImport?.previousSource ?? elements.app.dataset.source;
   const previousOriginName =
     activeLocalImport?.previousOriginName ?? elements.originName.textContent ?? "";
   const previousCellCount =
     activeLocalImport?.previousCellCount ?? elements.cellCount.textContent ?? "";
+  const previousOriginPhase =
+    activeLocalImport?.previousOriginPhase ?? elements.originPhase.textContent ?? "";
+  const previousOriginStatus =
+    activeLocalImport?.previousOriginStatus ?? elements.originStatus.textContent ?? "";
+  const previousAnchorShort =
+    activeLocalImport?.previousAnchorShort ?? elements.anchorShort.textContent ?? "";
+  const previousMomentShort =
+    activeLocalImport?.previousMomentShort ?? elements.momentShort.textContent ?? "";
+  const previousEvidenceShort =
+    activeLocalImport?.previousEvidenceShort ?? elements.evidenceShort.textContent ?? "";
+  const previousCondensationWidth =
+    activeLocalImport?.previousCondensationWidth ?? elements.condensation.style.width;
   closeLocalFile(false);
   const state: ActiveLocalImport = {
     file,
-    kind: localFileKind(file),
+    kind: kindOverride ?? localFileKind(file),
     status: "indexing",
     identity: null,
     progress: { bytesRead: 0, totalBytes: file.size, chunksRead: 0 },
     previousSource,
     previousOriginName,
     previousCellCount,
+    previousOriginPhase,
+    previousOriginStatus,
+    previousAnchorShort,
+    previousMomentShort,
+    previousEvidenceShort,
+    previousCondensationWidth,
   };
   activeLocalImport = state;
   elements.app.dataset.source = "local-file";
@@ -1547,10 +1909,13 @@ async function openFileBackedArtifact(file: File): Promise<void> {
   elements.localName.textContent = file.name || "UNNAMED LOCAL FILE";
   elements.originName.textContent = file.name || "UNNAMED LOCAL FILE";
   elements.cellCount.textContent = "1 LOCAL FILE";
-  elements.localKind.textContent =
-    state.kind === "video"
-      ? "RAW VIDEO / INDEX ONLY / NOT WORLD GEOMETRY"
-      : `LOCAL ${state.kind.toUpperCase()} / FILE-BACKED`;
+  elements.originPhase.textContent = "LOCAL SOURCE / BYTE IDENTITY";
+  elements.originStatus.textContent = "INDEXING SOURCE EVIDENCE / NO UPLOAD";
+  elements.anchorShort.textContent = "UNBOUND";
+  elements.momentShort.textContent = "LOCAL FILE";
+  elements.evidenceShort.textContent = "STREAM ROOT PENDING";
+  elements.condensation.style.width = "0%";
+  elements.localKind.textContent = localFileKindLabel(state.kind);
   elements.localStatus.textContent = "INDEXING LOCAL BYTES";
   elements.localSize.textContent = `${formatBytes(file.size)} / 0%`;
   elements.localRoot.textContent = "STREAM ROOT PENDING";
@@ -1572,13 +1937,14 @@ async function openFileBackedArtifact(file: File): Promise<void> {
     elements.localSize.textContent = `${formatBytes(file.size)} / ${percent.toFixed(1)}%`;
     elements.localRoot.textContent = `${formatBytes(progress.bytesRead)} READ / BOUNDED MEMORY`;
     elements.localProgress.style.width = `${percent.toFixed(3)}%`;
+    elements.condensation.style.width = `${percent.toFixed(3)}%`;
     syncLocalImportView();
   });
   activeLocalTask = task;
 
   try {
     const identity = await task.result;
-    if (activeLocalImport !== state) return;
+    if (activeLocalImport !== state) return state;
     state.status = "indexed";
     state.identity = identity;
     state.progress = {
@@ -1591,6 +1957,9 @@ async function openFileBackedArtifact(file: File): Promise<void> {
     elements.localSize.textContent = `${formatBytes(file.size)} / 100%`;
     elements.localRoot.textContent = identity.streamRoot;
     elements.localProgress.style.width = "100%";
+    elements.condensation.style.width = "100%";
+    elements.originStatus.textContent = "SOURCE EVIDENCE INDEXED / LOCAL IDENTITY READY";
+    elements.evidenceShort.textContent = "STREAM ROOT COMPLETE";
     elements.localExport.disabled = false;
     elements.exportButton.disabled = false;
     syncLocalImportView();
@@ -1600,16 +1969,19 @@ async function openFileBackedArtifact(file: File): Promise<void> {
       activeLocalImport !== state ||
       (error instanceof DOMException && error.name === "AbortError")
     ) {
-      return;
+      return state;
     }
     state.status = "error";
     state.error = error instanceof Error ? error.message : String(error);
     activeLocalTask = null;
     elements.localStatus.textContent = "LOCAL INDEX FAILED";
+    elements.originStatus.textContent = "SOURCE EVIDENCE INDEX FAILED";
+    elements.evidenceShort.textContent = "INDEX CAUTION";
     elements.localRoot.textContent = state.error.toUpperCase();
     syncLocalImportView();
     showToast("LOCAL INDEX FAILED");
   }
+  return state;
 }
 
 function closeLocalFile(restoreSource = true): void {
@@ -1628,6 +2000,12 @@ function closeLocalFile(restoreSource = true): void {
   if (active) {
     elements.originName.textContent = active.previousOriginName;
     elements.cellCount.textContent = active.previousCellCount;
+    elements.originPhase.textContent = active.previousOriginPhase;
+    elements.originStatus.textContent = active.previousOriginStatus;
+    elements.anchorShort.textContent = active.previousAnchorShort;
+    elements.momentShort.textContent = active.previousMomentShort;
+    elements.evidenceShort.textContent = active.previousEvidenceShort;
+    elements.condensation.style.width = active.previousCondensationWidth;
   }
   elements.chronofoldButton.disabled = importedArtifact !== null;
   elements.challengeButton.disabled = false;
@@ -1738,9 +2116,12 @@ function reconstructionCell(
   };
 }
 
-function temporalObservations(report: ValidationLocusBrowserReport): TemporalObservation[] {
-  if (!validationArtifact) throw new Error("validation artifact unavailable");
-  const activeValidationArtifact = validationArtifact;
+function temporalObservations(
+  report: ValidationLocusBrowserReport,
+  artifact: ValidationLocusArtifactView | null = validationArtifact,
+): TemporalObservation[] {
+  if (!artifact) throw new Error("validation artifact unavailable");
+  const activeValidationArtifact = artifact;
   temporalArtifactsByCell.clear();
   temporalCellsByMoment.clear();
   const values = [
@@ -1846,6 +2227,23 @@ function renderLocalFileVerification(state: ActiveLocalImport): void {
       `Stream root ${state.identity.streamRoot}.`
     : state.error ??
       `${formatBytes(state.progress.bytesRead)} of ${formatBytes(state.file.size)} read directly from local storage.`;
+}
+
+function renderSourceGeometryVerification(
+  source: SourceGeometryView,
+  state: ActiveLocalImport,
+): void {
+  elements.verifyCells.textContent = "SOURCE ROOT";
+  elements.verifyPha.textContent = "NOT ATTACHED";
+  elements.verifyRootprint.textContent = "NOT ATTACHED";
+  elements.verifyReplay.textContent = `${String(source.meshes + source.pointClouds)} DRAWABLES`;
+  elements.verifyMemory.textContent = "FILE-BACKED";
+  elements.verifyTitle.textContent = "SOURCE GEOMETRY STAGED";
+  elements.verifyDetail.textContent =
+    `${source.format.toUpperCase()} geometry with ${String(source.vertices)} vertices and ` +
+    `${String(source.triangles)} triangles is rendered from local bytes. ` +
+    `Stream root ${source.streamRoot}. No Cell, PHA, or Rootprint identity is inferred from source geometry.`;
+  if (state.status === "error") elements.verifyTitle.textContent = "SOURCE INDEX CAUTION";
 }
 
 function exportCapsule(): void {
@@ -2172,6 +2570,8 @@ function setPublishBusy(busy: boolean): void {
 
 function clearActiveConstruction(): void {
   activeCinematicObject = null;
+  activeSourceGeometry = null;
+  activeValidationLocus = null;
   activeArtifactFile = null;
   activePublicEntry = null;
   importedArtifact = null;
@@ -2181,6 +2581,7 @@ function clearActiveConstruction(): void {
     delete window.__tessaryn.cinematicVerification;
     delete window.__tessaryn.importedArtifact;
     delete window.__tessaryn.importedVerification;
+    delete window.__tessaryn.sourceGeometry;
   }
   closeLocalFile(false);
   elements.cinematicControls.hidden = true;
@@ -2359,6 +2760,14 @@ function localFileKind(file: File): LocalFileKind {
     return "audio";
   }
   return "binary";
+}
+
+function localFileKindLabel(kind: LocalFileKind): string {
+  if (kind === "geometry") return "SOURCE GEOMETRY / INDEXING LOCAL BYTES";
+  if (kind === "video") return "SOURCE VIDEO / INDEXED EVIDENCE / NOT WORLD GEOMETRY";
+  if (kind === "image") return "SOURCE IMAGE / INDEXED EVIDENCE / NOT WORLD GEOMETRY";
+  if (kind === "audio") return "SOURCE AUDIO / INDEXED EVIDENCE / NOT WORLD GEOMETRY";
+  return "SOURCE FILE / FILE-BACKED IDENTITY";
 }
 
 function formatBytes(bytes: number): string {

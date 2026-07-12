@@ -32,8 +32,11 @@ Status: engineering review for `0.5.0`.
 - validation verification runs in a dedicated worker and returns no redundant
   copy of the identity-bearing artifact;
 - arbitrary local files use a separate worker, fixed 4 MiB reads, an O(log n)
-  digest accumulator, cancellable progress, and revocable object URLs; they are
-  never converted into one complete JavaScript string or buffer;
+  digest accumulator, and cancellable progress; indexing never converts the
+  complete file into one JavaScript string or buffer;
+- GLB/GLTF/OBJ/PLY/STL source previews retain that file-backed byte identity,
+  enforce finite coordinates plus node/vertex and interactive-byte profiles,
+  reject missing companions, and reject every network resource reference;
 - EuRoC, KITTI, and ScanNet adapters reject symlinks, unsorted indexes,
   modality-count mismatches, resource overrun, and file-content mutation;
 - public publication uses a browser-origin Ed25519 identity and signs exact

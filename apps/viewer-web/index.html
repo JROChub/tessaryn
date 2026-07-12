@@ -88,7 +88,7 @@
           <input
             id="import-input"
             type="file"
-            accept="application/json,.json,application/octet-stream,.pha,.phm,.tessaryn"
+            multiple
             hidden
           >
           <button id="verify-button" class="icon-command" type="button" title="Verify local world">
@@ -186,6 +186,29 @@
           </dl>
         </div>
       </aside>
+
+      <dialog id="intake-dialog" class="intake-dialog">
+        <header>
+          <div><small>LOCAL / NO UPLOAD</small><b>CONSTRUCTION INTAKE</b></div>
+          <button id="intake-close" class="icon-button" type="button" title="Close construction intake">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+        <button id="intake-drop" class="intake-drop" type="button">
+          <i data-lucide="upload"></i>
+          <span><small>DROP LOCAL FILES</small><b>CHOOSE FILES</b></span>
+        </button>
+        <div class="intake-routes" role="list" aria-label="Local intake routes">
+          <span role="listitem"><i data-lucide="waypoints"></i><b>VERIFIED PLACE</b><small>.JSON</small></span>
+          <span role="listitem"><i data-lucide="git-branch"></i><b>TEMPORAL OBJECT</b><small>.TESSARYN</small></span>
+          <span role="listitem"><i data-lucide="box"></i><b>SOURCE GEOMETRY</b><small>.GLB .GLTF .OBJ .PLY .STL</small></span>
+          <span role="listitem"><i data-lucide="hard-drive"></i><b>SOURCE EVIDENCE</b><small>ANY FILE</small></span>
+        </div>
+        <section id="intake-result" class="intake-result" role="status" aria-live="polite" hidden>
+          <span><small id="intake-state">READY</small><b id="intake-file">--</b></span>
+          <p id="intake-detail">--</p>
+        </section>
+      </dialog>
 
       <dialog id="verification-dialog" class="verification-dialog">
         <header>

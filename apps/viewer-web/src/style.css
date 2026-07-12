@@ -1659,6 +1659,258 @@ canvas:focus-visible {
   }
 }
 
+/* Local construction intake and source-geometry staging. */
+.intake-dialog {
+  width: min(760px, calc(100vw - 28px));
+  max-height: min(720px, calc(100dvh - 28px));
+  padding: 0;
+  overflow: hidden auto;
+  color: var(--bone);
+  border: 1px solid rgba(205, 228, 221, 0.22);
+  border-radius: 4px;
+  background: #071011;
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.58);
+}
+
+.intake-dialog::backdrop {
+  background: rgba(1, 5, 6, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.intake-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 62px;
+  padding: 0 14px 0 18px;
+  border-bottom: 1px solid rgba(205, 228, 221, 0.12);
+}
+
+.intake-dialog > header small,
+.intake-dialog > header b {
+  display: block;
+}
+
+.intake-dialog > header small,
+.intake-drop small,
+.intake-routes small,
+.intake-result small {
+  color: rgba(198, 211, 205, 0.56);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 7px;
+}
+
+.intake-dialog > header b {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 640;
+}
+
+.intake-drop {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  width: calc(100% - 36px);
+  min-height: 112px;
+  margin: 18px;
+  padding: 0 20px;
+  color: var(--bone);
+  text-align: left;
+  border: 1px solid rgba(128, 213, 203, 0.28);
+  border-radius: 3px;
+  background: #0a1515;
+}
+
+.intake-drop:hover,
+.intake-drop:focus-visible,
+.intake-dialog[data-drag="true"] .intake-drop {
+  border-color: rgba(224, 191, 115, 0.78);
+  outline: 0;
+  background: #0d1816;
+}
+
+.intake-drop > svg {
+  width: 32px;
+  height: 32px;
+  color: #c1db85;
+  stroke-width: 1.2;
+}
+
+.intake-drop span {
+  display: grid;
+  gap: 5px;
+}
+
+.intake-drop b {
+  font-size: 18px;
+  font-weight: 620;
+}
+
+.intake-routes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 18px 18px;
+  border-top: 1px solid rgba(205, 228, 221, 0.12);
+  border-left: 1px solid rgba(205, 228, 221, 0.12);
+}
+
+.intake-routes > span {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-content: center;
+  gap: 4px 8px;
+  min-height: 78px;
+  padding: 12px;
+  border-right: 1px solid rgba(205, 228, 221, 0.12);
+  border-bottom: 1px solid rgba(205, 228, 221, 0.12);
+}
+
+.intake-routes svg {
+  grid-row: 1 / 3;
+  width: 15px;
+  height: 15px;
+  color: #80d5cb;
+  stroke-width: 1.4;
+}
+
+.intake-routes b {
+  overflow-wrap: anywhere;
+  font-size: 8px;
+  font-weight: 640;
+}
+
+.intake-routes small {
+  overflow-wrap: anywhere;
+  font-size: 6px;
+}
+
+.intake-result {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.3fr);
+  gap: 18px;
+  margin: 0 18px 18px;
+  padding: 14px;
+  border-left: 2px solid #80d5cb;
+  background: #0a1414;
+}
+
+.intake-result[hidden] {
+  display: none;
+}
+
+.intake-result[data-state="rejected"] {
+  border-left-color: var(--danger);
+}
+
+.intake-result[data-state="accepted"],
+.intake-result[data-state="indexed"] {
+  border-left-color: var(--moss);
+}
+
+.intake-result span {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.intake-result b {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intake-result p {
+  margin: 0;
+  color: rgba(224, 232, 223, 0.74);
+  font-size: 9px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.local-stage-heading span {
+  display: grid;
+}
+
+.app-shell[data-source="source-geometry"] .moment-rail {
+  grid-template-columns: 1fr;
+}
+
+.app-shell[data-source="source-geometry"] .origin-status {
+  border-left-color: rgba(224, 191, 115, 0.72);
+}
+
+.app-shell[data-source="local-file"] .origin-status {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 680px) {
+  .intake-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .intake-drop {
+    width: calc(100% - 24px);
+    min-height: 92px;
+    margin: 12px;
+    padding: 0 14px;
+  }
+
+  .intake-drop b {
+    font-size: 15px;
+  }
+
+  .intake-routes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0 12px 12px;
+  }
+
+  .intake-routes > span {
+    min-height: 68px;
+    padding: 10px;
+  }
+
+  .intake-result {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 0 12px 12px;
+    padding: 11px;
+  }
+
+  .local-stage-heading b {
+    max-width: 160px;
+  }
+
+  .app-shell:is(
+    [data-source="local-file"],
+    [data-source="source-geometry"],
+    [data-source="imported"],
+    [data-source="imported-validation"],
+    [data-source="cinematic"]
+  ) .toast {
+    top: calc(var(--top) + 154px);
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    transform: translate(-50%, -8px);
+  }
+
+  .app-shell:is(
+    [data-source="local-file"],
+    [data-source="source-geometry"],
+    [data-source="imported"],
+    [data-source="imported-validation"],
+    [data-source="cinematic"]
+  ) .toast.visible {
+    transform: translate(-50%, 0);
+  }
+}
+
 /* Public Object Weave and native cinematic-object instrumentation. */
 .local-stage {
   position: fixed;

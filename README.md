@@ -88,9 +88,19 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. The first screen is the local construction field,
-not a synthetic scene or public catalog object. `CONSTRUCT A PLACE` opens a
-capture artifact directly from the device. Local artifacts remain private unless
-their owner explicitly chooses `PUBLISH TO WEAVE` and authorizes disclosure.
+not a synthetic scene or public catalog object. `CONSTRUCT A PLACE` opens one
+content-aware local intake with drag-and-drop and an unrestricted picker:
+
+- strict reconstruction JSON and complete validation-Locus JSON are locally
+  verified and materialized as native spatial-temporal Cells;
+- `.tessaryn` packages are locally verified and opened as native temporal objects;
+- GLB, GLTF, OBJ, PLY, and STL source geometry is indexed and staged in the
+  traversable renderer without inventing Cell, PHA, or Rootprint identity; and
+- every other file is indexed as source evidence with a deterministic,
+  file-backed stream root.
+
+Local artifacts remain private unless their owner explicitly chooses
+`PUBLISH TO WEAVE` and authorizes disclosure.
 
 The production Origin is available at [tessaryn.com](https://tessaryn.com/).
 
@@ -109,12 +119,12 @@ cargo run -p tessaryn-cli -- \
   verify-reconstruction capture/artifact.json
 ```
 
-The browser `ADD` control imports the same artifact without uploading it. It
-also indexes arbitrary local files directly from their original storage while
-a dedicated worker builds the deterministic
-`tessaryn/local-file-index/v1` stream root in bounded memory. Bulk channels stay
-file-backed; only compact reconstruction manifests use strict whole-document
-JSON parsing.
+The browser `ADD` and `CONSTRUCT A PLACE` controls use the same local intake.
+They import the artifact without uploading it and index arbitrary local files
+directly from their original storage while a dedicated worker builds the
+deterministic `tessaryn/local-file-index/v1` stream root in bounded memory. Bulk
+channels stay file-backed; only compact reconstruction manifests use strict
+whole-document JSON parsing.
 
 After local verification, the object can be retained in the Personal Weave or
 published directly from the product. The same path accepts both real RGB-D

@@ -8,6 +8,9 @@ import { PNG } from "pngjs";
 const reconstructionArtifact = fileURLToPath(
   new URL("../../../conformance/reconstruction-v0/minimal-artifact.json", import.meta.url),
 );
+const validationLocusArtifact = fileURLToPath(
+  new URL("../public/world/archviz-tiny-house-locus.json", import.meta.url),
+);
 
 async function openOrigin(page: Page): Promise<void> {
   await page.goto("/?origin=validation");
@@ -51,6 +54,107 @@ function expectInsideViewport(rectangle: Awaited<ReturnType<typeof bounds>>): vo
   expect(rectangle.bottom).toBeLessThanOrEqual(rectangle.viewportHeight);
 }
 
+function triangleBytes(): Buffer {
+  const bytes = Buffer.alloc(42);
+  const positions = [0, 0, 0, 1, 0, 0, 0, 1, 0];
+  positions.forEach((value, index) => bytes.writeFloatLE(value, index * 4));
+  [0, 1, 2].forEach((value, index) => bytes.writeUInt16LE(value, 36 + index * 2));
+  return bytes;
+}
+
+function triangleGltf(binaryUri = true): Buffer {
+  const binary = triangleBytes();
+  return Buffer.from(
+    JSON.stringify({
+      asset: { version: "2.0", generator: "tessaryn-intake-test" },
+      scene: 0,
+      scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+      buffers: [
+        binaryUri
+          ? { byteLength: binary.length, uri: `data:application/octet-stream;base64,${binary.toString("base64")}` }
+          : { byteLength: binary.length },
+      ],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 36, target: 34962 },
+        { buffer: 0, byteOffset: 36, byteLength: 6, target: 34963 },
+      ],
+      accessors: [
+        {
+          bufferView: 0,
+          componentType: 5126,
+          count: 3,
+          type: "VEC3",
+          min: [0, 0, 0],
+          max: [1, 1, 0],
+        },
+        { bufferView: 1, componentType: 5123, count: 3, type: "SCALAR" },
+      ],
+    }),
+  );
+}
+
+function triangleGlb(): Buffer {
+  const binary = triangleBytes();
+  const json = triangleGltf(false);
+  const jsonLength = Math.ceil(json.length / 4) * 4;
+  const binaryLength = Math.ceil(binary.length / 4) * 4;
+  const result = Buffer.alloc(12 + 8 + jsonLength + 8 + binaryLength);
+  result.writeUInt32LE(0x46546c67, 0);
+  result.writeUInt32LE(2, 4);
+  result.writeUInt32LE(result.length, 8);
+  result.writeUInt32LE(jsonLength, 12);
+  result.writeUInt32LE(0x4e4f534a, 16);
+  result.fill(0x20, 20, 20 + jsonLength);
+  json.copy(result, 20);
+  const binaryHeader = 20 + jsonLength;
+  result.writeUInt32LE(binaryLength, binaryHeader);
+  result.writeUInt32LE(0x004e4942, binaryHeader + 4);
+  binary.copy(result, binaryHeader + 8);
+  return result;
+}
+
+const sourceGeometryCases = [
+  {
+    name: "triangle.glb",
+    mimeType: "model/gltf-binary",
+    buffer: triangleGlb(),
+    format: "glb",
+  },
+  {
+    name: "triangle.gltf",
+    mimeType: "model/gltf+json",
+    buffer: triangleGltf(),
+    format: "gltf",
+  },
+  {
+    name: "triangle.obj",
+    mimeType: "model/obj",
+    buffer: Buffer.from("o triangle\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"),
+    format: "obj",
+  },
+  {
+    name: "triangle.ply",
+    mimeType: "model/ply",
+    buffer: Buffer.from(
+      "ply\nformat ascii 1.0\nelement vertex 3\nproperty float x\nproperty float y\n" +
+      "property float z\nelement face 1\nproperty list uchar int vertex_indices\nend_header\n" +
+      "0 0 0\n1 0 0\n0 1 0\n3 0 1 2\n",
+    ),
+    format: "ply",
+  },
+  {
+    name: "triangle.stl",
+    mimeType: "model/stl",
+    buffer: Buffer.from(
+      "solid triangle\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\n" +
+      "vertex 0 1 0\nendloop\nendfacet\nendsolid triangle\n",
+    ),
+    format: "stl",
+  },
+] as const;
+
 test("keeps synthetic ground truth in an opt-in lab and returns to the private Origin", async ({
   page,
 }) => {
@@ -75,6 +179,215 @@ test("keeps synthetic ground truth in an opt-in lab and returns to the private O
   await expect(page.locator("#app")).toHaveAttribute("data-source", "reference");
   await expect(page).toHaveURL(/\/$/u);
   expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().temporalObservations)).toBe(0);
+});
+
+test("construction intake exposes every route and indexes ordinary files without rejecting them", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.locator('body[data-ready="true"]').waitFor();
+  await page.locator("#construct-button").click();
+  await expect(page.locator("#intake-dialog")).toBeVisible();
+  expectInsideViewport(await bounds(page, "#intake-dialog"));
+  await expect(page.locator(".intake-routes")).toContainText("VERIFIED PLACE");
+  await expect(page.locator(".intake-routes")).toContainText("TEMPORAL OBJECT");
+  await expect(page.locator(".intake-routes")).toContainText("SOURCE GEOMETRY");
+  await expect(page.locator(".intake-routes")).toContainText("SOURCE EVIDENCE");
+  expect(await page.locator("#import-input").getAttribute("accept")).toBeNull();
+  expect(await page.locator("#import-input").getAttribute("multiple")).not.toBeNull();
+
+  await page.locator("#import-input").setInputFiles({
+    name: "ordinary.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"purpose":"source evidence","version":1}'),
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status))
+    .toBe("indexed");
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "local-file");
+  await expect(page.locator("#local-stage")).toBeVisible();
+  await expect(page.locator("#local-name")).toHaveText("ordinary.json");
+  await expect(page.locator("#local-kind")).toContainText("SOURCE FILE");
+  await expect(page.locator("#local-root")).toContainText(/^sha256:/u);
+  await page.locator("#local-close").click();
+
+  await page.locator("#import-input").setInputFiles({
+    name: "capture.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("local-source-image-bytes"),
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status))
+    .toBe("indexed");
+  await expect(page.locator("#local-kind")).toContainText("SOURCE IMAGE");
+  await page.locator("#verify-button").click();
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL FILE INDEXED");
+  await expect(page.locator("#verify-pha")).toHaveText("NOT ATTACHED");
+  await page.locator("#verify-close").click();
+  await page.locator("#local-close").click();
+
+  await page.evaluate(() => {
+    const transfer = new DataTransfer();
+    transfer.items.add(
+      new File([new Uint8Array([1, 2, 3, 4])], "dropped.bin", {
+        type: "application/octet-stream",
+      }),
+    );
+    window.dispatchEvent(new DragEvent("drop", { dataTransfer: transfer, bubbles: true }));
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.name))
+    .toBe("dropped.bin");
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status))
+    .toBe("indexed");
+});
+
+test("renders GLB, GLTF, OBJ, PLY, and STL as local source geometry", async ({ page }) => {
+  test.slow();
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openOrigin(page);
+
+  for (const artifact of sourceGeometryCases) {
+    await page.locator("#import-input").setInputFiles(artifact);
+    await expect(page.locator("#app")).toHaveAttribute("data-source", "source-geometry");
+    await expect
+      .poll(() => page.evaluate(() => window.__tessaryn?.sourceGeometry?.format))
+      .toBe(artifact.format);
+    const source = await page.evaluate(() => window.__tessaryn?.sourceGeometry);
+    expect(source?.vertices).toBeGreaterThanOrEqual(3);
+    expect(source?.streamRoot).toMatch(/^sha256:[0-9a-f]{64}$/u);
+    expect(source?.displayScale).toBeGreaterThan(0);
+    await expect(page.locator("#local-stage")).toBeVisible();
+    await expect(page.locator("#local-name")).toHaveText(artifact.name);
+    await expect(page.locator("#local-kind")).toContainText("SOURCE GEOMETRY");
+    await expect(page.locator("#origin-status")).toContainText("GEOMETRY STAGED");
+    await page.locator("#verify-button").click();
+    await expect(page.locator("#verify-title")).toHaveText("SOURCE GEOMETRY STAGED");
+    await expect(page.locator("#verify-pha")).toHaveText("NOT ATTACHED");
+    await page.locator("#verify-close").click();
+    await page.locator("#local-close").click();
+    await expect(page.locator("#app")).toHaveAttribute("data-source", "reference");
+  }
+
+  const externalGltf = JSON.parse(triangleGltf(false).toString("utf8")) as {
+    buffers: Array<{ byteLength: number; uri?: string }>;
+  };
+  externalGltf.buffers[0]!.uri = "triangle.bin";
+  await page.locator("#import-input").setInputFiles([
+    {
+      name: "external.gltf",
+      mimeType: "model/gltf+json",
+      buffer: Buffer.from(JSON.stringify(externalGltf)),
+    },
+    {
+      name: "triangle.bin",
+      mimeType: "application/octet-stream",
+      buffer: triangleBytes(),
+    },
+  ]);
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "source-geometry");
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.sourceGeometry?.name))
+    .toBe("external.gltf");
+  await page.locator("#local-close").click();
+
+  await page.locator("#import-input").setInputFiles(sourceGeometryCases[0]);
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "source-geometry");
+  await page.waitForTimeout(500);
+  const screenshot = await page.locator("#world-canvas").screenshot();
+  const image = PNG.sync.read(screenshot);
+  const colors = new Set<string>();
+  for (let y = 0; y < image.height; y += Math.max(1, Math.floor(image.height / 72))) {
+    for (let x = 0; x < image.width; x += Math.max(1, Math.floor(image.width / 72))) {
+      const index = (y * image.width + x) * 4;
+      colors.add(
+        `${String(image.data[index] ?? 0)},${String(image.data[index + 1] ?? 0)},${String(image.data[index + 2] ?? 0)}`,
+      );
+    }
+  }
+  expect(colors.size).toBeGreaterThan(12);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  expectInsideViewport(await bounds(page, "#local-stage"));
+  expectInsideViewport(await bounds(page, "#local-close"));
+  expectInsideViewport(await bounds(page, ".world-controls"));
+  await expect(page.locator("#origin-status")).toHaveText(
+    "GEOMETRY STAGED / WORLD CELL NOT ATTACHED",
+  );
+  const localStageBounds = await bounds(page, "#local-stage");
+  const toastBounds = await bounds(page, "#toast");
+  const toastIntersectsLocalStage =
+    toastBounds.x < localStageBounds.right &&
+    toastBounds.right > localStageBounds.x &&
+    toastBounds.y < localStageBounds.bottom &&
+    toastBounds.bottom > localStageBounds.y;
+  expect(toastIntersectsLocalStage).toBe(false);
+  const mobileScreenshot = await page.locator("#world-canvas").screenshot();
+  const mobileImage = PNG.sync.read(mobileScreenshot);
+  let mobileNonblack = 0;
+  for (let index = 0; index < mobileImage.data.length; index += 4) {
+    if (
+      (mobileImage.data[index] ?? 0) > 10 ||
+      (mobileImage.data[index + 1] ?? 0) > 10 ||
+      (mobileImage.data[index + 2] ?? 0) > 10
+    ) mobileNonblack += 1;
+  }
+  expect(mobileNonblack / (mobileImage.width * mobileImage.height)).toBeGreaterThan(0.08);
+  expect(browserErrors).toEqual([]);
+});
+
+test("keeps malformed native and geometry failures visible in the intake", async ({ page }) => {
+  const remoteRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().startsWith("https://untrusted.invalid/")) remoteRequests.push(request.url());
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.locator('body[data-ready="true"]').waitFor();
+  await page.locator("#import-input").setInputFiles({
+    name: "broken.tessaryn",
+    mimeType: "application/vnd.tessaryn.object",
+    buffer: Buffer.alloc(80, 1),
+  });
+  await expect(page.locator("#intake-dialog")).toBeVisible();
+  await expect(page.locator("#intake-state")).toHaveText("REJECTED");
+  await expect(page.locator("#intake-detail")).toContainText("UNSUPPORTED CINEMATIC OBJECT MAGIC");
+  expectInsideViewport(await bounds(page, "#intake-dialog"));
+  expectInsideViewport(await bounds(page, "#intake-close"));
+  await page.locator("#intake-close").click();
+
+  await page.locator("#import-input").setInputFiles({
+    name: "empty.obj",
+    mimeType: "model/obj",
+    buffer: Buffer.from("# no geometry\n"),
+  });
+  await expect(page.locator("#intake-dialog")).toBeVisible();
+  await expect(page.locator("#intake-state")).toHaveText("REJECTED");
+  await expect(page.locator("#intake-detail")).toContainText("NO RENDERABLE VERTICES");
+  expectInsideViewport(await bounds(page, "#intake-dialog"));
+  expectInsideViewport(await bounds(page, "#intake-close"));
+  await page.locator("#intake-close").click();
+
+  const networkGltf = JSON.parse(triangleGltf(false).toString("utf8")) as {
+    buffers: Array<{ byteLength: number; uri?: string }>;
+  };
+  networkGltf.buffers[0]!.uri = "https://untrusted.invalid/geometry.bin";
+  await page.locator("#import-input").setInputFiles({
+    name: "network-dependent.gltf",
+    mimeType: "model/gltf+json",
+    buffer: Buffer.from(JSON.stringify(networkGltf)),
+  });
+  await expect(page.locator("#intake-dialog")).toBeVisible();
+  await expect(page.locator("#intake-state")).toHaveText("REJECTED");
+  await expect(page.locator("#intake-detail")).toContainText("NETWORK DEPENDENCY REJECTED");
+  expect(remoteRequests).toEqual([]);
 });
 
 test("locally verifies every committed layer and renders nonblank canvas pixels", async ({
@@ -379,6 +692,24 @@ test("imports, reverifies, and renders a reconstruction artifact without upload"
     }
   }
   expect(colors.size).toBeGreaterThan(20);
+});
+
+test("imports and constructs a complete portable multi-moment Locus", async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openOrigin(page);
+  await page.locator("#import-input").setInputFiles(validationLocusArtifact);
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "imported-validation");
+  await expect(page.locator("#verify-title")).toHaveText("GROUND-TRUTH LOCUS ACCEPTED");
+  await expect(page.locator("#cell-count")).toHaveText("9 CELLS");
+  await expect(page.locator("#local-kind")).toContainText("PORTABLE 4D LOCUS");
+  await expect(page.locator("#moment-rail button")).toHaveCount(3);
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().temporalObservations)).toBe(4);
+  await page.locator("#verify-close").click();
+  await page.locator("#chronofold-button").click();
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().chronofold)).toBe(true);
+  await page.locator("#local-close").click();
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "reference");
 });
 
 test("publishes a real capture from the product and retains it in the Personal Weave", async ({

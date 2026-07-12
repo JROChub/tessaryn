@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { CinematicObjectVisual } from "./cinematic-visual";
+import type { SourceGeometryAsset } from "./source-geometry";
 import type {
   CinematicObjectDescriptorView,
   DemoCell,
@@ -172,6 +173,7 @@ export class TessarynWorld {
   private constrainedWeave: THREE.LineSegments | null = null;
   private referenceConstrainedWeave: THREE.LineSegments | null = null;
   private importedTemporal = false;
+  private sourceGeometryFrame = false;
   private importedSdfVoxelCount = 0;
   private importedProvenanceLinks = 0;
   private cinematicVisual: CinematicObjectVisual | null = null;
@@ -393,6 +395,7 @@ export class TessarynWorld {
     this.disposeImportedRoot();
     this.importedFrame = null;
     this.importedTemporal = false;
+    this.sourceGeometryFrame = false;
     this.importedSdfVoxelCount = 0;
     this.importedProvenanceLinks = 0;
     this.materializedCellCount = this.world.cells.length;
@@ -428,6 +431,7 @@ export class TessarynWorld {
   }
 
   prepareCinematicLoad(): void {
+    this.sourceGeometryFrame = false;
     this.root.visible = false;
     this.aggregateRoot.visible = false;
     this.temporalRoot.visible = false;
@@ -441,6 +445,75 @@ export class TessarynWorld {
     this.scene.fog = new THREE.FogExp2("#050605", 0.02);
   }
 
+  loadSourceGeometry(asset: SourceGeometryAsset): number {
+    this.disposeImportedRoot();
+    this.importedTemporal = false;
+    this.sourceGeometryFrame = true;
+    this.importedSdfVoxelCount = 0;
+    this.importedProvenanceLinks = 0;
+    this.materializedCellCount = 0;
+    this.root.visible = false;
+    this.aggregateRoot.visible = false;
+    this.temporalRoot.visible = false;
+    this.continuumRoot.visible = true;
+    this.fieldRoot.visible = true;
+    this.importedRoot.visible = true;
+    this.focusRoot.visible = false;
+    this.nodes.clear();
+    this.cellsById.clear();
+    this.interactive.length = 0;
+    this.selected = null;
+    this.hovered = null;
+
+    asset.root.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(asset.root);
+    const center = bounds.getCenter(new THREE.Vector3());
+    const size = bounds.getSize(new THREE.Vector3());
+    const largestDimension = Math.max(size.x, size.y, size.z);
+    const displayScale = largestDimension > 1e-9 ? 6 / largestDimension : 1;
+    const focus = new THREE.Vector3(0, 1.1, 0);
+    const normalized = new THREE.Group();
+    normalized.name = "local-source-geometry";
+    normalized.position.set(
+      focus.x - center.x * displayScale,
+      focus.y - center.y * displayScale,
+      focus.z - center.z * displayScale,
+    );
+    normalized.scale.setScalar(displayScale);
+    asset.root.traverse((object) => {
+      if (object instanceof THREE.Light || object instanceof THREE.Camera) {
+        object.visible = false;
+      }
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = !this.constrainedRenderer;
+        object.receiveShadow = !this.constrainedRenderer;
+      }
+    });
+    normalized.add(asset.root);
+    this.importedRoot.add(normalized);
+
+    const radius = Math.max(0.55, size.length() * displayScale * 0.5);
+    this.importedFrame = { focus, radius };
+    this.targetFocus.copy(focus);
+    this.targetBackground.set("#050907");
+    this.scene.fog = new THREE.FogExp2("#050907", 0.017);
+    this.renderer.toneMappingExposure = 1.02;
+    this.ambient.color.set("#d5ded8");
+    this.ambient.groundColor.set("#171b17");
+    this.ambient.intensity = this.constrainedRenderer ? 1.2 : 0.68;
+    this.sun.color.set("#f2d7a3");
+    this.sun.intensity = this.constrainedRenderer ? 2.2 : 1.65;
+    this.sun.position.set(-8, 13, 7);
+    this.chronofold = false;
+    this.targetTemporalOpacity = 0;
+    this.setScale("room");
+    this.yaw = -0.42;
+    this.pitch = 0.34;
+    this.firstStructureMs ??= performance.now() - this.startedAt;
+    this.materializationMs = performance.now() - this.startedAt;
+    return displayScale;
+  }
+
   async loadCinematicObject(
     cell: DemoCell,
     descriptor: CinematicObjectDescriptorView,
@@ -448,6 +521,7 @@ export class TessarynWorld {
   ): Promise<void> {
     this.disposeImportedRoot();
     this.importedTemporal = false;
+    this.sourceGeometryFrame = false;
     this.importedSdfVoxelCount = 0;
     this.importedProvenanceLinks = descriptor.geometry.cell_count - 1;
     this.materializedCellCount = descriptor.geometry.cell_count;
@@ -533,6 +607,7 @@ export class TessarynWorld {
     this.renderer.toneMappingExposure = 1.14;
     this.disposeImportedRoot();
     this.importedTemporal = false;
+    this.sourceGeometryFrame = false;
     this.importedSdfVoxelCount = 0;
     this.importedProvenanceLinks = 0;
     this.materializedCellCount = 2;
@@ -688,6 +763,7 @@ export class TessarynWorld {
     this.fieldRoot.visible = true;
     this.importedRoot.visible = true;
     this.importedTemporal = true;
+    this.sourceGeometryFrame = false;
     this.nodes.clear();
     this.cellsById.clear();
     this.interactive.length = 0;
@@ -1187,6 +1263,7 @@ export class TessarynWorld {
   private disposeImportedRoot(): void {
     this.cinematicVisual?.destroy();
     this.cinematicVisual = null;
+    const textures = new Set<THREE.Texture>();
     this.importedRoot.traverse((object) => {
       const renderable = object as THREE.Mesh;
       renderable.geometry?.dispose();
@@ -1194,9 +1271,18 @@ export class TessarynWorld {
       const materials = Array.isArray(renderable.material)
         ? renderable.material
         : [renderable.material];
-      materials.forEach((material) => material.dispose());
+      materials.forEach((material) => {
+        Object.values(material).forEach((value) => {
+          if (value instanceof THREE.Texture) textures.add(value);
+        });
+        material.dispose();
+      });
     });
+    textures.forEach((texture) => texture.dispose());
     this.importedRoot.clear();
+    this.importedRoot.position.set(0, 0, 0);
+    this.importedRoot.rotation.set(0, 0, 0);
+    this.importedRoot.scale.set(1, 1, 1);
     this.importedLinks.length = 0;
   }
 
@@ -3904,16 +3990,20 @@ export class TessarynWorld {
     this.scaleDepth = Math.abs(next - this.targetScaleDepth) < 0.0005
       ? this.targetScaleDepth
       : next;
+    const canvasAspect = Math.max(0.35, this.canvas.clientWidth / Math.max(1, this.canvas.clientHeight));
+    const sourceFraming = this.sourceGeometryFrame
+      ? 1.38 * Math.max(1, 0.75 / canvasAspect)
+      : 1;
     const objectDistance = this.importedFrame
-      ? Math.max(0.8, this.importedFrame.radius * 0.72)
+      ? Math.max(0.8, this.importedFrame.radius * 0.72 * sourceFraming)
       : innerWidth <= 680
         ? 4.15
         : 3.05;
     const roomDistance = this.importedFrame
-      ? Math.max(1.4, this.importedFrame.radius * 1.65)
+      ? Math.max(1.4, this.importedFrame.radius * 1.65 * sourceFraming)
       : 14.5;
     const siteDistance = this.importedFrame
-      ? Math.max(2.6, this.importedFrame.radius * 3.1)
+      ? Math.max(2.6, this.importedFrame.radius * 3.1 * sourceFraming)
       : 25;
     if (this.scaleDepth <= 0.5) {
       this.targetDistance = THREE.MathUtils.lerp(
