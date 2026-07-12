@@ -1466,7 +1466,7 @@ fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), WeaveError> {
     drop(output);
     match fs::rename(&temporary, path) {
         Ok(()) => sync_parent(path),
-        Err(error) if path.exists() => {
+        Err(_error) if path.exists() => {
             let _ = fs::remove_file(&temporary);
             let existing = fs::read(path)?;
             if existing == bytes {
