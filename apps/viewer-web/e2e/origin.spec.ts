@@ -392,6 +392,7 @@ test("publishes a real capture from the product and retains it in the Personal W
   const errors: string[] = [];
   const uploaded = new Map<number, number>();
   let intent: Record<string, unknown> | undefined;
+  let revocation: Record<string, unknown> | undefined;
   const cors = {
     "access-control-allow-origin": "http://127.0.0.1:4180",
     "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
@@ -514,6 +515,15 @@ test("publishes a real capture from the product and retains it in the Personal W
       });
       return;
     }
+    if (path === "/v1/publications/revoke" && request.method() === "POST") {
+      revocation = request.postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify(revocation),
+      });
+      return;
+    }
     await route.fulfill({ status: 404, headers: cors });
   });
 
@@ -568,6 +578,15 @@ test("publishes a real capture from the product and retains it in the Personal W
   await page.locator('[data-weave-scope="personal"]').click();
   await expect(page.locator(".personal-object-row")).toHaveCount(1);
   await expect(page.locator("#personal-weave-count")).toHaveText("1");
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.locator(".personal-object-row .personal-unpublish").click();
+  await expect.poll(() => revocation?.publication_id).toBe(`obj_${"3".repeat(64)}`);
+  expect(revocation).toMatchObject({
+    schema: "tessaryn/publication-revocation/v1",
+    publication_id: `obj_${"3".repeat(64)}`,
+  });
+  expect(revocation?.signature).toMatch(/^[A-Za-z0-9+/]{86}$/u);
+  await expect(page.locator(".personal-object-row .personal-unpublish")).toHaveCount(0);
   await page.locator(".personal-object-row .object-entry").click();
   await expect(page.locator("#verify-title")).toHaveText("LOCAL CAPTURE ACCEPTED");
   expect(errors).toEqual([]);
