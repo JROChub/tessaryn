@@ -1,7 +1,7 @@
 # TESSARYN Visual System
 
 Version: `1.0`
-Release: `0.3.0`
+Release: `0.4.0`
 Principle: The world is not loaded. It is constructed.
 
 ## Constitution
@@ -37,6 +37,21 @@ near-surface sparse-SDF matter. A deterministic constrained profile selects
 evenly spaced verified samples for software renderers and mobile devices; the
 full profile retains the complete visible state. Both profiles verify the
 entire provenance-bound artifact before materialization.
+
+### Cinematic matter
+
+The Continuum Monument is authored as a diamond-plan atrium with four open
+thresholds, segmented Cell walls, disclosure glass, a faceted temporal kernel,
+three structural identity portals, phase sections, and committed relation
+paths. These structures exist before media decode and remain navigable from
+every camera angle.
+
+Its compressed temporal payload is decoded off-DOM and is never shown as a
+player, rectangle, panorama, or reconstructed point surface. The payload moves
+through object-space laminations, channels, and the kernel. The object descriptor and each
+4 MiB media chunk are committed into the same Cell root and reverified before
+materialization. Chronofold separates temporal matter while the logo-derived
+architecture remains coherent.
 
 ### Branching memory architecture
 
@@ -132,6 +147,7 @@ interaction path.
 ## Performance Contract
 
 - no map, tile, panorama, analytics, or remote world runtime;
+- no video-derived geometry or visible browser media surface;
 - one renderer and one bounded animation loop;
 - pixel ratio capped by viewport class;
 - mobile lattice density reduced deterministically;

@@ -8,7 +8,7 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.3.0`. It contains the tested World Cell kernel,
+This repository is `0.4.0`. It contains the tested World Cell kernel,
 capture-to-Cell reconstruction, authenticated private Locus exchange, signed
 witness receipts, Power House packaging, a browser-local verifier, and the
 TartanAir V2 ArchViz Tiny House validation Origin. Vesper Court remains a
@@ -40,9 +40,18 @@ The release implements:
 - a restricted region whose protected geometry is absent;
 - strict local browser import, verification, rendering, and exact-layer
   mutation rejection for portable reconstruction artifacts;
-- file-backed local video, image, and arbitrary artifact opening with no total
-  application size cap, worker-isolated 4 MiB indexing, bounded memory, progress,
-  cancellation, and deterministic stream roots;
+- a binary `tessaryn/cinematic-object/v1` package that commits authored native
+  spatial architecture and chunked internal temporal matter under one Cell, PHA,
+  Rootprint, replay identity, Memory Capsule, and SLBIT binding;
+- the public Object Weave catalog with stable object IDs, search, direct viewer
+  routes, local reverification, and shareable public artifacts;
+- a diamond-plan Continuum Monument with open entrances, inhabitable Cell
+  walls, disclosure boundaries, a volumetric memory core, four separable
+  Moments, and deterministic architectural World Cell placement;
+- file-backed arbitrary artifact indexing with no total application size cap,
+  worker-isolated 4 MiB windows, bounded memory, progress, cancellation, and
+  deterministic stream roots; raw video is index-only and never treated as
+  world geometry;
 - worker-isolated verification of temporal artifacts with explicit source
   selection manifests and exact mutation rejection;
 - full-bleed native Three.js construction, Condensation, continuous Scale Breathing,
@@ -86,11 +95,33 @@ cargo run -p tessaryn-cli -- \
 ```
 
 The browser `OPEN` control imports the same artifact without uploading it. It
-also opens local media and arbitrary files directly from their original storage
-while a dedicated worker builds the deterministic
+also indexes arbitrary local files directly from their original storage while
+a dedicated worker builds the deterministic
 `tessaryn/local-file-index/v1` stream root in bounded memory. Bulk channels stay
 file-backed; only compact reconstruction manifests use strict whole-document
 JSON parsing.
+
+## Build And Verify A Cinematic Object
+
+The cinematic object path is authored object first. Its embedded MP4 is a
+compressed temporal material source decoded off-DOM; it cannot supply geometry
+and is never presented as a player, panorama, or reconstruction. The reference
+monument is reproducible from the committed descriptor and deterministic media
+script:
+
+```bash
+./scripts/render-continuum-cinematic.sh /tmp/continuum-material.mp4
+cargo run -p tessaryn-cli -- pack-cinematic-object \
+  assets/cinematic/nostalgia-continuum-monument-01.json \
+  /tmp/continuum-material.mp4 \
+  apps/viewer-web/public/objects/nostalgia-continuum-monument-01.tessaryn
+cargo run -p tessaryn-cli -- verify-cinematic-object \
+  apps/viewer-web/public/objects/nostalgia-continuum-monument-01.tessaryn
+```
+
+Published catalog objects are discoverable under `OBJECTS` and through
+`?object=<object-id>`. Opening the same file locally recalculates every media
+chunk and proof layer before the renderer accepts it.
 
 ## Reproduce The Validation Origin
 
@@ -179,10 +210,13 @@ and leaked workstation paths.
 
 ## Public Origin
 
-The tested static viewer is published at `https://tessaryn.com/`. GitHub Pages
+The tested static viewer and read-only public Object Weave are published at
+`https://tessaryn.com/`. GitHub Pages
 deploys only after the conformance workflow succeeds. The apex and `www` hosts
 use HTTPS, with `www` redirected to the apex. The distribution contains no
-runtime map dependency, analytics SDK, remote world model, or upload endpoint.
+runtime map dependency, analytics SDK, or remote world model. Local files are
+never published implicitly; objects become publicly discoverable when their
+committed artifact and catalog entry ship together.
 
 [Open TESSARYN](https://tessaryn.com/)
 

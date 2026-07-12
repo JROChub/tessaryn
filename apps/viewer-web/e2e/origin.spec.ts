@@ -10,10 +10,21 @@ const reconstructionArtifact = fileURLToPath(
 );
 
 async function openOrigin(page: Page): Promise<void> {
-  await page.goto("/");
+  await page.goto("/?origin=validation");
   await page.locator('body[data-ready="true"]').waitFor();
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__tessaryn?.verification)))
+    .toBe(true);
+}
+
+async function openCinematicObject(page: Page): Promise<void> {
+  await page.goto("/?object=nostalgia-continuum-monument-01");
+  await page.locator('body[data-ready="true"]').waitFor();
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "cinematic", {
+    timeout: 30_000,
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.cinematicVerification?.accepted))
     .toBe(true);
 }
 
@@ -140,6 +151,151 @@ test("binds crystalline construction, Rootprint flow, Chronofold, and SLBIT to w
   await expect(page.locator("#evidence-button")).toHaveAttribute("aria-pressed", "false");
   expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().activeMeaningFields)).toBe(0);
   expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
+});
+
+test("constructs the public cinematic object without a video surface", async ({ page }) => {
+  test.slow();
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openCinematicObject(page);
+
+  expect(await page.locator("video").count()).toBe(0);
+  await expect(page.locator("#local-kind")).toHaveText(
+    "PUBLIC OBJECT WEAVE / LOCALLY VERIFIED",
+  );
+  await expect(page.locator("#cinematic-controls")).toBeVisible();
+  await expect(page.locator("#moment-rail button")).toHaveCount(4);
+  await expect(page.locator("#cell-count")).toHaveText("72 WORLD CELLS");
+  const verification = await page.evaluate(() => window.__tessaryn?.cinematicVerification);
+  expect(verification).toMatchObject({
+    accepted: true,
+    manifestValid: true,
+    descriptorValid: true,
+    mediaValid: true,
+    cellValid: true,
+    phaValid: true,
+    rootprintValid: true,
+    replayValid: true,
+    memoryValid: true,
+    errors: [],
+  });
+  expect(verification?.verifiedMediaChunks).toBeGreaterThan(1);
+  const diagnostics = await page.evaluate(() => window.__tessaryn?.scene.diagnostics());
+  expect(diagnostics).toMatchObject({
+    cellCount: 72,
+    provenanceLinks: 71,
+    temporalManifolds: 4,
+    semanticConstellations: 5,
+    activeMeaningFields: 5,
+    assemblyPoints: 72,
+    temporalObservations: 4,
+    sdfVoxels: 0,
+  });
+  expect(diagnostics?.drawCalls).toBeLessThan(
+    diagnostics?.visualProfile === "constrained" ? 60 : 120,
+  );
+
+  await page.locator("#verify-button").click();
+  await expect(page.locator("#verify-title")).toHaveText("NATIVE TEMPORAL OBJECT ACCEPTED");
+  await expect(page.locator("#verify-pha")).toHaveText("VALID");
+  await expect(page.locator("#verify-detail")).toContainText("authored geometry");
+  await page.locator("#verify-close").click();
+
+  await page.locator("#cinematic-play").click();
+  await expect(page.locator("#cinematic-play")).toHaveAttribute("aria-pressed", "false");
+  await page.locator("#cinematic-time").fill("750");
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.scene.cinematicTime()))
+    .toBeGreaterThan(0.74);
+  await page.locator("#chronofold-button").click();
+  await expect(page.locator("#chronofold-button")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#evidence-button").click();
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().activeMeaningFields)).toBe(0);
+
+  await page.evaluate(() =>
+    window.__tessaryn?.scene.selectCell("cinematic-nostalgia-continuum-monument-01"),
+  );
+  await expect(page.locator("#trace-title")).toHaveText("NOSTALGIA / CONTINUUM MONUMENT");
+  await page.locator('[data-trace-tab="meaning"]').click();
+  await expect(page.locator("#trace-summary")).toContainText("interlocked Tessaryn frames");
+  await page.locator("#trace-close").click();
+
+  await page.locator("#objects-button").click();
+  await page.locator("#object-search").fill("nostalgia");
+  await expect(page.locator(".object-entry")).toHaveCount(1);
+  await expect(page.locator(".object-entry code")).toHaveText(
+    "nostalgia-continuum-monument-01",
+  );
+  await page.locator("#objects-close").click();
+
+  for (const selector of ["#local-stage", "#cinematic-controls", ".world-controls"]) {
+    expectInsideViewport(await bounds(page, selector));
+  }
+  const screenshot = await page.locator("#world-canvas").screenshot();
+  const image = PNG.sync.read(screenshot);
+  const colors = new Set<string>();
+  let visible = 0;
+  let samples = 0;
+  for (let y = 0; y < image.height; y += Math.max(1, Math.floor(image.height / 96))) {
+    for (let x = 0; x < image.width; x += Math.max(1, Math.floor(image.width / 96))) {
+      const index = (y * image.width + x) * 4;
+      const red = image.data[index] ?? 0;
+      const green = image.data[index + 1] ?? 0;
+      const blue = image.data[index + 2] ?? 0;
+      colors.add(`${red},${green},${blue}`);
+      if (red + green + blue > 18) visible += 1;
+      samples += 1;
+    }
+  }
+  expect(colors.size).toBeGreaterThan(120);
+  expect(visible / samples).toBeGreaterThan(0.18);
+  expect(browserErrors).toEqual([]);
+});
+
+test("mobile constructs the public temporal object with reachable controls", async ({ page }) => {
+  test.slow();
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openCinematicObject(page);
+
+  expect(await page.locator("video").count()).toBe(0);
+  const diagnostics = await page.evaluate(() => window.__tessaryn?.scene.diagnostics());
+  expect(diagnostics?.drawCalls).toBeLessThan(
+    diagnostics?.visualProfile === "constrained" ? 55 : 120,
+  );
+  expect(diagnostics?.materializationMs).toBeLessThan(30_000);
+  for (const selector of [
+    "#local-stage",
+    "#cinematic-controls",
+    ".world-controls",
+    "#chronofold-button",
+    "#evidence-button",
+  ]) {
+    expectInsideViewport(await bounds(page, selector));
+  }
+
+  await page.locator("#verify-button").click();
+  await expect(page.locator("#verify-title")).toHaveText("NATIVE TEMPORAL OBJECT ACCEPTED");
+  expectInsideViewport(await bounds(page, "#verification-dialog"));
+  expectInsideViewport(await bounds(page, "#verify-close"));
+  await page.locator("#verify-close").click();
+
+  await page.locator("#chronofold-button").click();
+  await expect(page.locator("#chronofold-button")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#objects-button").click();
+  expectInsideViewport(await bounds(page, "#objects-dialog"));
+  expectInsideViewport(await bounds(page, "#objects-close"));
+  await expect(page.locator(".object-entry")).toHaveCount(1);
+  await page.locator("#objects-close").click();
+  expect(browserErrors).toEqual([]);
 });
 
 test("imports, reverifies, and renders a reconstruction artifact without upload", async ({

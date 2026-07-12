@@ -1,5 +1,6 @@
 import type {
   CellManifest,
+  CellProofBundleView,
   DemoCell,
   DemoWorld,
   PhaArtifact,
@@ -17,6 +18,8 @@ const encoder = new TextEncoder();
 const CELL_DOMAIN = encoder.encode("TESSARYN-CELL-v0\0");
 const CHUNK_DOMAIN = encoder.encode("TESSARYN-CHUNK-v0\0");
 const MERKLE_LEAF_DOMAIN = encoder.encode("TESSARYN-MERKLE-LEAF-v0\0");
+const MERKLE_NODE_DOMAIN = encoder.encode("TESSARYN-MERKLE-NODE-v0\0");
+const EMPTY_MERKLE_DOMAIN = encoder.encode("TESSARYN-MERKLE-EMPTY-v0\0");
 const PHA_DOMAIN = encoder.encode("power-house:pha:v1:phx-fingerprint\0");
 const BRANCH_DOMAIN = encoder.encode("power-house:rootprint:v1:branch-id\0");
 const REPLAY_DOMAIN = encoder.encode("power-house:rootprint:v1:replay-state\0");
@@ -77,6 +80,76 @@ const TARTANAIR_PROFILE = {
 export async function calculateCellId(manifest: CellManifest): Promise<string> {
   const canonical = canonicalizeManifest(manifest);
   return hashDomain(CELL_DOMAIN, encoder.encode(canonicalStringify(canonical)));
+}
+
+export async function calculateChunkId(bytes: Uint8Array): Promise<string> {
+  return hashDomain(CHUNK_DOMAIN, bytes);
+}
+
+export async function calculateCanonicalChunkId(value: unknown): Promise<string> {
+  return hashDomain(CHUNK_DOMAIN, encoder.encode(canonicalStringify(value)));
+}
+
+export async function calculateChunkMerkleRoot(chunks: readonly string[]): Promise<string> {
+  if (chunks.length === 0) return hashDomain(EMPTY_MERKLE_DOMAIN, new Uint8Array());
+  let level = await Promise.all(
+    chunks.map((chunk) => hashDomainBytes(MERKLE_LEAF_DOMAIN, digestBytes(chunk))),
+  );
+  level.sort(compareBytes);
+  while (level.length > 1) {
+    const next: Uint8Array[] = [];
+    for (let index = 0; index < level.length; index += 2) {
+      const left = level[index];
+      const right = level[index + 1];
+      if (!left) throw new Error("Cell Merkle level is empty");
+      next.push(
+        right
+          ? await hashDomainBytes(MERKLE_NODE_DOMAIN, concatenate([left, right]))
+          : left,
+      );
+    }
+    level = next;
+  }
+  const root = level[0];
+  if (!root) throw new Error("Cell Merkle root is empty");
+  return "sha256:" + toHex(root);
+}
+
+export async function verifyCellProofBundle(proof: CellProofBundleView): Promise<{
+  cellValid: boolean;
+  phaValid: boolean;
+  rootprintValid: boolean;
+  replayValid: boolean;
+  memoryValid: boolean;
+  errors: string[];
+}> {
+  const report = {
+    cellValid: false,
+    phaValid: false,
+    rootprintValid: false,
+    replayValid: false,
+    memoryValid: false,
+    errors: [] as string[],
+  };
+  try {
+    report.cellValid = (await calculateCellId(proof.manifest)) === proof.cell_id;
+    if (!report.cellValid) throw new Error("Cell identity mismatch");
+    report.phaValid =
+      (await calculatePhaFingerprint(proof.pha)) === proof.pha.phx_fingerprint &&
+      proof.pha.embedded_proof.protocol === "tessaryn/world-cell/v0" &&
+      proof.pha.embedded_proof.public_inputs.cell_manifest_digest === proof.cell_id &&
+      proof.pha.identity_root === proof.rootprint.root_branch;
+    if (!report.phaValid) throw new Error("Power House PHA binding mismatch");
+    const replay = await verifyRootprint(proof.rootprint);
+    report.rootprintValid = true;
+    report.replayValid = replay === proof.replay_fingerprint;
+    if (!report.replayValid) throw new Error("Rootprint replay fingerprint mismatch");
+    report.memoryValid = await verifyMemoryCapsule(proof.memory_capsule);
+    if (!report.memoryValid) throw new Error("Memory Capsule mismatch");
+  } catch (error) {
+    report.errors.push(error instanceof Error ? error.message : String(error));
+  }
+  return report;
 }
 
 export async function calculatePhaFingerprint(artifact: PhaArtifact): Promise<string> {
@@ -972,4 +1045,38 @@ async function hashDomain(domain: Uint8Array, payload: Uint8Array): Promise<stri
     "sha256:" +
     Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
   );
+}
+
+async function hashDomainBytes(
+  domain: Uint8Array,
+  payload: Uint8Array,
+): Promise<Uint8Array> {
+  const bytes = concatenate([domain, payload]);
+  const input = new Uint8Array(bytes.byteLength);
+  input.set(bytes);
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", input.buffer));
+}
+
+function concatenate(parts: readonly Uint8Array[]): Uint8Array {
+  const length = parts.reduce((total, part) => total + part.byteLength, 0);
+  const output = new Uint8Array(length);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.byteLength;
+  }
+  return output;
+}
+
+function compareBytes(left: Uint8Array, right: Uint8Array): number {
+  const length = Math.min(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return left.length - right.length;
+}
+
+function toHex(value: Uint8Array): string {
+  return Array.from(value, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

@@ -1,0 +1,17 @@
+{
+  "schema": "tessaryn/public-object-catalog/v1",
+  "updated_at_unix_us": 1783843200000000,
+  "objects": [
+    {
+      "object_id": "nostalgia-continuum-monument-01",
+      "title": "NOSTALGIA / CONTINUUM MONUMENT",
+      "artifact": "./objects/nostalgia-continuum-monument-01.tessaryn",
+      "cell_id": "sha256:9032e084bec3f530482d18b8d47058c60265335bff7ae2a7d9d3547b2f0611e4",
+      "rootprint_branch": "sha256:e9e9f0fee2fbc5537c088d8f63e17b755335b41053354ad38e943fc78d7cf7e7",
+      "media": "2560x1440 H.264",
+      "dimensions": "NATIVE 3D + TIME",
+      "moments": 4,
+      "summary": "A logo-derived temporal monument whose cinematic memory moves through committed matter."
+    }
+  ]
+}

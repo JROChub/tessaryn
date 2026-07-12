@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.3.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.4.0",
       "author": "MFENX LLC",
       "name": "tessaryn-powerhouse",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "description": "Narrow Power House provenance adapter for TESSARYN Cells",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-powerhouse@0.3.0?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-powerhouse@0.4.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,10 +39,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.3.0 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.4.0 bin-target-0",
           "name": "tessaryn_powerhouse",
-          "version": "0.3.0",
-          "purl": "pkg:cargo/tessaryn-powerhouse@0.3.0?download_url=file://.#src/lib.rs"
+          "version": "0.4.0",
+          "purl": "pkg:cargo/tessaryn-powerhouse@0.4.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -56,10 +56,10 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.3.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
       "author": "MFENX LLC",
       "name": "tessaryn-canonical",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "description": "Strict canonicalization, Cell identity, and chunk Merkle binding for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -67,7 +67,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-canonical@0.3.0?download_url=file://../tessaryn-canonical",
+      "purl": "pkg:cargo/tessaryn-canonical@0.4.0?download_url=file://../tessaryn-canonical",
       "externalReferences": [
         {
           "type": "vcs",
@@ -77,10 +77,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.3.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -88,7 +88,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.3.0?download_url=file://../tessaryn-schema",
+      "purl": "pkg:cargo/tessaryn-schema@0.4.0?download_url=file://../tessaryn-schema",
       "externalReferences": [
         {
           "type": "vcs",
@@ -2524,31 +2524,31 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.3.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.3.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.3.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.4.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#power_house@0.3.24",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.3.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.3.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.3.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"

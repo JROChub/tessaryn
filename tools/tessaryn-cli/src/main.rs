@@ -1,7 +1,9 @@
+mod cinematic;
 mod datasets;
 mod layout;
 mod tartanair;
 
+use cinematic::{pack_cinematic_object, verify_cinematic_object};
 use datasets::{tartanair_profile, validation_portfolio};
 use layout::inspect_dataset_layout;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -271,6 +273,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }))?
             );
         }
+        Some("pack-cinematic-object") => {
+            let descriptor = required_path(arguments.next(), "cinematic descriptor path")?;
+            let media = required_path(arguments.next(), "cinematic media path")?;
+            let output = required_path(arguments.next(), "cinematic object path")?;
+            ensure_no_extra(arguments)?;
+            let report = pack_cinematic_object(&descriptor, &media, &output)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Some("verify-cinematic-object") => {
+            let input = required_path(arguments.next(), "cinematic object path")?;
+            ensure_no_extra(arguments)?;
+            let report = verify_cinematic_object(&input)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
         _ => {
             println!("TESSARYN local world-construction tooling");
             println!("  tessaryn generate-demo [output.json]");
@@ -287,6 +303,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "  tessaryn inspect-dataset <euroc|kitti|scannet> <dataset-dir> [receipt.json]"
             );
             println!("  tessaryn verify-locus <portable-locus.json>");
+            println!(
+                "  tessaryn pack-cinematic-object <descriptor.json> <media.mp4> <object.tessaryn>"
+            );
+            println!("  tessaryn verify-cinematic-object <object.tessaryn>");
         }
     }
     Ok(())
@@ -498,6 +518,7 @@ fn run_tartanair_validation_locus(
         &selection_manifest,
         &source_manifest,
         source_bytes.len(),
+        env!("CARGO_PKG_VERSION"),
     )?;
     let source_proof = prove_cell(
         source_cell.clone(),
@@ -596,6 +617,7 @@ fn validation_source_cell(
     selection_manifest: &Digest,
     source_manifest: &Digest,
     source_bytes: usize,
+    tool_version: &str,
 ) -> Result<CellManifestV0, Box<dyn std::error::Error>> {
     let observations = moments
         .iter()
@@ -692,7 +714,7 @@ fn validation_source_cell(
             transform_id,
             method: "tessaryn/validation-source-binding-v1".to_string(),
             tool: "tessaryn-cli".to_string(),
-            tool_version: env!("CARGO_PKG_VERSION").to_string(),
+            tool_version: tool_version.to_string(),
             input_ids,
         }],
         policy_root: template.manifest.policy_root.clone(),
@@ -818,6 +840,17 @@ fn verify_validation_locus(
         &artifact.alternate,
         &artifact.source.selection_manifest,
     )?;
+    let source_transform_versions = artifact
+        .source_proof
+        .manifest
+        .transform_records
+        .iter()
+        .filter(|record| record.method == "tessaryn/validation-source-binding-v1")
+        .map(|record| record.tool_version.as_str())
+        .collect::<Vec<_>>();
+    if source_transform_versions.len() != 1 {
+        return Err("validation source transform version is missing or ambiguous".into());
+    }
     let expected_source_cell = validation_source_cell(
         &artifact.source.profile,
         &artifact.moments,
@@ -825,6 +858,7 @@ fn verify_validation_locus(
         &artifact.source.selection_manifest,
         &artifact.source.source_manifest,
         source_bytes.len(),
+        source_transform_versions[0],
     )?;
     if artifact.source_proof.manifest != expected_source_cell
         || verify_bundle(&artifact.source_proof)? != artifact.source_proof_report

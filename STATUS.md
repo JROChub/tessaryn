@@ -1,8 +1,8 @@
 # Development Status
 
-Version: `0.3.0`
+Version: `0.4.0`
 
-Capability states below describe the tested `0.3.0` release surface.
+Capability states below describe the tested `0.4.0` release surface.
 
 | Capability | State | Evidence |
 |---|---|---|
@@ -26,7 +26,10 @@ Capability states below describe the tested `0.3.0` release surface.
 | Bounded Locus compiler | Implemented | Deterministic 10,000-Cell test |
 | Power House bridge | Implemented | `.pha`, Rootprint, replay, Memory Capsule tests |
 | Browser-local verifier and capture import | Implemented | Fixture and reconstruction-artifact verification, rendering, mutation rejection |
-| Unbounded file-backed browser index | Implemented | No total application cap; 4 MiB worker windows, O(log n) stream root, progress, cancellation, local media playback |
+| Unbounded file-backed browser index | Implemented | No total application cap; 4 MiB worker windows, O(log n) stream root, progress, cancellation; raw media remains index-only |
+| Native cinematic object package | Implemented | Strict binary header, authored geometry descriptor, chunked media commitments, Cell/PHA/Rootprint/replay/Memory Capsule verification |
+| Native temporal matter renderer | Implemented | Diamond-plan atrium, inhabitable Cell walls, off-DOM committed temporal material, four Moments, Scale Breathing, Chronofold, provenance currents, SLBIT field |
+| Public Object Weave | Implemented | Searchable same-origin catalog, stable object route, direct artifact, local reverification, share action |
 | Authenticated private Loci | Implemented | XChaCha20-Poly1305, X25519/HKDF wrapping, revocation, tamper/property tests |
 | Private multi-device Weave | Implemented | Ed25519 packets, chain/replay checks, branch preservation, local installation |
 | Witness receipts | Implemented | Signed scoped statements, expiry, independence groups, no core authority |
@@ -42,8 +45,9 @@ Capability states below describe the tested `0.3.0` release surface.
 
 ## Release Contract
 
-TESSARYN `0.3.0` is complete when the versioned software, deterministic
+TESSARYN `0.4.0` is complete when the versioned software, deterministic
 reference vectors, validation Origin, local verification paths, mutation suite, browser experience,
 offline path, supply-chain checks, and cross-platform conformance pass on the
-release commit. The TartanAir V2 validation Locus is the default visible Origin;
+release commit. The public Continuum Monument is the default visible object;
+the TartanAir V2 validation Locus remains available with `?origin=validation`.
 Vesper Court and the minimal reconstruction remain deterministic protocol vectors.

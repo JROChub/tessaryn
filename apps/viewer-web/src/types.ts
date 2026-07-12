@@ -194,6 +194,100 @@ export interface CellProofBundleView {
   memory_capsule: Record<string, any>;
 }
 
+export interface CinematicMomentView {
+  id: string;
+  label: string;
+  time_ms: number;
+  phase_milli: number;
+  meaning: string;
+}
+
+export interface CinematicObjectDescriptorView {
+  schema: "tessaryn/cinematic-object-descriptor/v1";
+  object_id: string;
+  title: string;
+  created_at_unix_us: number;
+  duration_ms: number;
+  geometry: {
+    profile: "tessaryn/continuum-monument/v1";
+    seed: number;
+    cell_count: number;
+    shell_count: number;
+    ribbon_count: number;
+    phase_count: number;
+    bounds_um: [number, number, number];
+    quality_tier: number;
+  };
+  media: {
+    mime: "video/mp4";
+    width: number;
+    height: number;
+    frame_rate_millihz: number;
+    codec: "h264";
+    codec_version: string;
+  };
+  moments: CinematicMomentView[];
+  slbit: {
+    schema: "slbit/viz-packet/v3";
+    claim_state: string;
+    summary: string;
+    statements: string[];
+  };
+}
+
+export interface CinematicObjectEnvelopeView {
+  schema: "tessaryn/cinematic-object/v1";
+  descriptor: CinematicObjectDescriptorView;
+  descriptor_chunk_id: Digest;
+  media: {
+    payload_bytes: number;
+    chunk_bytes: number;
+    chunk_ids: Digest[];
+    chunk_merkle_root: Digest;
+  };
+  cell_proof: CellProofBundleView;
+  cell_proof_report: {
+    cell_identity_valid: boolean;
+    pha_valid: boolean;
+    rootprint_valid: boolean;
+    replay_valid: boolean;
+    memory_capsule_valid: boolean;
+    physical_truth_claimed: boolean;
+  };
+}
+
+export interface CinematicObjectBrowserReport {
+  accepted: boolean;
+  manifestValid: boolean;
+  descriptorValid: boolean;
+  mediaValid: boolean;
+  cellValid: boolean;
+  phaValid: boolean;
+  rootprintValid: boolean;
+  replayValid: boolean;
+  memoryValid: boolean;
+  verifiedMediaChunks: number;
+  errors: string[];
+}
+
+export interface PublicObjectCatalogEntry {
+  object_id: string;
+  title: string;
+  artifact: string;
+  cell_id: Digest;
+  rootprint_branch: Digest;
+  media: string;
+  dimensions: string;
+  moments: number;
+  summary: string;
+}
+
+export interface PublicObjectCatalog {
+  schema: "tessaryn/public-object-catalog/v1";
+  updated_at_unix_us: number;
+  objects: PublicObjectCatalogEntry[];
+}
+
 export interface ReconstructionArtifactView {
   schema: "tessaryn/reconstruction-artifact/v0";
   reconstruction_policy: {

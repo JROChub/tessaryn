@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#05080d">
     <meta
       name="description"
-      content="TESSARYN native 4D Origin viewer and local World Cell reconstruction verifier."
+      content="Enter, verify, and navigate native temporal objects in the public TESSARYN Object Weave."
     >
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./tessaryn-mark.svg" type="image/svg+xml">
@@ -21,14 +21,18 @@
       ></canvas>
 
       <section id="local-stage" class="local-stage" aria-label="Local file stream" hidden>
-        <video id="local-video" controls muted loop playsinline preload="metadata" hidden></video>
-        <img id="local-image" alt="Locally opened artifact" hidden>
-        <div id="local-field" class="local-field" aria-hidden="true" hidden>
-          <i></i><i></i><i></i><i></i><i></i><i></i>
-        </div>
         <header class="local-stage-heading">
           <span><small id="local-kind">LOCAL FILE</small><b id="local-name">--</b></span>
           <div class="local-stage-actions">
+            <button
+              id="local-share"
+              class="icon-button"
+              type="button"
+              title="Share public object"
+              disabled
+            >
+              <i data-lucide="share-2"></i>
+            </button>
             <button
               id="local-export"
               class="icon-button"
@@ -70,6 +74,9 @@
           <button id="sources-button" class="icon-command secondary" type="button" title="Open validation sources">
             <i data-lucide="database"></i><span>SOURCES</span>
           </button>
+          <button id="objects-button" class="icon-command secondary" type="button" title="Find public objects">
+            <i data-lucide="search"></i><span>OBJECTS</span>
+          </button>
           <button
             id="import-button"
             class="icon-command secondary"
@@ -81,7 +88,7 @@
           <input
             id="import-input"
             type="file"
-            accept="application/json,.json,video/*,image/*,audio/*,application/octet-stream,.pha,.phm,.tessaryn"
+            accept="application/json,.json,application/octet-stream,.pha,.phm,.tessaryn"
             hidden
           >
           <button id="verify-button" class="icon-command" type="button" title="Verify local world">
@@ -218,7 +225,29 @@
         <div id="portfolio-list" class="portfolio-list"></div>
       </dialog>
 
+      <dialog id="objects-dialog" class="objects-dialog">
+        <header>
+          <div><small>PUBLIC OBJECT WEAVE</small><b>FIND CONSTRUCTED REALITY</b></div>
+          <button id="objects-close" class="icon-button" type="button" title="Close public objects">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+        <label class="object-search">
+          <i data-lucide="search"></i>
+          <input id="object-search" type="search" autocomplete="off" placeholder="Search object ID, title, or meaning">
+        </label>
+        <div id="object-list" class="object-list" aria-live="polite"></div>
+      </dialog>
+
       <footer class="world-controls" aria-label="World controls">
+        <div id="cinematic-controls" class="cinematic-controls" hidden>
+          <button id="cinematic-play" class="icon-button" type="button" title="Pause temporal object" aria-pressed="true">
+            <i class="play-state" data-lucide="play"></i>
+            <i class="pause-state" data-lucide="pause"></i>
+          </button>
+          <input id="cinematic-time" type="range" min="0" max="1000" value="0" aria-label="Temporal position">
+          <output id="cinematic-clock" for="cinematic-time">00:00.000</output>
+        </div>
         <div class="control-group scale-control" role="group" aria-label="Scale">
           <button class="active" type="button" data-scale="object" title="Object scale"><i data-lucide="scan"></i><span>OBJECT</span></button>
           <button type="button" data-scale="room" title="Room scale"><i data-lucide="box"></i><span>ROOM</span></button>

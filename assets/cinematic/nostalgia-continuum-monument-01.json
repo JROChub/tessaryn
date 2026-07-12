@@ -1,0 +1,67 @@
+{
+  "schema": "tessaryn/cinematic-object-descriptor/v1",
+  "object_id": "nostalgia-continuum-monument-01",
+  "title": "NOSTALGIA / CONTINUUM MONUMENT",
+  "created_at_unix_us": 1783843200000000,
+  "duration_ms": 12000,
+  "geometry": {
+    "profile": "tessaryn/continuum-monument/v1",
+    "seed": 5377470,
+    "cell_count": 72,
+    "shell_count": 5,
+    "ribbon_count": 5,
+    "phase_count": 4,
+    "bounds_um": [9600000, 8600000, 7200000],
+    "quality_tier": 4
+  },
+  "media": {
+    "mime": "video/mp4",
+    "width": 2560,
+    "height": 1440,
+    "frame_rate_millihz": 30000,
+    "codec": "h264",
+    "codec_version": "high-5.1"
+  },
+  "moments": [
+    {
+      "id": "origin",
+      "label": "ORIGIN",
+      "time_ms": 0,
+      "phase_milli": 0,
+      "meaning": "World Cells establish the first stable spatial identity."
+    },
+    {
+      "id": "memory",
+      "label": "MEMORY",
+      "time_ms": 3000,
+      "phase_milli": 250,
+      "meaning": "Cinematic memory becomes material behavior inside the object."
+    },
+    {
+      "id": "lineage",
+      "label": "LINEAGE",
+      "time_ms": 6000,
+      "phase_milli": 500,
+      "meaning": "Power House provenance moves through committed structural paths."
+    },
+    {
+      "id": "continuum",
+      "label": "CONTINUUM",
+      "time_ms": 9000,
+      "phase_milli": 750,
+      "meaning": "Four temporal phases remain navigable as one Rootprint identity."
+    }
+  ],
+  "slbit": {
+    "schema": "slbit/viz-packet/v3",
+    "claim_state": "AUTHORED_TEMPORAL_OBJECT",
+    "summary": "Three interlocked Tessaryn frames hold a navigable temporal monument whose cinematic memory remains inside committed matter.",
+    "statements": [
+      "The geometry is authored by a deterministic Tessaryn object profile.",
+      "The cinematic payload drives internal material state and never defines geometry.",
+      "World Cell identity commits the descriptor and every cinematic media chunk.",
+      "Power House binds PHA identity, Rootprint replay, and a portable Memory Capsule.",
+      "SLBIT meaning remains removable and distinct from the committed object core."
+    ]
+  }
+}

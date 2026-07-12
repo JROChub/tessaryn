@@ -13,8 +13,8 @@ hex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-tessaryn-canonical = { version = "=0.3.0", path = "../tessaryn-canonical" }
-tessaryn-forge = { version = "=0.3.0", path = "../tessaryn-forge" }
-tessaryn-schema = { version = "=0.3.0", path = "../tessaryn-schema" }
-tessaryn-transport = { version = "=0.3.0", path = "../tessaryn-transport" }
+tessaryn-canonical = { version = "=0.4.0", path = "../tessaryn-canonical" }
+tessaryn-forge = { version = "=0.4.0", path = "../tessaryn-forge" }
+tessaryn-schema = { version = "=0.4.0", path = "../tessaryn-schema" }
+tessaryn-transport = { version = "=0.4.0", path = "../tessaryn-transport" }
 thiserror.workspace = true

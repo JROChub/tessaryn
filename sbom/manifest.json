@@ -5,23 +5,23 @@
     "browser": "@cyclonedx/cyclonedx-npm 6.0.0"
   },
   "inputs": {
-    "Cargo.lock": "bd93b136b4ee5b81532d14bf88571e7d1ddb0e3b02eed0325e0747b4f01b7c94",
-    "apps/viewer-web/package-lock.json": "0a2d4b6589de12f1b94f392b4d003d9582d93a8bb8c4232b332d0cbc277e2cd2"
+    "Cargo.lock": "c8cc9b165f1d1335ff92e7818989adb26b125361bc5d9b3cfb1e82b4999e120e",
+    "apps/viewer-web/package-lock.json": "7cba958dc045439b474fcb2313576f4f9d389213fbbbbb163c540293ab687bc1"
   },
   "files": {
-    "sbom/rust/tessaryn-anchor.cdx.json": "e670b1d2fe76a3d83bdf14c24b47abde27a883f33b55479c9caea4ed178b0ba0",
-    "sbom/rust/tessaryn-canonical.cdx.json": "257138c8c1f0a80aeb56672dd4009b867ecaed474c4576bcbcbf0c17ba82e2ac",
-    "sbom/rust/tessaryn-forge.cdx.json": "5991a2c4e865139a6309049a2f5f7a1aaa28f8dfccb26a688e44fd4b90404f78",
-    "sbom/rust/tessaryn-powerhouse.cdx.json": "ceae53dee6a59a74fc2e090d9c67565e5e0cab733431d8f180718c7b04fd3483",
-    "sbom/rust/tessaryn-privacy.cdx.json": "c9b47e08e2bb351ba64c3b4943ecbfcf57ed0eff1c9cadc8471a28563399f706",
-    "sbom/rust/tessaryn-reconstruct.cdx.json": "aa1131b607a443f201e22e45411fde0af1a35bcc982ac3847ec85095714f8b19",
-    "sbom/rust/tessaryn-schema.cdx.json": "ef22a201c643d1c7d954e95655ea51cf024d10b1a4969d8b82fa2eb722e52433",
-    "sbom/rust/tessaryn-store.cdx.json": "1667211c702996ba2df5ddaba618d2c168c6d9d42dd6708d81837a4f2bd647dd",
-    "sbom/rust/tessaryn-sync.cdx.json": "a5d964eaca6ad420c90ab877c0b6f472b09b9b2141642b8747c53a1a7dda2e63",
-    "sbom/rust/tessaryn-transport.cdx.json": "cc13e970991554c9a6aad1bea46bc68db378af2cc6967f64980c85bc049b47be",
-    "sbom/rust/tessaryn-weave.cdx.json": "e67ebf82316410680aa52e1789c41d152f25c981a4bdb59b2c7b42d05ad3b4ab",
-    "sbom/rust/tessaryn-witness.cdx.json": "13e92844ba671b3bccc4b303c3855b4cdc590717902361a33a49e389752e3a07",
-    "sbom/rust/tessaryn-cli.cdx.json": "b65dc8edf42cf3a9d5f3b724b05324ebcfb96e1fb4241ddfa35da96ce5e61b57",
-    "sbom/viewer-web.cdx.json": "f0d5cfa76a53d1cf69ec63b0e4b6cdaa950b6d7d70f583c7aaee21034b61386f"
+    "sbom/rust/tessaryn-anchor.cdx.json": "a2f6964af399a567298ffcfb2332d4a7bbd20b7263a137aed20032d93cafb56a",
+    "sbom/rust/tessaryn-canonical.cdx.json": "43256465ff49f31460e3a33e47c4a116c3b5e2eb073191ca840d679a245da356",
+    "sbom/rust/tessaryn-forge.cdx.json": "ee5511293869d943ce34d094df3278923456927b8e51dd04729d26125e9fcc82",
+    "sbom/rust/tessaryn-powerhouse.cdx.json": "7b90485d9f59dcb1a24f33ac77ba86e0dee1f0c4c2da9b255cfb955ad6047b48",
+    "sbom/rust/tessaryn-privacy.cdx.json": "c0f4518f9170722efdf6dd4c2586700ee7fa9d05f356621e3a8275c5afef212a",
+    "sbom/rust/tessaryn-reconstruct.cdx.json": "f61a4e028abef3d47deeb5d36115168d77aa76699439cbbb25b9ff940f58c053",
+    "sbom/rust/tessaryn-schema.cdx.json": "9198f067e7c369bc64197a1e981296fc7000eb74889ddd4f40d84ec5a7f16d18",
+    "sbom/rust/tessaryn-store.cdx.json": "070ea3c69a295cb36372c0e0a73f59ce1dc102ccd317de00ef0130ccb39a0e87",
+    "sbom/rust/tessaryn-sync.cdx.json": "6fdf0f40b29ae76de0e9767de827511c3f4a9b9ca3e7be222fc14d200998f3ba",
+    "sbom/rust/tessaryn-transport.cdx.json": "f357824e64116366689c43e59cce20c2359e5af065964331fb602d2ce6b728b0",
+    "sbom/rust/tessaryn-weave.cdx.json": "c3a6566c5e635a143f7ff5c9b64663d9d9414b3205504d2b0f781f1c0ff505ea",
+    "sbom/rust/tessaryn-witness.cdx.json": "969568c742a81edb251b1f068e8b0a4ee18479a6256db1c3e6589c39e1a3d78d",
+    "sbom/rust/tessaryn-cli.cdx.json": "48445d0ae91d4a730386d9b9f04411ca52570ed4eed588ab3cbff768c6f6b98e",
+    "sbom/viewer-web.cdx.json": "2e1045565e319e59fc00bb095dab994f0621d50e14d1fd012e8137fb9895039e"
   }
 }

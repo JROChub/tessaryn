@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { CinematicObjectVisual } from "./cinematic-visual";
 import type {
+  CinematicObjectDescriptorView,
   DemoCell,
   DemoMoment,
   DemoWorld,
@@ -167,12 +169,14 @@ export class TessarynWorld {
   private importedTemporal = false;
   private importedSdfVoxelCount = 0;
   private importedProvenanceLinks = 0;
+  private cinematicVisual: CinematicObjectVisual | null = null;
   private materializedCellCount = 0;
   private inspectionLayer: "state" | "lineage" | "meaning" | null = null;
   private lastScaleTargetUpdate = -1;
   private lastScaleDepthCallback = -1;
   private adaptivePixelRatio = 1;
   private lastResolutionAdjustmentMs = 0;
+  private lastConstrainedFrameAt = -1;
 
   constructor(canvas: HTMLCanvasElement, world: DemoWorld, callbacks: WorldCallbacks) {
     this.canvas = canvas;
@@ -239,6 +243,10 @@ export class TessarynWorld {
   }
 
   setMoment(moment: string): void {
+    if (this.cinematicVisual?.setMoment(moment)) {
+      this.moment = moment;
+      return;
+    }
     if (!this.world.moments.some((candidate) => candidate.id === moment)) return;
     this.moment = moment;
     const environment = this.world.moments.find((candidate) => candidate.id === moment);
@@ -322,12 +330,14 @@ export class TessarynWorld {
 
   setChronofold(active: boolean): void {
     this.chronofold = active;
-    this.targetTemporalOpacity = active && !this.importedTemporal ? 1 : 0;
+    this.cinematicVisual?.setChronofold(active);
+    this.targetTemporalOpacity = active && !this.importedTemporal && !this.cinematicVisual ? 1 : 0;
     this.updateCellTargets();
   }
 
   setEvidence(active: boolean): void {
     this.evidence = active;
+    this.cinematicVisual?.setEvidence(active);
     if (this.constrainedWeave) this.constrainedWeave.visible = active;
     for (const link of this.weaveLinks) {
       if (link.line) link.line.visible = active;
@@ -361,12 +371,118 @@ export class TessarynWorld {
     this.pitch = 0.44;
     this.targetFocus.copy(this.importedFrame?.focus ?? new THREE.Vector3(0, 1.1, 0));
     this.setScale("room");
+    if (this.cinematicVisual) {
+      const firstMoment = this.cinematicVisual.setMoment("origin");
+      if (firstMoment) this.moment = "origin";
+    }
     this.highlightSelection();
     this.updateMeaningFields();
   }
 
+  prepareCinematicLoad(): void {
+    this.root.visible = false;
+    this.aggregateRoot.visible = false;
+    this.temporalRoot.visible = false;
+    this.continuumRoot.visible = false;
+    this.fieldRoot.visible = false;
+    this.importedRoot.visible = false;
+    this.focusRoot.visible = false;
+    this.selected = null;
+    this.hovered = null;
+    this.targetBackground.set("#050605");
+    this.scene.fog = new THREE.FogExp2("#050605", 0.02);
+  }
+
+  async loadCinematicObject(
+    cell: DemoCell,
+    descriptor: CinematicObjectDescriptorView,
+    media: Blob,
+  ): Promise<void> {
+    this.disposeImportedRoot();
+    this.importedTemporal = false;
+    this.importedSdfVoxelCount = 0;
+    this.importedProvenanceLinks = descriptor.geometry.cell_count - 1;
+    this.materializedCellCount = descriptor.geometry.cell_count;
+    this.root.visible = false;
+    this.aggregateRoot.visible = false;
+    this.temporalRoot.visible = false;
+    this.continuumRoot.visible = false;
+    this.fieldRoot.visible = false;
+    this.importedRoot.visible = true;
+    this.targetBackground.set("#070907");
+    this.renderer.toneMappingExposure = 0.88;
+    this.scene.fog = new THREE.FogExp2("#070907", 0.018);
+    this.ambient.color.set("#c8c6b3");
+    this.ambient.groundColor.set("#16150f");
+    this.ambient.intensity = this.constrainedRenderer ? 0.7 : 0.38;
+    this.sun.color.set("#e4c795");
+    this.sun.intensity = this.constrainedRenderer ? 1.75 : 1.15;
+    this.sun.position.set(-6, 11, 8);
+    this.nodes.clear();
+    this.cellsById.clear();
+    this.interactive.length = 0;
+
+    const visual = new CinematicObjectVisual(descriptor, media, this.constrainedRenderer);
+    visual.setCellKey(cell.key);
+    visual.setEvidence(this.evidence);
+    this.cinematicVisual = visual;
+    this.importedRoot.add(visual.root);
+    const node: CellNode = {
+      cell,
+      group: visual.root,
+      materials: visual.materials,
+      basePosition: visual.focus.clone(),
+      targetPosition: visual.focus.clone(),
+      baseQuaternion: visual.root.quaternion.clone(),
+      assemblyQuaternion: visual.root.quaternion.clone(),
+      halo: null,
+      haloMaterial: null,
+      meaning: null,
+      currentOpacity: 1,
+      targetOpacity: 1,
+      condensed: true,
+      condenseAt: 0,
+      assembledAt: 0,
+      momentIndex: 0,
+    };
+    this.nodes.set(cell.key, node);
+    this.cellsById.set(cell.cell_id, node);
+    this.interactive.push(...visual.interactive);
+    this.importedFrame = { focus: visual.focus.clone(), radius: visual.radius };
+    this.selected = node;
+    this.moment = descriptor.moments[0]?.id ?? "origin";
+    visual.setMoment(this.moment);
+    this.chronofold = false;
+    this.targetTemporalOpacity = 0;
+    this.setScale("room");
+    this.yaw = -0.48;
+    this.pitch = 0.36;
+    this.setOpacity(node, 1);
+    this.highlightSelection();
+    await visual.ready();
+    this.firstStructureMs ??= performance.now() - this.startedAt;
+    this.materializationMs = performance.now() - this.startedAt;
+  }
+
+  setCinematicTime(value: number): void {
+    this.cinematicVisual?.setTemporalPosition(value);
+  }
+
+  cinematicTime(): number {
+    return this.cinematicVisual?.temporalPosition() ?? 0;
+  }
+
+  cinematicPlaying(): boolean {
+    return this.cinematicVisual?.isPlaying() ?? false;
+  }
+
+  async setCinematicPlaying(active: boolean): Promise<void> {
+    await this.cinematicVisual?.setPlaying(active);
+  }
+
   loadSurfelObservation(cell: DemoCell, surfels: SurfelPoint[]): void {
     if (surfels.length === 0) throw new Error("imported observation contains no surfels");
+    this.renderer.toneMappingExposure = 1.14;
     this.disposeImportedRoot();
     this.importedTemporal = false;
     this.importedSdfVoxelCount = 0;
@@ -374,6 +490,8 @@ export class TessarynWorld {
     this.materializedCellCount = 2;
     this.root.visible = false;
     this.aggregateRoot.visible = false;
+    this.continuumRoot.visible = true;
+    this.fieldRoot.visible = true;
     this.importedRoot.visible = true;
     this.nodes.clear();
     this.cellsById.clear();
@@ -514,9 +632,12 @@ export class TessarynWorld {
     if (observations.length < 3 || observations.some((observation) => observation.surfels.length === 0)) {
       throw new Error("temporal Locus requires at least three nonempty observations");
     }
+    this.renderer.toneMappingExposure = 1.14;
     this.disposeImportedRoot();
     this.root.visible = false;
     this.aggregateRoot.visible = false;
+    this.continuumRoot.visible = true;
+    this.fieldRoot.visible = true;
     this.importedRoot.visible = true;
     this.importedTemporal = true;
     this.nodes.clear();
@@ -931,23 +1052,34 @@ export class TessarynWorld {
       firstStructureMs: this.firstStructureMs,
       materializationMs: this.materializationMs,
       cellCount: this.materializedCellCount || this.nodes.size,
-      provenanceLinks: this.importedTemporal
+      provenanceLinks: this.cinematicVisual
+        ? this.importedProvenanceLinks
+        : this.importedTemporal
         ? this.importedProvenanceLinks
         : this.weaveLinks.length,
-      temporalManifolds: this.importedTemporal ? this.nodes.size : this.world.moments.length,
-      semanticConstellations: [...this.nodes.values()].filter((node) =>
-        Boolean(node.meaning),
-      ).length,
-      activeMeaningFields: [...this.nodes.values()].filter((node) => node.meaning?.visible)
-        .length,
-      assemblyPoints: this.assemblyPointCount,
-      continuumLayers: this.importedTemporal
+      temporalManifolds: this.cinematicVisual
+        ? this.cinematicVisual.phaseCount
+        : this.importedTemporal
+          ? this.nodes.size
+          : this.world.moments.length,
+      semanticConstellations: this.cinematicVisual
+        ? this.cinematicVisual.semanticCount
+        : [...this.nodes.values()].filter((node) => Boolean(node.meaning)).length,
+      activeMeaningFields: this.cinematicVisual
+        ? this.cinematicVisual.activeSemanticCount
+        : [...this.nodes.values()].filter((node) => node.meaning?.visible).length,
+      assemblyPoints: this.cinematicVisual ? this.materializedCellCount : this.assemblyPointCount,
+      continuumLayers: this.cinematicVisual || this.importedTemporal
         ? this.importedRoot.children.length
         : this.continuumRoot.children.length,
       scale: this.scale,
       scaleDepth: this.scaleDepth,
       chronofold: this.chronofold,
-      temporalObservations: this.importedTemporal ? this.nodes.size : 0,
+      temporalObservations: this.cinematicVisual
+        ? this.cinematicVisual.phaseCount
+        : this.importedTemporal
+          ? this.nodes.size
+          : 0,
       sdfVoxels: this.importedSdfVoxelCount,
     };
   }
@@ -957,6 +1089,8 @@ export class TessarynWorld {
     this.resizeObserver.disconnect();
     document.removeEventListener("visibilitychange", this.handleVisibility);
     this.timer.dispose();
+    this.cinematicVisual?.destroy();
+    this.cinematicVisual = null;
     const geometries = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();
     this.scene.traverse((object) => {
@@ -1003,6 +1137,8 @@ export class TessarynWorld {
   }
 
   private disposeImportedRoot(): void {
+    this.cinematicVisual?.destroy();
+    this.cinematicVisual = null;
     this.importedRoot.traverse((object) => {
       const renderable = object as THREE.Mesh;
       renderable.geometry?.dispose();
@@ -3038,6 +3174,10 @@ export class TessarynWorld {
     for (const node of this.nodes.values()) {
       if (this.importedFrame) {
         node.targetPosition.copy(node.basePosition);
+        if (this.cinematicVisual) {
+          node.targetOpacity = 1;
+          continue;
+        }
         if (!this.importedTemporal) {
           node.targetOpacity = 1;
           continue;
@@ -3200,7 +3340,8 @@ export class TessarynWorld {
     node.currentOpacity = opacity;
     for (const material of node.materials) {
       if (material instanceof THREE.ShaderMaterial && material.uniforms.opacity) {
-        material.uniforms.opacity.value = opacity;
+        material.uniforms.opacity.value =
+          opacity * Number(material.userData.baseOpacity ?? 1);
         material.transparent = true;
         material.depthWrite = opacity > 0.985;
       } else if ("opacity" in material) {
@@ -3356,6 +3497,14 @@ export class TessarynWorld {
   private animate = (timestamp: number): void => {
     this.animationFrame = requestAnimationFrame(this.animate);
     if (!this.visible) return;
+    if (
+      this.constrainedRenderer &&
+      this.lastConstrainedFrameAt >= 0 &&
+      timestamp - this.lastConstrainedFrameAt < 33
+    ) {
+      return;
+    }
+    this.lastConstrainedFrameAt = timestamp;
     this.timer.update(timestamp);
     const rawDelta = this.timer.getDelta();
     const delta = Math.min(rawDelta, 0.05);
@@ -3457,6 +3606,7 @@ export class TessarynWorld {
         link.from.currentOpacity > 0.03 &&
         link.to.currentOpacity > 0.03;
     }
+    this.cinematicVisual?.animate(seconds, delta, this.scaleDepth);
     if (!this.reducedMotion) {
       this.fieldRoot.children.forEach((child) => {
         const rate = Number(child.userData.rotationRate ?? 0);
@@ -3610,7 +3760,7 @@ export class TessarynWorld {
       const positions = this.constrainedWeave.geometry.attributes.position as THREE.BufferAttribute;
       positions.needsUpdate = true;
     }
-    const focusNode = this.hovered ?? this.selected;
+    const focusNode = this.cinematicVisual ? null : this.hovered ?? this.selected;
     this.focusOpacity = THREE.MathUtils.damp(
       this.focusOpacity,
       focusNode ? 1 : 0,

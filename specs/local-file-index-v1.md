@@ -50,8 +50,9 @@ The exported index records the root, byte length, chunk size, chunk count, local
 filename, media type, and modification time. Filename, media type, and
 modification time are descriptive and do not enter the stream root.
 
-Video and image files are presented through a revocable local object URL while
-the worker indexes them. This path is file-backed: presentation does not wait for
-the entire file, and closing the file revokes the URL and cancels unfinished
-indexing. Reconstruction JSON remains a strict manifest profile. Large channel
-data belongs in file-backed chunks rather than one enormous JSON string.
+Raw media is index-only. Selecting a video, image, or audio file does not claim
+spatial reconstruction and does not create a visible media player. Closing the
+file cancels unfinished indexing. Reconstruction JSON remains a strict manifest
+profile; a native temporal object must use its separate versioned package and
+authored geometry descriptor. Large channel data belongs in file-backed chunks
+rather than one enormous JSON string.
