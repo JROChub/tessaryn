@@ -20,6 +20,38 @@
         tabindex="0"
       ></canvas>
 
+      <section id="local-stage" class="local-stage" aria-label="Local file stream" hidden>
+        <video id="local-video" controls muted loop playsinline preload="metadata" hidden></video>
+        <img id="local-image" alt="Locally opened artifact" hidden>
+        <div id="local-field" class="local-field" aria-hidden="true" hidden>
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <header class="local-stage-heading">
+          <span><small id="local-kind">LOCAL FILE</small><b id="local-name">--</b></span>
+          <div class="local-stage-actions">
+            <button
+              id="local-export"
+              class="icon-button"
+              type="button"
+              title="Export local stream index"
+              disabled
+            >
+              <i data-lucide="download"></i>
+            </button>
+            <button id="local-close" class="icon-button" type="button" title="Close local file">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        </header>
+        <footer class="local-stage-identity" aria-live="polite">
+          <span>
+            <small id="local-status">AWAITING LOCAL STREAM</small><b id="local-size">--</b>
+          </span>
+          <code id="local-root">STREAM ROOT PENDING</code>
+          <div class="local-stream-progress"><i id="local-progress"></i></div>
+        </footer>
+      </section>
+
       <header class="topbar">
         <a class="brand" href="./" aria-label="TESSARYN home">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -38,10 +70,20 @@
           <button id="sources-button" class="icon-command secondary" type="button" title="Open validation sources">
             <i data-lucide="database"></i><span>SOURCES</span>
           </button>
-          <button id="import-button" class="icon-command secondary" type="button" title="Open local reconstruction artifact">
+          <button
+            id="import-button"
+            class="icon-command secondary"
+            type="button"
+            title="Open local file or reconstruction artifact"
+          >
             <i data-lucide="upload"></i><span>OPEN</span>
           </button>
-          <input id="import-input" type="file" accept="application/json,.json" hidden>
+          <input
+            id="import-input"
+            type="file"
+            accept="application/json,.json,video/*,image/*,audio/*,application/octet-stream,.pha,.phm,.tessaryn"
+            hidden
+          >
           <button id="verify-button" class="icon-command" type="button" title="Verify local world">
             <i data-lucide="shield-check"></i><span>VERIFY</span>
           </button>

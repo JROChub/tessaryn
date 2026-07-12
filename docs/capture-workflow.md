@@ -21,8 +21,16 @@ The resulting artifact is public-shareable only if its policy permits
 publication. It contains the filtered surfel and SDF chunks, Cell manifests,
 Power House bundles, Rootprint lineage, SLBIT packets, and Memory Capsules. It
 does not contain raw frame arrays. Import it with the viewer's `OPEN` control to
-reverify and render it locally. The browser profile accepts artifacts up to 128
-MiB; larger bounded artifacts remain verifiable with the 256 MiB CLI profile.
+reverify and render it locally.
+
+The same control opens arbitrary local media and binary artifacts through the
+file-backed local index profile. There is no application-level total-size cap:
+the browser reads fixed 4 MiB windows in a dedicated worker and retains only an
+`O(log n)` stream-root accumulator. Video and image presentation uses a local
+object URL and does not wait for the complete file or upload it. Very large
+reconstruction channels must remain external file-backed chunks referenced by a
+compact strict JSON manifest; they must not be embedded into a single enormous
+JSON string. See `specs/local-file-index-v1.md`.
 
 Before physical capture, obtain site authorization, show a visible recording
 state, define exclusion volumes, inspect the public derivative, test aggregate

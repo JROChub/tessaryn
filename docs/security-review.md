@@ -31,6 +31,9 @@ Status: engineering review for `0.3.0`.
   Rootprint replay, Memory Capsule challenge suite, and top-lineage binding;
 - validation verification runs in a dedicated worker and returns no redundant
   copy of the identity-bearing artifact;
+- arbitrary local files use a separate worker, fixed 4 MiB reads, an O(log n)
+  digest accumulator, cancellable progress, and revocable object URLs; they are
+  never converted into one complete JavaScript string or buffer;
 - EuRoC, KITTI, and ScanNet adapters reject symlinks, unsorted indexes,
   modality-count mismatches, resource overrun, and file-content mutation;
 - the web build has no analytics, upload endpoint, map SDK, tile client, or

@@ -11,6 +11,9 @@ const htmlUrl = new URL("../index.html", import.meta.url);
 const packageUrl = new URL("../package-lock.json", import.meta.url);
 const packageManifestUrl = new URL("../package.json", import.meta.url);
 const workerUrl = new URL("../public/sw.js", import.meta.url);
+const mainUrl = new URL("../src/main.ts", import.meta.url);
+const localIdentityUrl = new URL("../src/local-file-identity.ts", import.meta.url);
+const localWorkerUrl = new URL("../src/local-ingest-worker.ts", import.meta.url);
 
 test("the bounded Origin declares its local verification profile", async () => {
   const world = JSON.parse(await readFile(fixtureUrl, "utf8"));
@@ -73,9 +76,25 @@ test("the offline cache includes the local world fixture", async () => {
   const worker = await readFile(workerUrl, "utf8");
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
-  assert.ok(worker.includes(`const CACHE = "tessaryn-origin-v${release}-validation-locus1";`));
+  assert.ok(
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-validation-locus1-stream1";`),
+  );
   assert.match(worker, /\.\/world\/archviz-tiny-house-locus\.json/);
   assert.match(worker, /\.\/world\/vesper-court\.json/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
+});
+
+test("local file indexing has no total-size gate and remains chunk bounded", async () => {
+  const [main, identity, localWorker] = await Promise.all([
+    readFile(mainUrl, "utf8"),
+    readFile(localIdentityUrl, "utf8"),
+    readFile(localWorkerUrl, "utf8"),
+  ]);
+  assert.doesNotMatch(main, /MAX_IMPORT_BYTES|EXCEEDS 128 MIB/);
+  assert.match(main, /URL\.createObjectURL\(file\)/);
+  assert.match(identity, /LOCAL_FILE_CHUNK_BYTES = 4 \* 1024 \* 1024/);
+  assert.match(identity, /TESSARYN-LOCAL-FILE-v1/);
+  assert.match(identity, /while \(peaks\.at\(-1\)\?\.height === peak\.height\)/);
+  assert.match(localWorker, /calculateLocalFileIdentity/);
 });

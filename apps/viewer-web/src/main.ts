@@ -31,6 +31,12 @@ import type {
   ValidationLocusBrowserReport,
   VerificationReport,
 } from "./types";
+import {
+  destroyLocalIngestWorker,
+  indexLocalFileOffThread,
+  type LocalIngestTask,
+} from "./local-ingest-client";
+import type { LocalFileIdentity, LocalFileProgress } from "./local-file-identity";
 import { parseStrictIntegerJson } from "./strict-json";
 import { runMutation } from "./verification";
 import {
@@ -54,6 +60,7 @@ declare global {
       importedVerification?: ReconstructionBrowserReport;
       validationArtifact?: ValidationLocusArtifactView;
       validationVerification?: ValidationLocusBrowserReport;
+      localImport?: LocalImportView;
       verifyValidationArtifact: typeof verifyValidationOffThread;
       scene: TessarynWorld;
       metrics: RuntimeMetrics;
@@ -67,6 +74,34 @@ interface RuntimeMetrics {
   materializedMs?: number;
   verificationMs?: number;
 }
+
+type LocalFileKind = "video" | "image" | "audio" | "binary";
+type LocalImportStatus = "indexing" | "indexed" | "error";
+
+interface LocalImportView {
+  name: string;
+  mediaType: string;
+  bytes: number;
+  kind: LocalFileKind;
+  status: LocalImportStatus;
+  bytesRead: number;
+  chunkCount: number;
+  streamRoot?: string;
+}
+
+interface ActiveLocalImport {
+  file: File;
+  objectUrl: string;
+  kind: LocalFileKind;
+  status: LocalImportStatus;
+  identity: LocalFileIdentity | null;
+  progress: LocalFileProgress;
+  previousSource?: string;
+  previousOriginName: string;
+  previousCellCount: string;
+  error?: string;
+}
+
 const elements = {
   app: byId<HTMLDivElement>("app"),
   canvas: byId<HTMLCanvasElement>("world-canvas"),
@@ -132,6 +167,18 @@ const elements = {
   sourceAssets: byId<HTMLElement>("source-assets"),
   sourceProfileId: byId<HTMLElement>("source-profile-id"),
   portfolioList: byId<HTMLElement>("portfolio-list"),
+  localStage: byId<HTMLElement>("local-stage"),
+  localVideo: byId<HTMLVideoElement>("local-video"),
+  localImage: byId<HTMLImageElement>("local-image"),
+  localField: byId<HTMLElement>("local-field"),
+  localClose: byId<HTMLButtonElement>("local-close"),
+  localExport: byId<HTMLButtonElement>("local-export"),
+  localKind: byId<HTMLElement>("local-kind"),
+  localName: byId<HTMLElement>("local-name"),
+  localStatus: byId<HTMLElement>("local-status"),
+  localSize: byId<HTMLElement>("local-size"),
+  localRoot: byId<HTMLElement>("local-root"),
+  localProgress: byId<HTMLElement>("local-progress"),
 };
 
 interface ValidationPortfolio {
@@ -164,7 +211,9 @@ let chronofoldOpen = false;
 let evidenceVisible = true;
 let condensationComplete = false;
 let toastTimer = 0;
-const MAX_IMPORT_BYTES = 128 * 1024 * 1024;
+let activeLocalImport: ActiveLocalImport | null = null;
+let activeLocalTask: LocalIngestTask | null = null;
+const MAX_INLINE_RECONSTRUCTION_BYTES = 64 * 1024 * 1024;
 const runtimeMetrics: RuntimeMetrics = {
   bootStartedAtMs: performance.now(),
 };
@@ -228,6 +277,8 @@ async function boot(): Promise<void> {
     window.addEventListener(
       "pagehide",
       () => {
+        closeLocalFile(false);
+        destroyLocalIngestWorker();
         destroyVerificationWorker();
         scene.destroy();
       },
@@ -294,7 +345,16 @@ function bindControls(): void {
   });
   elements.sourcesClose.addEventListener("click", () => elements.sourcesDialog.close());
   elements.importButton.addEventListener("click", () => elements.importInput.click());
-  elements.importInput.addEventListener("change", () => void importReconstruction());
+  elements.importInput.addEventListener("change", () => void importLocalFile());
+  elements.localClose.addEventListener("click", () => closeLocalFile());
+  elements.localExport.addEventListener("click", () => {
+    if (activeLocalImport) exportLocalFileIndex(activeLocalImport);
+  });
+  elements.localVideo.addEventListener("loadedmetadata", updateLocalMediaMetadata);
+  elements.localVideo.addEventListener("error", () => {
+    if (!activeLocalImport || activeLocalImport.kind !== "video") return;
+    elements.localKind.textContent = "LOCAL VIDEO / CODEC PREVIEW UNAVAILABLE";
+  });
   elements.verifyClose.addEventListener("click", () => elements.verificationDialog.close());
   elements.fullscreenButton.addEventListener("click", () => void toggleFullscreen());
   elements.traceClose.addEventListener("click", closeTrace);
@@ -302,6 +362,10 @@ function bindControls(): void {
   elements.challengeButton.addEventListener("click", openChallenge);
   elements.exportButton.addEventListener("click", exportCapsule);
   elements.resetButton.addEventListener("click", () => {
+    if (activeLocalImport) {
+      closeLocalFile();
+      return;
+    }
     scene.reset();
     closeTrace();
     showToast("RETURNED TO ORIGIN");
@@ -342,6 +406,7 @@ function bindControls(): void {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    if (activeLocalImport) closeLocalFile();
     closeTrace();
     closeChallenge();
     if (elements.verificationDialog.open) elements.verificationDialog.close();
@@ -623,6 +688,10 @@ async function showVerification(): Promise<void> {
   ]) {
     element.textContent = "PENDING";
   }
+  if (activeLocalImport) {
+    renderLocalFileVerification(activeLocalImport);
+    return;
+  }
   if (importedArtifact) {
     const report = await verifyReconstructionOffThread(importedArtifact);
     importedVerification = report;
@@ -684,14 +753,18 @@ function renderValidationVerification(report: ValidationLocusBrowserReport): voi
       : report.errors.join(" / ");
 }
 
-async function importReconstruction(): Promise<void> {
+async function importLocalFile(): Promise<void> {
   const file = elements.importInput.files?.[0];
   elements.importInput.value = "";
   if (!file) return;
-  if (file.size > MAX_IMPORT_BYTES) {
-    showToast("ARTIFACT EXCEEDS 128 MIB BROWSER PROFILE");
+  if (isJsonFile(file) && file.size <= MAX_INLINE_RECONSTRUCTION_BYTES) {
+    await importReconstructionFile(file);
     return;
   }
+  await openFileBackedArtifact(file);
+}
+
+async function importReconstructionFile(file: File): Promise<void> {
   elements.importButton.disabled = true;
   elements.importButton.querySelector("span")!.textContent = "READING";
   try {
@@ -703,6 +776,7 @@ async function importReconstruction(): Promise<void> {
     if (verification.errors.length > 0) {
       throw new Error(verification.errors.join(" / "));
     }
+    closeLocalFile(false);
     const cell = reconstructionCell(parsed);
     importedArtifact = parsed;
     importedVerification = verification;
@@ -733,6 +807,169 @@ async function importReconstruction(): Promise<void> {
     elements.importButton.disabled = false;
     elements.importButton.querySelector("span")!.textContent = "OPEN";
   }
+}
+
+async function openFileBackedArtifact(file: File): Promise<void> {
+  const previousSource = activeLocalImport?.previousSource ?? elements.app.dataset.source;
+  const previousOriginName =
+    activeLocalImport?.previousOriginName ?? elements.originName.textContent ?? "";
+  const previousCellCount =
+    activeLocalImport?.previousCellCount ?? elements.cellCount.textContent ?? "";
+  closeLocalFile(false);
+  const state: ActiveLocalImport = {
+    file,
+    objectUrl: URL.createObjectURL(file),
+    kind: localFileKind(file),
+    status: "indexing",
+    identity: null,
+    progress: { bytesRead: 0, totalBytes: file.size, chunksRead: 0 },
+    previousSource,
+    previousOriginName,
+    previousCellCount,
+  };
+  activeLocalImport = state;
+  elements.app.dataset.source = "local-file";
+  elements.localStage.dataset.kind = state.kind;
+  elements.localStage.hidden = false;
+  elements.localName.textContent = file.name || "UNNAMED LOCAL FILE";
+  elements.originName.textContent = file.name || "UNNAMED LOCAL FILE";
+  elements.cellCount.textContent = "1 LOCAL FILE";
+  elements.localKind.textContent = `LOCAL ${state.kind.toUpperCase()} / FILE-BACKED`;
+  elements.localStatus.textContent = "INDEXING LOCAL BYTES";
+  elements.localSize.textContent = `${formatBytes(file.size)} / 0%`;
+  elements.localRoot.textContent = "STREAM ROOT PENDING";
+  elements.localProgress.style.width = "0%";
+  elements.localExport.disabled = true;
+  elements.chronofoldButton.disabled = true;
+  elements.challengeButton.disabled = true;
+  elements.exportButton.disabled = true;
+  elements.scaleBreath.disabled = true;
+  presentLocalMedia(state);
+  syncLocalImportView();
+  showToast(`LOCAL STREAM OPEN / ${formatBytes(file.size)} / NO UPLOAD`);
+
+  const task = indexLocalFileOffThread(file, (progress) => {
+    if (activeLocalImport !== state) return;
+    state.progress = progress;
+    const percent =
+      progress.totalBytes === 0 ? 100 : (progress.bytesRead / progress.totalBytes) * 100;
+    elements.localStatus.textContent = `INDEXING / ${String(progress.chunksRead)} CHUNKS`;
+    elements.localSize.textContent = `${formatBytes(file.size)} / ${percent.toFixed(1)}%`;
+    elements.localRoot.textContent = `${formatBytes(progress.bytesRead)} READ / BOUNDED MEMORY`;
+    elements.localProgress.style.width = `${percent.toFixed(3)}%`;
+    syncLocalImportView();
+  });
+  activeLocalTask = task;
+
+  try {
+    const identity = await task.result;
+    if (activeLocalImport !== state) return;
+    state.status = "indexed";
+    state.identity = identity;
+    state.progress = {
+      bytesRead: identity.byteLength,
+      totalBytes: identity.byteLength,
+      chunksRead: identity.chunkCount,
+    };
+    activeLocalTask = null;
+    elements.localStatus.textContent = `LOCAL STREAM INDEXED / ${String(identity.chunkCount)} CHUNKS`;
+    elements.localSize.textContent = `${formatBytes(file.size)} / 100%`;
+    elements.localRoot.textContent = identity.streamRoot;
+    elements.localProgress.style.width = "100%";
+    elements.localExport.disabled = false;
+    elements.exportButton.disabled = false;
+    syncLocalImportView();
+    showToast("LOCAL STREAM ROOT COMPLETE");
+  } catch (error) {
+    if (
+      activeLocalImport !== state ||
+      (error instanceof DOMException && error.name === "AbortError")
+    ) {
+      return;
+    }
+    state.status = "error";
+    state.error = error instanceof Error ? error.message : String(error);
+    activeLocalTask = null;
+    elements.localStatus.textContent = "LOCAL INDEX FAILED";
+    elements.localRoot.textContent = state.error.toUpperCase();
+    syncLocalImportView();
+    showToast("LOCAL INDEX FAILED");
+  }
+}
+
+function presentLocalMedia(state: ActiveLocalImport): void {
+  elements.localVideo.hidden = true;
+  elements.localImage.hidden = true;
+  elements.localField.hidden = true;
+  elements.localVideo.pause();
+  elements.localVideo.removeAttribute("src");
+  elements.localImage.removeAttribute("src");
+
+  if (state.kind === "video" || state.kind === "audio") {
+    elements.localVideo.hidden = false;
+    elements.localVideo.src = state.objectUrl;
+    elements.localVideo.muted = state.kind === "video";
+    elements.localField.hidden = state.kind !== "audio";
+    elements.localVideo.load();
+    void elements.localVideo.play().catch(() => undefined);
+  } else if (state.kind === "image") {
+    elements.localImage.hidden = false;
+    elements.localImage.src = state.objectUrl;
+  } else {
+    elements.localField.hidden = false;
+  }
+}
+
+function closeLocalFile(restoreSource = true): void {
+  const active = activeLocalImport;
+  activeLocalTask?.cancel();
+  activeLocalTask = null;
+  elements.localVideo.pause();
+  elements.localVideo.removeAttribute("src");
+  elements.localVideo.load();
+  elements.localImage.removeAttribute("src");
+  elements.localStage.hidden = true;
+  elements.localExport.disabled = true;
+  elements.localStage.removeAttribute("data-kind");
+  if (active) URL.revokeObjectURL(active.objectUrl);
+  activeLocalImport = null;
+  if (window.__tessaryn) delete window.__tessaryn.localImport;
+  if (!restoreSource) return;
+  if (active?.previousSource) elements.app.dataset.source = active.previousSource;
+  else delete elements.app.dataset.source;
+  if (active) {
+    elements.originName.textContent = active.previousOriginName;
+    elements.cellCount.textContent = active.previousCellCount;
+  }
+  elements.chronofoldButton.disabled = importedArtifact !== null;
+  elements.challengeButton.disabled = false;
+  elements.exportButton.disabled = false;
+  elements.scaleBreath.disabled = false;
+  showToast("LOCAL STREAM CLOSED");
+}
+
+function updateLocalMediaMetadata(): void {
+  if (!activeLocalImport || activeLocalImport.kind !== "video") return;
+  const width = elements.localVideo.videoWidth;
+  const height = elements.localVideo.videoHeight;
+  const seconds = elements.localVideo.duration;
+  const duration = Number.isFinite(seconds) ? ` / ${formatDuration(seconds)}` : "";
+  elements.localKind.textContent = `LOCAL VIDEO / ${String(width)}x${String(height)}${duration}`;
+}
+
+function syncLocalImportView(): void {
+  if (!window.__tessaryn || !activeLocalImport) return;
+  const active = activeLocalImport;
+  window.__tessaryn.localImport = {
+    name: active.file.name,
+    mediaType: active.file.type || "application/octet-stream",
+    bytes: active.file.size,
+    kind: active.kind,
+    status: active.status,
+    bytesRead: active.progress.bytesRead,
+    chunkCount: active.identity?.chunkCount ?? active.progress.chunksRead,
+    streamRoot: active.identity?.streamRoot,
+  };
 }
 
 function isReconstructionArtifact(value: unknown): value is ReconstructionArtifactView {
@@ -904,7 +1141,39 @@ function renderImportedVerification(report: ReconstructionBrowserReport): void {
       : report.errors.join(" / ");
 }
 
+function renderLocalFileVerification(state: ActiveLocalImport): void {
+  const percent =
+    state.progress.totalBytes === 0
+      ? 100
+      : (state.progress.bytesRead / state.progress.totalBytes) * 100;
+  elements.verifyCells.textContent = state.identity
+    ? "STREAM ROOT"
+    : `${percent.toFixed(1)}% INDEXED`;
+  elements.verifyPha.textContent = "NOT ATTACHED";
+  elements.verifyRootprint.textContent = "LOCAL INDEX";
+  elements.verifyReplay.textContent = state.identity
+    ? `${String(state.identity.chunkCount)} CHUNKS`
+    : "IN PROGRESS";
+  elements.verifyMemory.textContent = "FILE-BACKED";
+  elements.verifyTitle.textContent =
+    state.status === "indexed"
+      ? "LOCAL FILE INDEXED"
+      : state.status === "error"
+        ? "LOCAL INDEX CAUTION"
+        : "INDEXING LOCAL FILE";
+  elements.verifyDetail.textContent = state.identity
+    ? `${formatBytes(state.file.size)} indexed through fixed ` +
+      `${formatBytes(state.identity.chunkBytes)} windows with bounded memory. ` +
+      `Stream root ${state.identity.streamRoot}.`
+    : state.error ??
+      `${formatBytes(state.progress.bytesRead)} of ${formatBytes(state.file.size)} read directly from local storage.`;
+}
+
 function exportCapsule(): void {
+  if (activeLocalImport) {
+    exportLocalFileIndex(activeLocalImport);
+    return;
+  }
   const temporalSelected = temporalArtifactsByCell.get(selected.key);
   const capsule =
     importedArtifact?.sdf_proof.memory_capsule ??
@@ -922,6 +1191,30 @@ function exportCapsule(): void {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(anchor.href), 1_000);
   showToast("MEMORY CAPSULE EXPORTED");
+}
+
+function exportLocalFileIndex(state: ActiveLocalImport): void {
+  if (!state.identity) {
+    showToast("STREAM ROOT STILL INDEXING");
+    return;
+  }
+  const index = {
+    ...state.identity,
+    file: {
+      name: state.file.name,
+      media_type: state.file.type || "application/octet-stream",
+      last_modified_unix_ms: state.file.lastModified,
+    },
+  };
+  const blob = new Blob([JSON.stringify(index, null, 2) + "\n"], {
+    type: "application/json",
+  });
+  const anchor = document.createElement("a");
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = `${safeFileStem(state.file.name)}.tessaryn-index.json`;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(anchor.href), 1_000);
+  showToast("LOCAL FILE INDEX EXPORTED");
 }
 
 function updateScaleButtons(scale: ScaleMode): void {
@@ -990,6 +1283,53 @@ function showToast(message: string): void {
   elements.toast.classList.add("visible");
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("visible"), 2_200);
+}
+
+function isJsonFile(file: File): boolean {
+  return file.type === "application/json" || file.name.toLowerCase().endsWith(".json");
+}
+
+function localFileKind(file: File): LocalFileKind {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  if (type.startsWith("video/") || /\.(mp4|m4v|mov|webm|ogv|mkv)$/.test(name)) {
+    return "video";
+  }
+  if (type.startsWith("image/") || /\.(avif|bmp|gif|jpe?g|png|webp)$/.test(name)) {
+    return "image";
+  }
+  if (type.startsWith("audio/") || /\.(aac|flac|m4a|mp3|oga|ogg|wav)$/.test(name)) {
+    return "audio";
+  }
+  return "binary";
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1_024) return `${String(bytes)} B`;
+  const units = ["KiB", "MiB", "GiB", "TiB", "PiB"];
+  let value = bytes;
+  let unit = -1;
+  do {
+    value /= 1_024;
+    unit += 1;
+  } while (value >= 1_024 && unit < units.length - 1);
+  const precision = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(precision)} ${units[unit] ?? "B"}`;
+}
+
+function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3_600);
+  const minutes = Math.floor((total % 3_600) / 60);
+  const remainder = total % 60;
+  return hours > 0
+    ? `${String(hours)}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
+    : `${String(minutes)}:${String(remainder).padStart(2, "0")}`;
+}
+
+function safeFileStem(name: string): string {
+  const stem = name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9._-]+/gi, "-");
+  return stem.replace(/^-+|-+$/g, "") || "tessaryn-local-file";
 }
 
 function shortDigest(value: string, length: number): string {

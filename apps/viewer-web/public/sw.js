@@ -1,4 +1,4 @@
-const CACHE = "tessaryn-origin-v0-3-0-validation-locus1";
+const CACHE = "tessaryn-origin-v0-3-0-validation-locus1-stream1";
 const CORE = [
   "./",
   "./world/archviz-tiny-house-locus.json",

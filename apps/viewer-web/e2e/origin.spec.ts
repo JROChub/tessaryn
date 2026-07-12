@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, open, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
 
@@ -197,6 +199,77 @@ test("imports, reverifies, and renders a reconstruction artifact without upload"
   expect(colors.size).toBeGreaterThan(20);
 });
 
+test("indexes a local file beyond the former 128 MiB boundary", async ({ page }) => {
+  test.setTimeout(120_000);
+  const directory = await mkdtemp(join(tmpdir(), "tessaryn-large-file-"));
+  const artifact = join(directory, "large-local-artifact.bin");
+  const byteLength = 129 * 1024 * 1024 + 17;
+  const handle = await open(artifact, "w");
+  await handle.truncate(byteLength);
+  await handle.close();
+
+  try {
+    await openOrigin(page);
+    await page.locator("#import-input").setInputFiles(artifact);
+    await expect(page.locator("#local-stage")).toBeVisible();
+    await expect(page.locator("#local-name")).toHaveText("large-local-artifact.bin");
+    await expect(page.locator("#local-size")).toContainText("129 MiB");
+    await expect
+      .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status), {
+        timeout: 90_000,
+      })
+      .toBe("indexed");
+    const imported = await page.evaluate(() => window.__tessaryn?.localImport);
+    expect(imported).toMatchObject({
+      bytes: byteLength,
+      kind: "binary",
+      status: "indexed",
+      chunkCount: 33,
+    });
+    expect(imported?.streamRoot).toMatch(/^sha256:[0-9a-f]{64}$/);
+    await expect(page.locator("#local-progress")).toHaveCSS("width", /.+/);
+    await expect(page.locator("#toast")).not.toContainText("EXCEEDS");
+    await page.locator("#verify-button").click();
+    await expect(page.locator("#verify-title")).toHaveText("LOCAL FILE INDEXED");
+    await expect(page.locator("#verify-cells")).toHaveText("STREAM ROOT");
+    await expect(page.locator("#verify-memory")).toHaveText("FILE-BACKED");
+    await page.locator("#verify-close").click();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.locator("#local-export").click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("large-local-artifact.tessaryn-index.json");
+    const indexPath = await download.path();
+    expect(indexPath).not.toBeNull();
+    const index = JSON.parse(await readFile(indexPath!, "utf8")) as Record<string, unknown>;
+    expect(index).toMatchObject({
+      schema: "tessaryn/local-file-index/v1",
+      byteLength,
+      chunkCount: 33,
+      streamRoot: imported?.streamRoot,
+    });
+
+    await page.locator("#import-input").setInputFiles({
+      name: "empty.bin",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.alloc(0),
+    });
+    await expect(page.locator("#local-name")).toHaveText("empty.bin");
+    await expect
+      .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status))
+      .toBe("indexed");
+    expect(await page.evaluate(() => window.__tessaryn?.localImport)).toMatchObject({
+      bytes: 0,
+      chunkCount: 0,
+      streamRoot: "sha256:4a92843406d137a82b73651f63a28c335e1d940f3d3becb00a8c1fd5ab2c3d00",
+    });
+    await page.locator("#local-close").click();
+    await expect(page.locator("#local-stage")).toBeHidden();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("rejects duplicate-key and binary mutations before materialization", async ({ page }) => {
   await openOrigin(page);
   const valid = await readFile(reconstructionArtifact, "utf8");
@@ -355,6 +428,17 @@ test("production service worker reconstructs and verifies offline", async ({ con
   await openOrigin(page);
   await expect(page.locator("#network-state")).toContainText("OFFLINE READY");
   expect(await page.evaluate(() => window.__tessaryn?.verification?.errors)).toEqual([]);
+  await page.locator("#import-input").setInputFiles({
+    name: "offline-local.bin",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.from("offline-file-backed-index"),
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__tessaryn?.localImport?.status))
+    .toBe("indexed");
+  expect(await page.evaluate(() => window.__tessaryn?.localImport?.streamRoot)).toMatch(
+    /^sha256:[0-9a-f]{64}$/,
+  );
 });
 
 test.describe("reduced motion", () => {

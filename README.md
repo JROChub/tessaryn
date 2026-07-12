@@ -40,6 +40,9 @@ The release implements:
 - a restricted region whose protected geometry is absent;
 - strict local browser import, verification, rendering, and exact-layer
   mutation rejection for portable reconstruction artifacts;
+- file-backed local video, image, and arbitrary artifact opening with no total
+  application size cap, worker-isolated 4 MiB indexing, bounded memory, progress,
+  cancellation, and deterministic stream roots;
 - worker-isolated verification of temporal artifacts with explicit source
   selection manifests and exact mutation rejection;
 - full-bleed native Three.js construction, Condensation, continuous Scale Breathing,
@@ -82,7 +85,12 @@ cargo run -p tessaryn-cli -- \
   verify-reconstruction capture/artifact.json
 ```
 
-The browser `OPEN` control imports the same artifact without uploading it.
+The browser `OPEN` control imports the same artifact without uploading it. It
+also opens local media and arbitrary files directly from their original storage
+while a dedicated worker builds the deterministic
+`tessaryn/local-file-index/v1` stream root in bounded memory. Bulk channels stay
+file-backed; only compact reconstruction manifests use strict whole-document
+JSON parsing.
 
 ## Reproduce The Validation Origin
 
