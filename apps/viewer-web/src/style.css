@@ -1286,7 +1286,7 @@ canvas:focus-visible {
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: opacity 180ms ease;
 }
 
 .toast.visible {
