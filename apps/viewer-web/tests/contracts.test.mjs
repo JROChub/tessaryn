@@ -15,6 +15,7 @@ const mainUrl = new URL("../src/main.ts", import.meta.url);
 const localIdentityUrl = new URL("../src/local-file-identity.ts", import.meta.url);
 const localWorkerUrl = new URL("../src/local-ingest-worker.ts", import.meta.url);
 const cinematicObjectUrl = new URL("../src/cinematic-object.ts", import.meta.url);
+const weaveClientUrl = new URL("../src/weave-client.ts", import.meta.url);
 
 test("the bounded Origin declares its local verification profile", async () => {
   const world = JSON.parse(await readFile(fixtureUrl, "utf8"));
@@ -78,13 +79,27 @@ test("the offline cache includes the local world fixture", async () => {
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-object-weave1";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-write-weave1";`),
   );
   assert.match(worker, /\.\/world\/archviz-tiny-house-locus\.json/);
   assert.match(worker, /\.\/world\/vesper-court\.json/);
   assert.match(worker, /\.\/objects\/catalog\.json/);
+  assert.match(worker, /\.\/weave\.json/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
+});
+
+test("publication is product-native, resumable, signed, and device-persistent", async () => {
+  const source = await readFile(weaveClientUrl, "utf8");
+  assert.match(source, /TESSARYN-WEAVE-PUBLICATION-v1/);
+  assert.match(source, /generateKey\("Ed25519"/);
+  assert.match(source, /importKey\([\s\S]*?false,[\s\S]*?\["sign"\]/);
+  assert.match(source, /\\u202a-\\u202e/);
+  assert.match(source, /missing_chunks/);
+  assert.match(source, /x-tessaryn-chunk-sha256/);
+  assert.match(source, /navigator\.storage\.getDirectory/);
+  assert.match(source, /publication-revocation\/v1/);
+  assert.doesNotMatch(source, /github\.com|api\.github/);
 });
 
 test("local file indexing and cinematic objects remain file-backed and chunk bounded", async () => {

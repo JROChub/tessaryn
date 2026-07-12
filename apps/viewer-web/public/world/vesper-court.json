@@ -198,7 +198,7 @@
     {
       "key": "archive-b",
       "label": "Archive stone / rain archive",
-      "cell_id": "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034",
+      "cell_id": "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac",
       "manifest": {
         "schema": "tessaryn/cell/v0",
         "class": "derived",
@@ -267,7 +267,7 @@
             "transform_id": "sha256:c443a0ab9c6ec5de9295ad8dce01f4c82631f156178cd6c10062f142956f40c5",
             "method": "tessaryn/reference-delta-v0",
             "tool": "tessaryn-reference-world",
-            "tool_version": "0.4.0",
+            "tool_version": "0.5.0",
             "input_ids": [
               "sha256:a1c4035b1179d26d599104a0030a16e4c597e7be5c4c5455100b109b61d932ae"
             ]
@@ -337,12 +337,12 @@
             "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
             "cell_schema": "tessaryn/cell/v0",
             "producer": "tessaryn-forge",
-            "source_manifest_root": "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034"
+            "source_manifest_root": "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac"
           },
           "embedded_proof": {
             "protocol": "tessaryn/world-cell/v0",
             "public_inputs": {
-              "cell_manifest_digest": "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034",
+              "cell_manifest_digest": "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac",
               "chunk_merkle_root": "sha256:d3f1d4c2c7751965ecf2ab6dfb3122eb8b99a729ee35024c0e89f00fb40fb058",
               "declared_class": "derived",
               "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -353,17 +353,17 @@
               "physical_truth_claimed": false
             }
           },
-          "identity_root": "sha256:aa5d8df1b45c95d6d3f30aea3d6ea833a33f27b81efb5ebae216e97a2abf0a1d",
-          "phx_fingerprint": "sha256:e2df60dd3562a1e48e6e2ecfa35b8e682ac3b5d101e2a2c4542bc70f61664b28"
+          "identity_root": "sha256:c5bf3fd016ffe8d71df85201ca185356c9c36f6077131589551f8683763e3a6e",
+          "phx_fingerprint": "sha256:a4a3c1fffffbe6f67d21f94446ebb008649679fd629dec41a587f4b3df35c486"
         },
-        "rootprint_id": "sha256:aa5d8df1b45c95d6d3f30aea3d6ea833a33f27b81efb5ebae216e97a2abf0a1d",
-        "replay_fingerprint": "sha256:0c713603f828251a5ea708cb931146e100d1e69bf4222bc76f376118f0410984"
+        "rootprint_id": "sha256:c5bf3fd016ffe8d71df85201ca185356c9c36f6077131589551f8683763e3a6e",
+        "replay_fingerprint": "sha256:ec0fdb50e8bdb269e2592311e11fa4d4821db0d34c5b7907c1d4b455beb3590c"
       }
     },
     {
       "key": "archive-c",
       "label": "Archive stone / present weave",
-      "cell_id": "sha256:8c4bb21aa2a77dcf20861bf58f5b9b4b74655872b7f1085332e1910de6dbc68e",
+      "cell_id": "sha256:a791d4f63037cb977c75921d27e6f47a90eca264d39dc1239ca0e0ce6e29158c",
       "manifest": {
         "schema": "tessaryn/cell/v0",
         "class": "derived",
@@ -400,7 +400,7 @@
           "valid_from_unix_us": 1788739200000000,
           "valid_until_unix_us": 1788739200000000,
           "supersedes": [
-            "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034"
+            "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac"
           ],
           "state_kind": "derived"
         },
@@ -417,7 +417,7 @@
           }
         ],
         "parents": [
-          "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034"
+          "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac"
         ],
         "source_records": [
           {
@@ -432,9 +432,9 @@
             "transform_id": "sha256:21ee0092fbd1b0d87a1cde4ca4c9126b2893eeec1a62a20ce870365b07cdd25e",
             "method": "tessaryn/reference-delta-v0",
             "tool": "tessaryn-reference-world",
-            "tool_version": "0.4.0",
+            "tool_version": "0.5.0",
             "input_ids": [
-              "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034"
+              "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac"
             ]
           }
         ],
@@ -502,12 +502,12 @@
             "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
             "cell_schema": "tessaryn/cell/v0",
             "producer": "tessaryn-forge",
-            "source_manifest_root": "sha256:8c4bb21aa2a77dcf20861bf58f5b9b4b74655872b7f1085332e1910de6dbc68e"
+            "source_manifest_root": "sha256:a791d4f63037cb977c75921d27e6f47a90eca264d39dc1239ca0e0ce6e29158c"
           },
           "embedded_proof": {
             "protocol": "tessaryn/world-cell/v0",
             "public_inputs": {
-              "cell_manifest_digest": "sha256:8c4bb21aa2a77dcf20861bf58f5b9b4b74655872b7f1085332e1910de6dbc68e",
+              "cell_manifest_digest": "sha256:a791d4f63037cb977c75921d27e6f47a90eca264d39dc1239ca0e0ce6e29158c",
               "chunk_merkle_root": "sha256:4797e14473fe2a6f7d78c7f302bce5fb73b21510335b2cb936825d5b9806fcb4",
               "declared_class": "derived",
               "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -518,11 +518,11 @@
               "physical_truth_claimed": false
             }
           },
-          "identity_root": "sha256:bd4b59561bbd63af341e4197ec88f9b608a3ed12c5da0a706fab43edd0b6fe44",
-          "phx_fingerprint": "sha256:c09bdd6eb0387819a322de30c5f761f62336b66d7df11aa031f35407b7921e5c"
+          "identity_root": "sha256:42005bca2f081faa2b98bcae5963d7ca9f70e9c8b5aba4a445bb5e922f7b754c",
+          "phx_fingerprint": "sha256:473349c1f190768c4431a668982d64472cffe96f2f6eb827bd57d6af4862ea5d"
         },
-        "rootprint_id": "sha256:bd4b59561bbd63af341e4197ec88f9b608a3ed12c5da0a706fab43edd0b6fe44",
-        "replay_fingerprint": "sha256:c63d68a9a5117261b34db97adceb7e8ccc3df8b0891452962e0c2f235a188630"
+        "rootprint_id": "sha256:42005bca2f081faa2b98bcae5963d7ca9f70e9c8b5aba4a445bb5e922f7b754c",
+        "replay_fingerprint": "sha256:3cd8b680011009fd7372ae07a268dd6ad69e3a0323661aac36b3ebf2614d3e98"
       }
     },
     {
@@ -679,7 +679,7 @@
     {
       "key": "canopy-b",
       "label": "Canopy / rain archive",
-      "cell_id": "sha256:63a01f5395d87314f44f322f57219793ae73574f24caf4a2fcfa5fa84733b63a",
+      "cell_id": "sha256:e20f9db5b862a50736c46ca9db5812490e99ac9642a1df3b678b3a5f29d4cc44",
       "manifest": {
         "schema": "tessaryn/cell/v0",
         "class": "derived",
@@ -748,7 +748,7 @@
             "transform_id": "sha256:2792ec897a3adcac97cbaab40aa53814610a092e282a5bcbef8b3d599182f689",
             "method": "tessaryn/reference-delta-v0",
             "tool": "tessaryn-reference-world",
-            "tool_version": "0.4.0",
+            "tool_version": "0.5.0",
             "input_ids": [
               "sha256:f4326138bf6ff2a8363ebd7a99c19b5f0d049c9d419fd15321e4651061fe1122"
             ]
@@ -818,12 +818,12 @@
             "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
             "cell_schema": "tessaryn/cell/v0",
             "producer": "tessaryn-forge",
-            "source_manifest_root": "sha256:63a01f5395d87314f44f322f57219793ae73574f24caf4a2fcfa5fa84733b63a"
+            "source_manifest_root": "sha256:e20f9db5b862a50736c46ca9db5812490e99ac9642a1df3b678b3a5f29d4cc44"
           },
           "embedded_proof": {
             "protocol": "tessaryn/world-cell/v0",
             "public_inputs": {
-              "cell_manifest_digest": "sha256:63a01f5395d87314f44f322f57219793ae73574f24caf4a2fcfa5fa84733b63a",
+              "cell_manifest_digest": "sha256:e20f9db5b862a50736c46ca9db5812490e99ac9642a1df3b678b3a5f29d4cc44",
               "chunk_merkle_root": "sha256:5fb273da8c1c9109e319bbb69da0e407c827f1571ed9ed13a2b78794da553d78",
               "declared_class": "derived",
               "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -834,17 +834,17 @@
               "physical_truth_claimed": false
             }
           },
-          "identity_root": "sha256:034fe73ff131888f507cffc2d30e0444ed6c577826483ee87a36010c24c14c03",
-          "phx_fingerprint": "sha256:a3237272f68f35e86621cba730dbbff73e29f979aaeacba8fd790ae30df3999a"
+          "identity_root": "sha256:38140db9d3209dfc257ee92d45da906575c96ed4a6409e0d708aaebc7cd05319",
+          "phx_fingerprint": "sha256:5352be65a883b2098369dc943303963dbc8c31a512aa97f96986e2d2122435e7"
         },
-        "rootprint_id": "sha256:034fe73ff131888f507cffc2d30e0444ed6c577826483ee87a36010c24c14c03",
-        "replay_fingerprint": "sha256:acde42476407430e117e0924d272e170dbbb0a2fa47db767ade71972d47d5a27"
+        "rootprint_id": "sha256:38140db9d3209dfc257ee92d45da906575c96ed4a6409e0d708aaebc7cd05319",
+        "replay_fingerprint": "sha256:78585ded0b390f9849184d5597e28b4d9f3f3b84f2a5788372fe5d365ae04fc2"
       }
     },
     {
       "key": "canopy-c",
       "label": "Canopy / present weave",
-      "cell_id": "sha256:5d1fcfea357b3c042173ea67b286cc629cd53891a07a9c649fa42c94fdeeae1d",
+      "cell_id": "sha256:e3133f5f8947e4708de5538fd8dad1dca1342134462ab3e46ee45aa5cea6089e",
       "manifest": {
         "schema": "tessaryn/cell/v0",
         "class": "derived",
@@ -881,7 +881,7 @@
           "valid_from_unix_us": 1788739200000000,
           "valid_until_unix_us": 1788739200000000,
           "supersedes": [
-            "sha256:63a01f5395d87314f44f322f57219793ae73574f24caf4a2fcfa5fa84733b63a"
+            "sha256:e20f9db5b862a50736c46ca9db5812490e99ac9642a1df3b678b3a5f29d4cc44"
           ],
           "state_kind": "derived"
         },
@@ -898,7 +898,7 @@
           }
         ],
         "parents": [
-          "sha256:63a01f5395d87314f44f322f57219793ae73574f24caf4a2fcfa5fa84733b63a"
+          "sha256:e20f9db5b862a50736c46ca9db5812490e99ac9642a1df3b678b3a5f29d4cc44"
         ],
         "source_records": [
           {
@@ -913,9 +913,9 @@
             "transform_id": "sha256:3d2b967334d099de5b221b73b78c55bbedf39cb74d5000bfb5af6f582f66559f",
             "method": "tessaryn/reference-delta-v0",
             "tool": "tessaryn-reference-world",
-            "tool_version": "0.4.0",
+            "tool_version": "0.5.0",
             "input_ids": [
-              "sha256:63a01f5395d87314f44f322f57219793ae73574f24caf4a2fcfa5fa84733b63a"
+              "sha256:e20f9db5b862a50736c46ca9db5812490e99ac9642a1df3b678b3a5f29d4cc44"
             ]
           }
         ],
@@ -983,12 +983,12 @@
             "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
             "cell_schema": "tessaryn/cell/v0",
             "producer": "tessaryn-forge",
-            "source_manifest_root": "sha256:5d1fcfea357b3c042173ea67b286cc629cd53891a07a9c649fa42c94fdeeae1d"
+            "source_manifest_root": "sha256:e3133f5f8947e4708de5538fd8dad1dca1342134462ab3e46ee45aa5cea6089e"
           },
           "embedded_proof": {
             "protocol": "tessaryn/world-cell/v0",
             "public_inputs": {
-              "cell_manifest_digest": "sha256:5d1fcfea357b3c042173ea67b286cc629cd53891a07a9c649fa42c94fdeeae1d",
+              "cell_manifest_digest": "sha256:e3133f5f8947e4708de5538fd8dad1dca1342134462ab3e46ee45aa5cea6089e",
               "chunk_merkle_root": "sha256:2ea37fe7bcb99f10ea7561758b0b8be68f352c41d3e547400d7948743bc897a1",
               "declared_class": "derived",
               "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -999,11 +999,11 @@
               "physical_truth_claimed": false
             }
           },
-          "identity_root": "sha256:b51e619cca5bd812699d6f52f6157863dc3603d573067070fda5d78969bdc37d",
-          "phx_fingerprint": "sha256:54df46473f61b1b2c1ae5a040e9c851c791415d32831ab01979dbad4517f0127"
+          "identity_root": "sha256:465b66d8872106a9c4c2d340629ec70b7856f4cbc74ecbe15ca295bdfa2f2b01",
+          "phx_fingerprint": "sha256:e6bbaa93d15f534e8a94a9f373ec9d8c97a0158d0e72e822b6c25e030322d187"
         },
-        "rootprint_id": "sha256:b51e619cca5bd812699d6f52f6157863dc3603d573067070fda5d78969bdc37d",
-        "replay_fingerprint": "sha256:97df1bb2264ccf1a32b6fe599467bfa574514e4544c91b3c1fa122d8ad846dac"
+        "rootprint_id": "sha256:465b66d8872106a9c4c2d340629ec70b7856f4cbc74ecbe15ca295bdfa2f2b01",
+        "replay_fingerprint": "sha256:919c2ee8e9ef41834c763c1f6b005f739c646e2ff57c9b17d0c39ff5e85a34c9"
       }
     },
     {
@@ -2080,7 +2080,7 @@
     {
       "key": "threshold-east",
       "label": "Threshold hypothesis east",
-      "cell_id": "sha256:841ca3377137dd6b9d4ab3f62e9c9f32e7f48041047f446601b85e439dfaaf0c",
+      "cell_id": "sha256:e3e0ed73241af7744b7ce7880563478866ef5bfa65e2f2602081429748e63434",
       "manifest": {
         "schema": "tessaryn/cell/v0",
         "class": "derived",
@@ -2147,7 +2147,7 @@
             "transform_id": "sha256:ce7b083f89182c1d7800fdf38a9299ade7c6d2662fee434809558cf9e4e7a286",
             "method": "tessaryn/reference-delta-v0",
             "tool": "tessaryn-reference-world",
-            "tool_version": "0.4.0",
+            "tool_version": "0.5.0",
             "input_ids": [
               "sha256:6dac6c1514e9e63d0c3911984c26bf7be35dd962167b84ddcb51f3bcd2bc8e72"
             ]
@@ -2218,12 +2218,12 @@
             "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
             "cell_schema": "tessaryn/cell/v0",
             "producer": "tessaryn-forge",
-            "source_manifest_root": "sha256:841ca3377137dd6b9d4ab3f62e9c9f32e7f48041047f446601b85e439dfaaf0c"
+            "source_manifest_root": "sha256:e3e0ed73241af7744b7ce7880563478866ef5bfa65e2f2602081429748e63434"
           },
           "embedded_proof": {
             "protocol": "tessaryn/world-cell/v0",
             "public_inputs": {
-              "cell_manifest_digest": "sha256:841ca3377137dd6b9d4ab3f62e9c9f32e7f48041047f446601b85e439dfaaf0c",
+              "cell_manifest_digest": "sha256:e3e0ed73241af7744b7ce7880563478866ef5bfa65e2f2602081429748e63434",
               "chunk_merkle_root": "sha256:9f36af9e23a500380f81905617a8266ebd5073639b2037dcaadbd02cee6bb765",
               "declared_class": "derived",
               "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -2234,17 +2234,17 @@
               "physical_truth_claimed": false
             }
           },
-          "identity_root": "sha256:3bccd980aa20e80394a3c730441dbf39f4cc5f1f17d6f7f2c07bde51c298a2ea",
-          "phx_fingerprint": "sha256:99e1b04241a09efc629f3bad1855faae919dc090f1b19c2443d0cbaf97881cd6"
+          "identity_root": "sha256:f07236965fad69ee80159fe7ea28aca1e102c17af9247e8a32d342dbb63857d8",
+          "phx_fingerprint": "sha256:8211f32c5c34ff506df27745cdf3953109e2cde7aea36b048093ef25950c6b45"
         },
-        "rootprint_id": "sha256:3bccd980aa20e80394a3c730441dbf39f4cc5f1f17d6f7f2c07bde51c298a2ea",
-        "replay_fingerprint": "sha256:f4fcf7a7d7ee1b2612896b61e689f1bf2982609fd1f05ab8b4df84fdfbfc344e"
+        "rootprint_id": "sha256:f07236965fad69ee80159fe7ea28aca1e102c17af9247e8a32d342dbb63857d8",
+        "replay_fingerprint": "sha256:0282105f0de56bf0b264dea8af03aea944dc0b21c53a9c4a93a6c496c64371e5"
       }
     },
     {
       "key": "threshold-west",
       "label": "Threshold hypothesis west",
-      "cell_id": "sha256:e5b1e34916aeda590ed6a20357f9648a3d25f3c0970ac6007e906157537d3322",
+      "cell_id": "sha256:3229d14d1db78e8d11e62182eda2d6ff5d49cc55a29f1a553dcf619fa6d3df22",
       "manifest": {
         "schema": "tessaryn/cell/v0",
         "class": "derived",
@@ -2311,7 +2311,7 @@
             "transform_id": "sha256:be36e0ac572005ca5844899d71ba15fdf982cf8c822491a181056904abc7e655",
             "method": "tessaryn/reference-delta-v0",
             "tool": "tessaryn-reference-world",
-            "tool_version": "0.4.0",
+            "tool_version": "0.5.0",
             "input_ids": [
               "sha256:6dac6c1514e9e63d0c3911984c26bf7be35dd962167b84ddcb51f3bcd2bc8e72"
             ]
@@ -2382,12 +2382,12 @@
             "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
             "cell_schema": "tessaryn/cell/v0",
             "producer": "tessaryn-forge",
-            "source_manifest_root": "sha256:e5b1e34916aeda590ed6a20357f9648a3d25f3c0970ac6007e906157537d3322"
+            "source_manifest_root": "sha256:3229d14d1db78e8d11e62182eda2d6ff5d49cc55a29f1a553dcf619fa6d3df22"
           },
           "embedded_proof": {
             "protocol": "tessaryn/world-cell/v0",
             "public_inputs": {
-              "cell_manifest_digest": "sha256:e5b1e34916aeda590ed6a20357f9648a3d25f3c0970ac6007e906157537d3322",
+              "cell_manifest_digest": "sha256:3229d14d1db78e8d11e62182eda2d6ff5d49cc55a29f1a553dcf619fa6d3df22",
               "chunk_merkle_root": "sha256:dc27b9619e26ac29d7af012eb49640ba59e4d116e1ddf48e99c5b323f3973ea2",
               "declared_class": "derived",
               "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -2398,11 +2398,11 @@
               "physical_truth_claimed": false
             }
           },
-          "identity_root": "sha256:db4d9ef2c16903a04d285751d51c9e63388a77463f39dfd28bc910aadeaed64d",
-          "phx_fingerprint": "sha256:f1944f322b1abac0bc174b3e786edad492caf03bb92fd04912c584b211f58cbb"
+          "identity_root": "sha256:dd422985647762f22b372950dc954dfff4d0dc7e7bfa949ac57fdb8f6222f7cc",
+          "phx_fingerprint": "sha256:0f071fd46980faf90341d7c47013ed1fca3ad13443fc553cac3c2e65bdb9987b"
         },
-        "rootprint_id": "sha256:db4d9ef2c16903a04d285751d51c9e63388a77463f39dfd28bc910aadeaed64d",
-        "replay_fingerprint": "sha256:db01259d833a57ecc52717660f0ffbddd70fbae59b505b6132ad5f41e781bf89"
+        "rootprint_id": "sha256:dd422985647762f22b372950dc954dfff4d0dc7e7bfa949ac57fdb8f6222f7cc",
+        "replay_fingerprint": "sha256:d1f5701486970f997c817bf12c2b99f952b56587d13b79aef35922e119822a98"
       }
     },
     {
@@ -2870,12 +2870,12 @@
       "schema": "power-house/rootprint/v1",
       "root_branch": "sha256:e2b589939778fd8b78cea091b8e543131add1277b390d19b2f3cdffe82f203fb",
       "branches": {
-        "sha256:24f1a34b794893b8d57e4cd9325ddc6370799c2f90be5a15403d0528dd9cd5a0": {
-          "id": "sha256:24f1a34b794893b8d57e4cd9325ddc6370799c2f90be5a15403d0528dd9cd5a0",
-          "label": "east-hypothesis",
-          "sequence": 4,
+        "sha256:28c8f9a9ab55736510039830eb9fad871347c30442057c1dc9c6f317dda5713b": {
+          "id": "sha256:28c8f9a9ab55736510039830eb9fad871347c30442057c1dc9c6f317dda5713b",
+          "label": "moment-c",
+          "sequence": 3,
           "parents": [
-            "sha256:c5130a82eb553c6e660168fa90956592a855e5fab23b8ee90dbe5efb2323a0ed"
+            "sha256:7b41d16aafba6c7232ce2530287b303f826eee75cf0fed10aca963564ce7fcf2"
           ],
           "artifact": {
             "schema": "power-house/pha/v1",
@@ -2883,12 +2883,45 @@
               "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
               "cell_schema": "tessaryn/cell/v0",
               "producer": "tessaryn-forge",
-              "source_manifest_root": "sha256:841ca3377137dd6b9d4ab3f62e9c9f32e7f48041047f446601b85e439dfaaf0c"
+              "source_manifest_root": "sha256:a791d4f63037cb977c75921d27e6f47a90eca264d39dc1239ca0e0ce6e29158c"
             },
             "embedded_proof": {
               "protocol": "tessaryn/world-cell/v0",
               "public_inputs": {
-                "cell_manifest_digest": "sha256:841ca3377137dd6b9d4ab3f62e9c9f32e7f48041047f446601b85e439dfaaf0c",
+                "cell_manifest_digest": "sha256:a791d4f63037cb977c75921d27e6f47a90eca264d39dc1239ca0e0ce6e29158c",
+                "chunk_merkle_root": "sha256:4797e14473fe2a6f7d78c7f302bce5fb73b21510335b2cb936825d5b9806fcb4",
+                "declared_class": "derived",
+                "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
+              },
+              "proof": {
+                "canonicalization_profile": "tessaryn-canonical-v0",
+                "identity_verified": true,
+                "physical_truth_claimed": false
+              }
+            },
+            "identity_root": "sha256:28c8f9a9ab55736510039830eb9fad871347c30442057c1dc9c6f317dda5713b",
+            "phx_fingerprint": "sha256:473349c1f190768c4431a668982d64472cffe96f2f6eb827bd57d6af4862ea5d"
+          }
+        },
+        "sha256:78a825852ac866b17bc6164a6d113ebf39184e5442c2f26b01a57042ce27af1c": {
+          "id": "sha256:78a825852ac866b17bc6164a6d113ebf39184e5442c2f26b01a57042ce27af1c",
+          "label": "east-hypothesis",
+          "sequence": 4,
+          "parents": [
+            "sha256:28c8f9a9ab55736510039830eb9fad871347c30442057c1dc9c6f317dda5713b"
+          ],
+          "artifact": {
+            "schema": "power-house/pha/v1",
+            "provenance": {
+              "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
+              "cell_schema": "tessaryn/cell/v0",
+              "producer": "tessaryn-forge",
+              "source_manifest_root": "sha256:e3e0ed73241af7744b7ce7880563478866ef5bfa65e2f2602081429748e63434"
+            },
+            "embedded_proof": {
+              "protocol": "tessaryn/world-cell/v0",
+              "public_inputs": {
+                "cell_manifest_digest": "sha256:e3e0ed73241af7744b7ce7880563478866ef5bfa65e2f2602081429748e63434",
                 "chunk_merkle_root": "sha256:9f36af9e23a500380f81905617a8266ebd5073639b2037dcaadbd02cee6bb765",
                 "declared_class": "derived",
                 "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -2899,12 +2932,12 @@
                 "physical_truth_claimed": false
               }
             },
-            "identity_root": "sha256:24f1a34b794893b8d57e4cd9325ddc6370799c2f90be5a15403d0528dd9cd5a0",
-            "phx_fingerprint": "sha256:99e1b04241a09efc629f3bad1855faae919dc090f1b19c2443d0cbaf97881cd6"
+            "identity_root": "sha256:78a825852ac866b17bc6164a6d113ebf39184e5442c2f26b01a57042ce27af1c",
+            "phx_fingerprint": "sha256:8211f32c5c34ff506df27745cdf3953109e2cde7aea36b048093ef25950c6b45"
           }
         },
-        "sha256:74740bd3ceaa6739f3eca4e3f4802241dca4bd1c9cddf0619b8f56366126f1db": {
-          "id": "sha256:74740bd3ceaa6739f3eca4e3f4802241dca4bd1c9cddf0619b8f56366126f1db",
+        "sha256:7b41d16aafba6c7232ce2530287b303f826eee75cf0fed10aca963564ce7fcf2": {
+          "id": "sha256:7b41d16aafba6c7232ce2530287b303f826eee75cf0fed10aca963564ce7fcf2",
           "label": "moment-b",
           "sequence": 2,
           "parents": [
@@ -2916,12 +2949,12 @@
               "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
               "cell_schema": "tessaryn/cell/v0",
               "producer": "tessaryn-forge",
-              "source_manifest_root": "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034"
+              "source_manifest_root": "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac"
             },
             "embedded_proof": {
               "protocol": "tessaryn/world-cell/v0",
               "public_inputs": {
-                "cell_manifest_digest": "sha256:aa88d8ac3cb0d77340bb037e0c03b55d817d86ca4a33edab07f3e402b6e98034",
+                "cell_manifest_digest": "sha256:2434f7e35a5a78f9ce0b08ef9d9ad8f4b1e776d916d0067f9c2c61624a967cac",
                 "chunk_merkle_root": "sha256:d3f1d4c2c7751965ecf2ab6dfb3122eb8b99a729ee35024c0e89f00fb40fb058",
                 "declared_class": "derived",
                 "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
@@ -2932,8 +2965,8 @@
                 "physical_truth_claimed": false
               }
             },
-            "identity_root": "sha256:74740bd3ceaa6739f3eca4e3f4802241dca4bd1c9cddf0619b8f56366126f1db",
-            "phx_fingerprint": "sha256:e2df60dd3562a1e48e6e2ecfa35b8e682ac3b5d101e2a2c4542bc70f61664b28"
+            "identity_root": "sha256:7b41d16aafba6c7232ce2530287b303f826eee75cf0fed10aca963564ce7fcf2",
+            "phx_fingerprint": "sha256:a4a3c1fffffbe6f67d21f94446ebb008649679fd629dec41a587f4b3df35c486"
           }
         },
         "sha256:874743edc4dd2c0d0d833e44321789c6601bdf110ec0dc6b3670fb8a48b19284": {
@@ -2969,12 +3002,12 @@
             "phx_fingerprint": "sha256:60cafa7fee640258743686289f4c669805f05f4a93690bc1ca400c1b44c6d404"
           }
         },
-        "sha256:c5130a82eb553c6e660168fa90956592a855e5fab23b8ee90dbe5efb2323a0ed": {
-          "id": "sha256:c5130a82eb553c6e660168fa90956592a855e5fab23b8ee90dbe5efb2323a0ed",
-          "label": "moment-c",
-          "sequence": 3,
+        "sha256:bea058e0c05598a9659463cfcf1a96f635d2af86aae9821d989c58d8c02871fa": {
+          "id": "sha256:bea058e0c05598a9659463cfcf1a96f635d2af86aae9821d989c58d8c02871fa",
+          "label": "west-hypothesis",
+          "sequence": 4,
           "parents": [
-            "sha256:74740bd3ceaa6739f3eca4e3f4802241dca4bd1c9cddf0619b8f56366126f1db"
+            "sha256:28c8f9a9ab55736510039830eb9fad871347c30442057c1dc9c6f317dda5713b"
           ],
           "artifact": {
             "schema": "power-house/pha/v1",
@@ -2982,13 +3015,13 @@
               "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
               "cell_schema": "tessaryn/cell/v0",
               "producer": "tessaryn-forge",
-              "source_manifest_root": "sha256:8c4bb21aa2a77dcf20861bf58f5b9b4b74655872b7f1085332e1910de6dbc68e"
+              "source_manifest_root": "sha256:3229d14d1db78e8d11e62182eda2d6ff5d49cc55a29f1a553dcf619fa6d3df22"
             },
             "embedded_proof": {
               "protocol": "tessaryn/world-cell/v0",
               "public_inputs": {
-                "cell_manifest_digest": "sha256:8c4bb21aa2a77dcf20861bf58f5b9b4b74655872b7f1085332e1910de6dbc68e",
-                "chunk_merkle_root": "sha256:4797e14473fe2a6f7d78c7f302bce5fb73b21510335b2cb936825d5b9806fcb4",
+                "cell_manifest_digest": "sha256:3229d14d1db78e8d11e62182eda2d6ff5d49cc55a29f1a553dcf619fa6d3df22",
+                "chunk_merkle_root": "sha256:dc27b9619e26ac29d7af012eb49640ba59e4d116e1ddf48e99c5b323f3973ea2",
                 "declared_class": "derived",
                 "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
               },
@@ -2998,8 +3031,8 @@
                 "physical_truth_claimed": false
               }
             },
-            "identity_root": "sha256:c5130a82eb553c6e660168fa90956592a855e5fab23b8ee90dbe5efb2323a0ed",
-            "phx_fingerprint": "sha256:c09bdd6eb0387819a322de30c5f761f62336b66d7df11aa031f35407b7921e5c"
+            "identity_root": "sha256:bea058e0c05598a9659463cfcf1a96f635d2af86aae9821d989c58d8c02871fa",
+            "phx_fingerprint": "sha256:0f071fd46980faf90341d7c47013ed1fca3ad13443fc553cac3c2e65bdb9987b"
           }
         },
         "sha256:e2b589939778fd8b78cea091b8e543131add1277b390d19b2f3cdffe82f203fb": {
@@ -3032,51 +3065,18 @@
             "identity_root": "sha256:e2b589939778fd8b78cea091b8e543131add1277b390d19b2f3cdffe82f203fb",
             "phx_fingerprint": "sha256:f3c7a90465f9a42d582bd30699864c810afc8d68b9ea7b1047e6c509fffe3c7a"
           }
-        },
-        "sha256:f98d4772e151a9bd8ad5aca647cac97d8bda13471707d5174970e03afd55ec26": {
-          "id": "sha256:f98d4772e151a9bd8ad5aca647cac97d8bda13471707d5174970e03afd55ec26",
-          "label": "west-hypothesis",
-          "sequence": 4,
-          "parents": [
-            "sha256:c5130a82eb553c6e660168fa90956592a855e5fab23b8ee90dbe5efb2323a0ed"
-          ],
-          "artifact": {
-            "schema": "power-house/pha/v1",
-            "provenance": {
-              "anchor_id": "sha256:724c22eb95ee17d1cf5751e636a6794c6fe157f565569a3b64f064fb94a3b25a",
-              "cell_schema": "tessaryn/cell/v0",
-              "producer": "tessaryn-forge",
-              "source_manifest_root": "sha256:e5b1e34916aeda590ed6a20357f9648a3d25f3c0970ac6007e906157537d3322"
-            },
-            "embedded_proof": {
-              "protocol": "tessaryn/world-cell/v0",
-              "public_inputs": {
-                "cell_manifest_digest": "sha256:e5b1e34916aeda590ed6a20357f9648a3d25f3c0970ac6007e906157537d3322",
-                "chunk_merkle_root": "sha256:dc27b9619e26ac29d7af012eb49640ba59e4d116e1ddf48e99c5b323f3973ea2",
-                "declared_class": "derived",
-                "policy_root": "sha256:a9b04f121e21a131397a61c2d1f8a4acdb85afc485354fce9a3dfc06ede15f55"
-              },
-              "proof": {
-                "canonicalization_profile": "tessaryn-canonical-v0",
-                "identity_verified": true,
-                "physical_truth_claimed": false
-              }
-            },
-            "identity_root": "sha256:f98d4772e151a9bd8ad5aca647cac97d8bda13471707d5174970e03afd55ec26",
-            "phx_fingerprint": "sha256:f1944f322b1abac0bc174b3e786edad492caf03bb92fd04912c584b211f58cbb"
-          }
         }
       }
     },
     "branches": {
-      "east-hypothesis": "sha256:24f1a34b794893b8d57e4cd9325ddc6370799c2f90be5a15403d0528dd9cd5a0",
+      "east-hypothesis": "sha256:78a825852ac866b17bc6164a6d113ebf39184e5442c2f26b01a57042ce27af1c",
       "moment-a": "sha256:874743edc4dd2c0d0d833e44321789c6601bdf110ec0dc6b3670fb8a48b19284",
-      "moment-b": "sha256:74740bd3ceaa6739f3eca4e3f4802241dca4bd1c9cddf0619b8f56366126f1db",
-      "moment-c": "sha256:c5130a82eb553c6e660168fa90956592a855e5fab23b8ee90dbe5efb2323a0ed",
+      "moment-b": "sha256:7b41d16aafba6c7232ce2530287b303f826eee75cf0fed10aca963564ce7fcf2",
+      "moment-c": "sha256:28c8f9a9ab55736510039830eb9fad871347c30442057c1dc9c6f317dda5713b",
       "origin": "sha256:e2b589939778fd8b78cea091b8e543131add1277b390d19b2f3cdffe82f203fb",
-      "west-hypothesis": "sha256:f98d4772e151a9bd8ad5aca647cac97d8bda13471707d5174970e03afd55ec26"
+      "west-hypothesis": "sha256:bea058e0c05598a9659463cfcf1a96f635d2af86aae9821d989c58d8c02871fa"
     },
-    "replay_fingerprint": "sha256:6ef698c0dd3db5da1b0dd84fc5faa7d7177523d0a225211585786c6747285f4a"
+    "replay_fingerprint": "sha256:1a0ad81c629df085fdc410e565e6d01b7d3a831f9d9ecfb5c01256dd14ccb222"
   },
   "origin_memory_capsule": {
     "header": {

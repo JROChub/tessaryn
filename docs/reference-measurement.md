@@ -5,7 +5,7 @@ claim.
 
 Date: 2026-07-11
 
-Release: `0.3.0`
+Release: `0.5.0`
 
 Artifacts:
 

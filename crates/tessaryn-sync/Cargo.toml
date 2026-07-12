@@ -15,12 +15,12 @@ hex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-tessaryn-canonical = { version = "=0.4.0", path = "../tessaryn-canonical" }
-tessaryn-privacy = { version = "=0.4.0", path = "../tessaryn-privacy" }
-tessaryn-powerhouse = { version = "=0.4.0", path = "../tessaryn-powerhouse" }
-tessaryn-schema = { version = "=0.4.0", path = "../tessaryn-schema" }
-tessaryn-store = { version = "=0.4.0", path = "../tessaryn-store" }
-tessaryn-transport = { version = "=0.4.0", path = "../tessaryn-transport" }
-tessaryn-witness = { version = "=0.4.0", path = "../tessaryn-witness" }
+tessaryn-canonical = { version = "=0.5.0", path = "../tessaryn-canonical" }
+tessaryn-privacy = { version = "=0.5.0", path = "../tessaryn-privacy" }
+tessaryn-powerhouse = { version = "=0.5.0", path = "../tessaryn-powerhouse" }
+tessaryn-schema = { version = "=0.5.0", path = "../tessaryn-schema" }
+tessaryn-store = { version = "=0.5.0", path = "../tessaryn-store" }
+tessaryn-transport = { version = "=0.5.0", path = "../tessaryn-transport" }
+tessaryn-witness = { version = "=0.5.0", path = "../tessaryn-witness" }
 thiserror.workspace = true
 zeroize.workspace = true

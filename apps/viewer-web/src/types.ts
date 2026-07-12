@@ -271,19 +271,25 @@ export interface CinematicObjectBrowserReport {
 }
 
 export interface PublicObjectCatalogEntry {
+  publication_id?: string;
+  publisher_id?: string;
   object_id: string;
   title: string;
   artifact: string;
+  artifact_sha256?: Digest;
+  artifact_bytes?: number;
+  artifact_kind?: "cinematic_object" | "rgbd_reconstruction";
   cell_id: Digest;
   rootprint_branch: Digest;
   media: string;
   dimensions: string;
   moments: number;
   summary: string;
+  accepted_at_unix_us?: number;
 }
 
 export interface PublicObjectCatalog {
-  schema: "tessaryn/public-object-catalog/v1";
+  schema: "tessaryn/public-object-catalog/v1" | "tessaryn/public-object-catalog/v2";
   updated_at_unix_us: number;
   objects: PublicObjectCatalogEntry[];
 }

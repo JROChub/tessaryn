@@ -1,0 +1,36 @@
+[Unit]
+Description=TESSARYN durable Object Weave node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tessaryn-weave
+Group=tessaryn-weave
+EnvironmentFile=/etc/tessaryn/weave.env
+ExecStart=/usr/local/bin/tessaryn-weave-node
+Restart=always
+RestartSec=3s
+TimeoutStopSec=30s
+UMask=0077
+LimitNOFILE=65536
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/tessaryn/weave
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

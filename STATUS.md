@@ -1,8 +1,8 @@
 # Development Status
 
-Version: `0.4.0`
+Version: `0.5.0`
 
-Capability states below describe the tested `0.4.0` release surface.
+Capability states below describe the tested `0.5.0` release surface.
 
 | Capability | State | Evidence |
 |---|---|---|
@@ -17,11 +17,11 @@ Capability states below describe the tested `0.4.0` release surface.
 | Per-pixel privacy masks | Implemented | Identity-bound and applied before normals, deprojection, surfels, and SDF |
 | Deterministic sparse SDF reconstruction | Implemented | Canonical codec, bounded fusion, report replay, mutation tests |
 | Public reconstruction reports without raw frames | Implemented | Independent report, Cell, chunk, PHA, lineage, and Capsule verification |
-| High-fidelity validation Origin | Implemented | 48 TartanAir V2 640x640 RGB-D frames, 212,565 surfels, 224,867 SDF voxels, 4 trajectory states |
+| High-fidelity Validation Lab | Implemented | Opt-in 48-frame TartanAir V2 640x640 RGB-D Locus, 212,565 surfels, 224,867 SDF voxels, 4 trajectory states |
 | Provenance-bound dataset profile | Implemented | Source class, release, sensor model, ground truth, archive digests and sizes are identity-bearing |
 | Explicit source-selection manifest | Implemented | Ordered frame IDs, source indices, synthetic timestamps, profile binding, mutation rejection, byte-identical reproduction workflow |
 | Source Aggregate Cell | Implemented | Source manifest has its own PHA, replay, Memory Capsule, SLBIT packet, and top Rootprint branch |
-| Real-sensor validation adapters | Implemented | EuRoC, KITTI raw, and ScanNet layout, synchronization, bounded hashing, and receipt tests |
+| Real-sensor source adapters | Implemented | EuRoC, KITTI raw, and ScanNet layout, synchronization, bounded hashing, and receipt tests |
 | Multilayer validation portfolio | Implemented | Shipped source-aware viewer distinguishes showcase ground truth from real-sensor stress adapters |
 | Bounded Locus compiler | Implemented | Deterministic 10,000-Cell test |
 | Power House bridge | Implemented | `.pha`, Rootprint, replay, Memory Capsule tests |
@@ -29,7 +29,10 @@ Capability states below describe the tested `0.4.0` release surface.
 | Unbounded file-backed browser index | Implemented | No total application cap; 4 MiB worker windows, O(log n) stream root, progress, cancellation; raw media remains index-only |
 | Native cinematic object package | Implemented | Strict binary header, authored geometry descriptor, chunked media commitments, Cell/PHA/Rootprint/replay/Memory Capsule verification |
 | Native temporal matter renderer | Implemented | Diamond-plan atrium, inhabitable Cell walls, off-DOM committed temporal material, four Moments, Scale Breathing, Chronofold, provenance currents, SLBIT field |
-| Public Object Weave | Implemented | Searchable same-origin catalog, stable object route, direct artifact, local reverification, share action |
+| Personal Weave persistence | Implemented | Explicit origin-private retention, browser persistence request, local reopen, removal, and published-state tracking |
+| Write-capable public Object Weave | Implemented | Browser Ed25519 identity, signed intent, resumable chunks, pending-byte/session reservations, stale-upload expiry, server-side cinematic and RGB-D reverification, atomic content-addressed commit, byte ranges, dynamic catalog, and discovery revocation |
+| GitHub-independent user publication | Implemented | Real RGB-D and temporal objects publish from the product and receive stable publication receipts without repository access |
+| Production Weave transport | Implemented | Dedicated node, restricted cloud firewall, loopback service, HTTPS, full/range retrieval, catalog admission, and owner-signed revocation verified 2026-07-12 |
 | Authenticated private Loci | Implemented | XChaCha20-Poly1305, X25519/HKDF wrapping, revocation, tamper/property tests |
 | Private multi-device Weave | Implemented | Ed25519 packets, chain/replay checks, branch preservation, local installation |
 | Witness receipts | Implemented | Signed scoped statements, expiry, independence groups, no core authority |
@@ -45,9 +48,12 @@ Capability states below describe the tested `0.4.0` release surface.
 
 ## Release Contract
 
-TESSARYN `0.4.0` is complete when the versioned software, deterministic
-reference vectors, validation Origin, local verification paths, mutation suite, browser experience,
+TESSARYN `0.5.0` is complete when the versioned software, deterministic
+reference vectors, Validation Lab, local verification paths, mutation suite, browser experience,
 offline path, supply-chain checks, and cross-platform conformance pass on the
-release commit. The public Continuum Monument is the default visible object;
-the TartanAir V2 validation Locus remains available with `?origin=validation`.
+release commit. The default starts in the private local construction field and
+does not materialize synthetic ground truth or a public catalog object. Real
+captures enter through `CONSTRUCT A PLACE`; validation data is opt-in through
+`LAB`; public and device-owned objects remain available through `WEAVE` and
+stable object/publication routes.
 Vesper Court and the minimal reconstruction remain deterministic protocol vectors.

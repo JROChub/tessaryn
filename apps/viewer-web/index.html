@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#05080d">
     <meta
       name="description"
-      content="Enter, verify, and navigate native temporal objects in the public TESSARYN Object Weave."
+      content="Construct, retain, verify, and publish native 4D places from real or synthetic observations without a map provider."
     >
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./tessaryn-mark.svg" type="image/svg+xml">
@@ -71,19 +71,19 @@
           <span id="cell-count">0 CELLS</span>
         </div>
         <div class="top-actions">
-          <button id="sources-button" class="icon-command secondary" type="button" title="Open validation sources">
-            <i data-lucide="database"></i><span>SOURCES</span>
+          <button id="sources-button" class="icon-command secondary" type="button" title="Open the validation lab">
+            <i data-lucide="database"></i><span>LAB</span>
           </button>
           <button id="objects-button" class="icon-command secondary" type="button" title="Find public objects">
-            <i data-lucide="search"></i><span>OBJECTS</span>
+            <i data-lucide="library"></i><span>WEAVE</span>
           </button>
           <button
             id="import-button"
             class="icon-command secondary"
             type="button"
-            title="Open local file or reconstruction artifact"
+            title="Add a local capture or portable object"
           >
-            <i data-lucide="upload"></i><span>OPEN</span>
+            <i data-lucide="upload"></i><span>ADD</span>
           </button>
           <input
             id="import-input"
@@ -117,6 +117,9 @@
           <div><dt>MOMENT</dt><dd id="moment-short">--</dd></div>
           <div><dt>STATE</dt><dd id="evidence-short">UNRESOLVED</dd></div>
         </dl>
+        <button id="construct-button" class="origin-construct" type="button">
+          <i data-lucide="upload"></i><span>CONSTRUCT A PLACE</span>
+        </button>
       </section>
 
       <div id="world-label" class="world-label" hidden>
@@ -203,14 +206,14 @@
 
       <dialog id="sources-dialog" class="sources-dialog">
         <header>
-          <div><small>PROVENANCE-BOUND VALIDATION</small><b>DATASET PORTFOLIO</b></div>
+          <div><small>REPRODUCIBILITY INSTRUMENT</small><b>VALIDATION LAB</b></div>
           <button id="sources-close" class="icon-button" type="button" title="Close dataset portfolio">
             <i data-lucide="x"></i>
           </button>
         </header>
         <section class="active-source">
           <div class="source-heading">
-            <span><small>ACTIVE ORIGIN</small><b id="source-name">--</b></span>
+            <span><small>GROUND-TRUTH PROFILE</small><b id="source-name">--</b></span>
             <em id="source-class">--</em>
           </div>
           <dl>
@@ -220,6 +223,9 @@
             <div><dt>ARCHIVES</dt><dd id="source-assets">--</dd></div>
           </dl>
           <code id="source-profile-id">--</code>
+          <button id="open-validation-origin" class="icon-command" type="button">
+            <i data-lucide="scan"></i><span>OPEN VALIDATION LOCUS</span>
+          </button>
         </section>
         <div class="portfolio-heading"><small>MULTILAYER VALIDATION ARRAY</small><span>SHOWCASE + SENSOR STRESS</span></div>
         <div id="portfolio-list" class="portfolio-list"></div>
@@ -227,16 +233,61 @@
 
       <dialog id="objects-dialog" class="objects-dialog">
         <header>
-          <div><small>PUBLIC OBJECT WEAVE</small><b>FIND CONSTRUCTED REALITY</b></div>
-          <button id="objects-close" class="icon-button" type="button" title="Close public objects">
+          <div><small>OBJECT WEAVE</small><b>PLACES OWNED BY PEOPLE, NOT PROVIDERS</b></div>
+          <span id="weave-node-state" class="weave-node-state" data-state="connecting">CONNECTING</span>
+          <button id="objects-close" class="icon-button" type="button" title="Close Object Weave">
             <i data-lucide="x"></i>
           </button>
         </header>
+        <div class="weave-scope" role="tablist" aria-label="Object Weave scope">
+          <button class="active" type="button" role="tab" aria-selected="true" data-weave-scope="public">
+            <i data-lucide="radio-tower"></i><span>PUBLIC</span><b id="public-weave-count">0</b>
+          </button>
+          <button type="button" role="tab" aria-selected="false" data-weave-scope="personal">
+            <i data-lucide="hard-drive"></i><span>THIS DEVICE</span><b id="personal-weave-count">0</b>
+          </button>
+        </div>
         <label class="object-search">
           <i data-lucide="search"></i>
           <input id="object-search" type="search" autocomplete="off" placeholder="Search object ID, title, or meaning">
         </label>
         <div id="object-list" class="object-list" aria-live="polite"></div>
+      </dialog>
+
+      <dialog id="publish-dialog" class="publish-dialog">
+        <header>
+          <div><small>PERSONAL + PUBLIC WEAVE</small><b>PLACE THIS CONSTRUCTION</b></div>
+          <button id="publish-close" class="icon-button" type="button" title="Close publication">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+        <div class="publish-identity">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span><small id="publish-kind">VERIFIED OBJECT</small><b id="publish-file">--</b></span>
+          <code id="publish-cell">--</code>
+        </div>
+        <div class="publish-fields">
+          <label><span>OBJECT ID</span><input id="publish-object-id" type="text" maxlength="96" autocomplete="off"></label>
+          <label><span>TITLE</span><input id="publish-title" type="text" maxlength="160" autocomplete="off"></label>
+          <label class="wide"><span>SLBIT SUMMARY</span><textarea id="publish-summary" maxlength="500" rows="3"></textarea></label>
+        </div>
+        <label class="publish-consent">
+          <input id="publish-consent" type="checkbox">
+          <span><b>PUBLICATION AUTHORIZED</b><small>I control disclosure of these committed bytes.</small></span>
+        </label>
+        <div id="publish-progress" class="publish-progress" data-state="idle">
+          <span><small id="publish-stage">READY</small><b id="publish-percent">0%</b></span>
+          <div><i id="publish-progress-bar"></i></div>
+          <code id="publish-detail">LOCAL IDENTITY REMAINS ON THIS DEVICE</code>
+        </div>
+        <footer>
+          <button id="keep-object" class="icon-command secondary" type="button">
+            <i data-lucide="hard-drive-download"></i><span>KEEP ON DEVICE</span>
+          </button>
+          <button id="publish-object" class="icon-command" type="button">
+            <i data-lucide="cloud-upload"></i><span>PUBLISH TO WEAVE</span>
+          </button>
+        </footer>
       </dialog>
 
       <footer class="world-controls" aria-label="World controls">

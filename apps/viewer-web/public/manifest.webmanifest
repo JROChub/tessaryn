@@ -1,7 +1,7 @@
 {
-  "name": "TESSARYN Reference Origin",
+  "name": "TESSARYN Personal Object Weave",
   "short_name": "TESSARYN",
-  "description": "Local-first native 4D World Cell construction and verification.",
+  "description": "Construct, retain, verify, and publish native 4D places without a map provider.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#111511",

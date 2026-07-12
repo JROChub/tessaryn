@@ -22,6 +22,7 @@ async function buildManifest() {
     "sbom/rust/tessaryn-weave.cdx.json",
     "sbom/rust/tessaryn-witness.cdx.json",
     "sbom/rust/tessaryn-cli.cdx.json",
+    "sbom/rust/tessaryn-weave-node.cdx.json",
     "sbom/viewer-web.cdx.json",
   ];
   return {

@@ -1,5 +1,8 @@
 //! Deterministic reference Origin and conformance tooling.
 
+pub mod artifact;
+pub mod cinematic;
+
 use power_house::provenance::PhaArtifact;
 use power_house::{MemoryCapsule, MemoryVerificationPolicy};
 use serde::{Deserialize, Serialize};

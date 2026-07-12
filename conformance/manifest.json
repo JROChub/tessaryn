@@ -5,14 +5,14 @@
     {
       "id": "vesper-court-reference-origin-v0",
       "fixture": "../apps/viewer-web/public/world/vesper-court.json",
-      "fixture_sha256": "4fa39e0e8c1753d223d4b99073c442197430e37bf21a565118e48af2b2bf2c6d",
+      "fixture_sha256": "a78bbf5f540989538a5affd7cdf814407502775a8ca5c89b60a1f850d1d24ab0",
       "expected_report": "expected/vesper-court.verify.json",
       "expected_challenge": "expected/vesper-court.challenge.json"
     },
     {
       "id": "minimal-rgbd-reconstruction-v0",
       "fixture": "reconstruction-v0/minimal-artifact.json",
-      "fixture_sha256": "0e58283a8c79c1fe21177e92cb83cd0c99e35a6745033d848b08195f60d5fdae",
+      "fixture_sha256": "49b10a8719a5217e87f9987de637f03de23da10447de94821d42b3b90f51056a",
       "expected_report": "expected/minimal-reconstruction.verify.json"
     },
     {

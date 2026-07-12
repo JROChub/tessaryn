@@ -51,6 +51,32 @@ function expectInsideViewport(rectangle: Awaited<ReturnType<typeof bounds>>): vo
   expect(rectangle.bottom).toBeLessThanOrEqual(rectangle.viewportHeight);
 }
 
+test("keeps synthetic ground truth in an opt-in lab and returns to the private Origin", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.locator('body[data-ready="true"]').waitFor();
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "reference");
+  await expect(page.locator("#origin-name")).toHaveText("LOCAL CONSTRUCTION FIELD");
+  await expect(page.locator("#origin-status")).toContainText("ADD YOUR CAPTURE");
+  await expect(page.locator("#construct-button")).toBeVisible();
+  expectInsideViewport(await bounds(page, "#construct-button"));
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().temporalObservations)).toBe(0);
+
+  await page.locator("#sources-button").click();
+  await expect(page.locator("#sources-dialog")).toBeVisible();
+  await page.locator("#open-validation-origin").click();
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "validation");
+  await expect(page.locator("#origin-status")).toHaveText("GROUND-TRUTH LAB / CONTINUUM STABLE");
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().temporalObservations)).toBe(4);
+
+  await page.locator("#reset-button").click();
+  await expect(page.locator("#app")).toHaveAttribute("data-source", "reference");
+  await expect(page).toHaveURL(/\/$/u);
+  expect(await page.evaluate(() => window.__tessaryn?.scene.diagnostics().temporalObservations)).toBe(0);
+});
+
 test("locally verifies every committed layer and renders nonblank canvas pixels", async ({
   page,
 }) => {
@@ -355,6 +381,281 @@ test("imports, reverifies, and renders a reconstruction artifact without upload"
   expect(colors.size).toBeGreaterThan(20);
 });
 
+test("publishes a real capture from the product and retains it in the Personal Weave", async ({
+  page,
+}) => {
+  test.slow();
+  const artifact = JSON.parse(await readFile(reconstructionArtifact, "utf8")) as {
+    report: { sdf_cell_id: string };
+    lineage: { rootprint: { root_branch: string } };
+  };
+  const errors: string[] = [];
+  const uploaded = new Map<number, number>();
+  let intent: Record<string, unknown> | undefined;
+  const cors = {
+    "access-control-allow-origin": "http://127.0.0.1:4180",
+    "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
+    "access-control-allow-headers": "content-type,x-tessaryn-chunk-sha256",
+  };
+  page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  await page.route("https://weave.test/**", async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: cors });
+      return;
+    }
+    const path = new URL(request.url()).pathname;
+    if (path === "/v1/catalog") {
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/public-object-catalog/v2",
+          updated_at_unix_us: 0,
+          objects: [],
+        }),
+      });
+      return;
+    }
+    if (path === "/v1/policy") {
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/weave-node-policy/v1",
+          chunk_bytes: 65_536,
+          max_object_bytes: 536_870_912,
+          max_publisher_bytes: 4_294_967_296,
+          max_pending_bytes: 2_147_483_648,
+          max_retained_bytes: 34_359_738_368,
+          max_active_uploads: 32,
+          max_active_uploads_per_publisher: 4,
+          max_publications: 100_000,
+          max_publications_per_publisher: 1_000,
+          upload_ttl_seconds: 86_400,
+          accepted_artifacts: ["tessaryn/reconstruction-artifact/v0"],
+          immutable_content_identity: true,
+          revocable_discovery: true,
+        }),
+      });
+      return;
+    }
+    if (path === "/v1/uploads" && request.method() === "POST") {
+      intent = request.postDataJSON() as Record<string, unknown>;
+      const bytes = Number(intent.artifact_bytes);
+      const chunkCount = Math.ceil(bytes / 65_536);
+      await route.fulfill({
+        status: 201,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/upload-session/v1",
+          upload_id: `upl_${"1".repeat(64)}`,
+          publisher_id: `key_${"2".repeat(64)}`,
+          chunk_bytes: 65_536,
+          chunk_count: chunkCount,
+          intent,
+        }),
+      });
+      return;
+    }
+    if (path === `/v1/uploads/upl_${"1".repeat(64)}` && request.method() === "GET") {
+      const bytes = Number(intent?.artifact_bytes ?? 0);
+      const chunkCount = Math.ceil(bytes / 65_536);
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          upload_id: `upl_${"1".repeat(64)}`,
+          chunk_count: chunkCount,
+          received_chunks: [],
+          missing_chunks: Array.from({ length: chunkCount }, (_, index) => index),
+          ready_to_commit: false,
+        }),
+      });
+      return;
+    }
+    const chunkMatch = path.match(/\/chunks\/(\d+)$/u);
+    if (chunkMatch && request.method() === "PUT") {
+      uploaded.set(Number(chunkMatch[1]), request.postDataBuffer()?.byteLength ?? 0);
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          upload_id: `upl_${"1".repeat(64)}`,
+          chunk_count: uploaded.size,
+          received_chunks: [...uploaded.keys()],
+          missing_chunks: [],
+          ready_to_commit: true,
+        }),
+      });
+      return;
+    }
+    if (path.endsWith("/commit") && request.method() === "POST" && intent) {
+      await route.fulfill({
+        status: 201,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/publication-receipt/v1",
+          publication_id: `obj_${"3".repeat(64)}`,
+          publisher_id: `key_${"2".repeat(64)}`,
+          accepted_at_unix_us: 1_783_833_700_000_000,
+          artifact_kind: "rgbd_reconstruction",
+          artifact_url: `https://weave.test/v1/artifacts/${String(intent.artifact_sha256).slice(7)}`,
+          cell_id: artifact.report.sdf_cell_id,
+          rootprint_branch: artifact.lineage.rootprint.root_branch,
+          moments: 1,
+          dimensions: "REAL RGB-D / NATIVE 3D + TIME",
+          media: "18 SURFELS / 90 SDF VOXELS",
+          intent,
+        }),
+      });
+      return;
+    }
+    await route.fulfill({ status: 404, headers: cors });
+  });
+
+  await page.goto("/?origin=validation&weaveApi=https%3A%2F%2Fweave.test");
+  await page.locator('body[data-ready="true"]').waitFor();
+  await page.locator("#import-input").setInputFiles(reconstructionArtifact);
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL CAPTURE ACCEPTED");
+  await page.locator("#verify-close").click();
+  await page.locator("#trace-close").click();
+  await page.locator("#local-share").click();
+  await expect(page.locator("#publish-dialog")).toBeVisible();
+  await page.locator("#publish-object-id").fill("real-place-alpha");
+  await page.locator("#publish-title").fill("Real Place Alpha");
+  await page.locator("#publish-summary").fill("A real sensor place owned and published from its originating device.");
+  await page.locator("#publish-consent").check();
+  await page.locator("#publish-object").click();
+  await expect(page.locator("#publish-stage")).toHaveText("PUBLIC WEAVE ACCEPTED", {
+    timeout: 30_000,
+  });
+  expect(
+    await page.evaluate(
+      () =>
+        new Promise<boolean>((resolve, reject) => {
+          const request = indexedDB.open("tessaryn-personal-weave-v1", 1);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const database = request.result;
+            const identity = database
+              .transaction("identity", "readonly")
+              .objectStore("identity")
+              .get("publisher");
+            identity.onerror = () => reject(identity.error);
+            identity.onsuccess = () => {
+              const extractable = Boolean(
+                (identity.result as { privateKey?: CryptoKey } | undefined)?.privateKey?.extractable,
+              );
+              database.close();
+              resolve(extractable);
+            };
+          };
+        }),
+    ),
+  ).toBe(false);
+  expect(uploaded.size).toBeGreaterThan(0);
+  expect([...uploaded.values()].reduce((total, bytes) => total + bytes, 0)).toBe(
+    (await readFile(reconstructionArtifact)).byteLength,
+  );
+  await page.locator("#publish-close").click();
+  await page.locator("#objects-button").click();
+  await page.locator("#object-search").fill("real-place-alpha");
+  await expect(page.locator(".object-entry")).toHaveCount(1);
+  await page.locator('[data-weave-scope="personal"]').click();
+  await expect(page.locator(".personal-object-row")).toHaveCount(1);
+  await expect(page.locator("#personal-weave-count")).toHaveText("1");
+  await page.locator(".personal-object-row .object-entry").click();
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL CAPTURE ACCEPTED");
+  expect(errors).toEqual([]);
+});
+
+test("rejects an inconsistent node session before releasing artifact chunks", async ({ page }) => {
+  let chunkRequests = 0;
+  const cors = {
+    "access-control-allow-origin": "http://127.0.0.1:4180",
+    "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
+    "access-control-allow-headers": "content-type,x-tessaryn-chunk-sha256",
+  };
+  await page.route("https://weave.test/**", async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: cors });
+      return;
+    }
+    const path = new URL(request.url()).pathname;
+    if (path === "/v1/catalog") {
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/public-object-catalog/v2",
+          updated_at_unix_us: 0,
+          objects: [],
+        }),
+      });
+      return;
+    }
+    if (path === "/v1/policy") {
+      await route.fulfill({
+        status: 200,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/weave-node-policy/v1",
+          chunk_bytes: 65_536,
+          max_object_bytes: 536_870_912,
+          max_publisher_bytes: 4_294_967_296,
+          max_pending_bytes: 2_147_483_648,
+          max_retained_bytes: 34_359_738_368,
+          max_active_uploads: 32,
+          max_active_uploads_per_publisher: 4,
+          max_publications: 100_000,
+          max_publications_per_publisher: 1_000,
+          upload_ttl_seconds: 86_400,
+          accepted_artifacts: ["tessaryn/reconstruction-artifact/v0"],
+          immutable_content_identity: true,
+          revocable_discovery: true,
+        }),
+      });
+      return;
+    }
+    if (path === "/v1/uploads" && request.method() === "POST") {
+      const intent = request.postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 201,
+        headers: { ...cors, "content-type": "application/json" },
+        body: JSON.stringify({
+          schema: "tessaryn/upload-session/v1",
+          upload_id: `upl_${"1".repeat(64)}`,
+          publisher_id: `key_${"2".repeat(64)}`,
+          chunk_bytes: 65_536,
+          chunk_count: 2,
+          intent,
+        }),
+      });
+      return;
+    }
+    if (path.includes("/chunks/")) chunkRequests += 1;
+    await route.fulfill({ status: 404, headers: cors });
+  });
+
+  await page.goto("/?origin=validation&weaveApi=https%3A%2F%2Fweave.test");
+  await page.locator('body[data-ready="true"]').waitFor();
+  await page.locator("#import-input").setInputFiles(reconstructionArtifact);
+  await expect(page.locator("#verify-title")).toHaveText("LOCAL CAPTURE ACCEPTED");
+  await page.locator("#verify-close").click();
+  await page.locator("#trace-close").click();
+  await page.locator("#local-share").click();
+  await page.locator("#publish-consent").check();
+  await page.locator("#publish-object").click();
+  await expect(page.locator("#publish-stage")).toHaveText("PUBLICATION REJECTED");
+  await expect(page.locator("#publish-detail")).toContainText("INVALID UPLOAD SESSION");
+  expect(chunkRequests).toBe(0);
+});
+
 test("indexes a local file beyond the former 128 MiB boundary", async ({ page }) => {
   test.setTimeout(120_000);
   const directory = await mkdtemp(join(tmpdir(), "tessaryn-large-file-"));
@@ -527,6 +828,13 @@ test("mobile import keeps verification and close controls reachable", async ({ p
   expectInsideViewport(await bounds(page, "#trace-drawer"));
   expectInsideViewport(await bounds(page, "#trace-close"));
   await page.locator("#trace-close").click();
+  await page.locator("#local-share").click();
+  await expect(page.locator("#publish-dialog")).toBeVisible();
+  expectInsideViewport(await bounds(page, "#publish-dialog"));
+  expectInsideViewport(await bounds(page, "#publish-close"));
+  expectInsideViewport(await bounds(page, "#keep-object"));
+  expectInsideViewport(await bounds(page, "#publish-object"));
+  await page.locator("#publish-close").click();
   await page.locator("#challenge-button").click();
   expectInsideViewport(await bounds(page, "#challenge-drawer"));
   expectInsideViewport(await bounds(page, "#challenge-close"));

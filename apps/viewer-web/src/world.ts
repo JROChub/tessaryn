@@ -117,6 +117,10 @@ export class TessarynWorld {
   private readonly cellsById = new Map<string, CellNode>();
   private readonly interactive: THREE.Object3D[] = [];
   private readonly weaveLinks: WeaveLink[] = [];
+  private readonly referenceNodes = new Map<string, CellNode>();
+  private readonly referenceCellsById = new Map<string, CellNode>();
+  private readonly referenceInteractive: THREE.Object3D[] = [];
+  private readonly referenceWeaveLinks: WeaveLink[] = [];
   private readonly importedLinks: ImportedLink[] = [];
   private readonly textureCache = new Map<string, THREE.CanvasTexture>();
   private readonly animatedShaders: THREE.ShaderMaterial[] = [];
@@ -166,6 +170,7 @@ export class TessarynWorld {
   private importedFrame: { focus: THREE.Vector3; radius: number } | null = null;
   private readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   private constrainedWeave: THREE.LineSegments | null = null;
+  private referenceConstrainedWeave: THREE.LineSegments | null = null;
   private importedTemporal = false;
   private importedSdfVoxelCount = 0;
   private importedProvenanceLinks = 0;
@@ -228,6 +233,11 @@ export class TessarynWorld {
     this.sun.shadow.camera.top = 18;
     this.sun.shadow.camera.bottom = -18;
     this.buildWorld();
+    this.nodes.forEach((node, key) => this.referenceNodes.set(key, node));
+    this.cellsById.forEach((node, key) => this.referenceCellsById.set(key, node));
+    this.referenceInteractive.push(...this.interactive);
+    this.referenceWeaveLinks.push(...this.weaveLinks);
+    this.referenceConstrainedWeave = this.constrainedWeave;
     this.materializedCellCount = this.world.cells.length;
     this.selected = this.nodes.get("archive-c") ?? this.findVisibleArchive();
     this.highlightSelection();
@@ -278,7 +288,7 @@ export class TessarynWorld {
     if (scale === "object") {
       const node = this.selected ?? this.findVisibleArchive();
       if (node) this.targetFocus.copy(node.group.position);
-      this.targetDistance = innerWidth <= 680 ? 4.15 : 3.05;
+      this.targetDistance = innerWidth <= 680 ? 3.35 : 3.05;
       this.pitch = 0.28;
     } else if (scale === "room") {
       this.targetFocus.set(0, 1.1, 0);
@@ -376,6 +386,44 @@ export class TessarynWorld {
       if (firstMoment) this.moment = "origin";
     }
     this.highlightSelection();
+    this.updateMeaningFields();
+  }
+
+  loadReferenceWorld(): void {
+    this.disposeImportedRoot();
+    this.importedFrame = null;
+    this.importedTemporal = false;
+    this.importedSdfVoxelCount = 0;
+    this.importedProvenanceLinks = 0;
+    this.materializedCellCount = this.world.cells.length;
+    this.root.visible = true;
+    this.aggregateRoot.visible = true;
+    this.temporalRoot.visible = true;
+    this.continuumRoot.visible = true;
+    this.fieldRoot.visible = true;
+    this.importedRoot.visible = false;
+    this.focusRoot.visible = true;
+    this.nodes.clear();
+    this.referenceNodes.forEach((node, key) => this.nodes.set(key, node));
+    this.cellsById.clear();
+    this.referenceCellsById.forEach((node, key) => this.cellsById.set(key, node));
+    this.interactive.length = 0;
+    this.interactive.push(...this.referenceInteractive);
+    this.weaveLinks.length = 0;
+    this.weaveLinks.push(...this.referenceWeaveLinks);
+    this.constrainedWeave = this.referenceConstrainedWeave;
+    this.renderer.toneMappingExposure = 1.14;
+    this.moment = "moment-c";
+    const current = this.world.moments.find((candidate) => candidate.id === this.moment);
+    if (current) this.applyEnvironment(current);
+    this.selected = this.nodes.get("archive-c") ?? this.findVisibleArchive();
+    this.hovered = null;
+    this.chronofold = false;
+    this.targetTemporalOpacity = 0;
+    this.setEvidence(this.evidence);
+    this.setScale("room");
+    this.highlightSelection();
+    this.updateCellTargets();
     this.updateMeaningFields();
   }
 

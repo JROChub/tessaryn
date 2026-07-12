@@ -18,10 +18,10 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-sync",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Signed encrypted peer synchronization for TESSARYN Loci",
       "scope": "required",
       "licenses": [
@@ -29,7 +29,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-sync@0.4.0?download_url=file://.",
+      "purl": "pkg:cargo/tessaryn-sync@0.5.0?download_url=file://.",
       "externalReferences": [
         {
           "type": "vcs",
@@ -39,10 +39,10 @@
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.4.0 bin-target-0",
+          "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.5.0 bin-target-0",
           "name": "tessaryn_sync",
-          "version": "0.4.0",
-          "purl": "pkg:cargo/tessaryn-sync@0.4.0?download_url=file://.#src/lib.rs"
+          "version": "0.5.0",
+          "purl": "pkg:cargo/tessaryn-sync@0.5.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -56,10 +56,10 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-canonical",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Strict canonicalization, Cell identity, and chunk Merkle binding for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -67,7 +67,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-canonical@0.4.0?download_url=file://../tessaryn-canonical",
+      "purl": "pkg:cargo/tessaryn-canonical@0.5.0?download_url=file://../tessaryn-canonical",
       "externalReferences": [
         {
           "type": "vcs",
@@ -77,10 +77,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-powerhouse",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Narrow Power House provenance adapter for TESSARYN Cells",
       "scope": "required",
       "licenses": [
@@ -88,7 +88,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-powerhouse@0.4.0?download_url=file://../tessaryn-powerhouse",
+      "purl": "pkg:cargo/tessaryn-powerhouse@0.5.0?download_url=file://../tessaryn-powerhouse",
       "externalReferences": [
         {
           "type": "vcs",
@@ -98,10 +98,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-privacy",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Authenticated private Locus transport and revocation for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -109,7 +109,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-privacy@0.4.0?download_url=file://../tessaryn-privacy",
+      "purl": "pkg:cargo/tessaryn-privacy@0.5.0?download_url=file://../tessaryn-privacy",
       "externalReferences": [
         {
           "type": "vcs",
@@ -119,10 +119,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-schema",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Canonical protocol types for TESSARYN World Cells",
       "scope": "required",
       "licenses": [
@@ -130,7 +130,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-schema@0.4.0?download_url=file://../tessaryn-schema",
+      "purl": "pkg:cargo/tessaryn-schema@0.5.0?download_url=file://../tessaryn-schema",
       "externalReferences": [
         {
           "type": "vcs",
@@ -140,10 +140,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-store#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-store#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-store",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Local content-addressed Cell and chunk store for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -151,7 +151,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-store@0.4.0?download_url=file://../tessaryn-store",
+      "purl": "pkg:cargo/tessaryn-store@0.5.0?download_url=file://../tessaryn-store",
       "externalReferences": [
         {
           "type": "vcs",
@@ -161,10 +161,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-transport",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Canonical bounded transport encodings for TESSARYN",
       "scope": "required",
       "licenses": [
@@ -172,7 +172,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-transport@0.4.0?download_url=file://../tessaryn-transport",
+      "purl": "pkg:cargo/tessaryn-transport@0.5.0?download_url=file://../tessaryn-transport",
       "externalReferences": [
         {
           "type": "vcs",
@@ -182,10 +182,10 @@
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-witness#0.4.0",
+      "bom-ref": "path+file:///workspace/tessaryn/crates/tessaryn-witness#0.5.0",
       "author": "MFENX LLC",
       "name": "tessaryn-witness",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "Explicit signed witness receipts for TESSARYN evidence vectors",
       "scope": "required",
       "licenses": [
@@ -193,7 +193,7 @@
           "expression": "AGPL-3.0-only"
         }
       ],
-      "purl": "pkg:cargo/tessaryn-witness@0.4.0?download_url=file://../tessaryn-witness",
+      "purl": "pkg:cargo/tessaryn-witness@0.5.0?download_url=file://../tessaryn-witness",
       "externalReferences": [
         {
           "type": "vcs",
@@ -1864,6 +1864,37 @@
     },
     {
       "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.33",
+      "author": "The Rust Project Developers",
+      "name": "log",
+      "version": "0.4.33",
+      "description": "A lightweight logging facade for Rust ",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/log@0.4.33",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/log"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/log"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
       "author": "Andrew Gallant <jamslam@gmail.com>, bluss",
       "name": "memchr",
@@ -3349,31 +3380,31 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#hex@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#power_house@0.3.24",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chacha20poly1305@0.10.1",
         "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.3.4",
@@ -3381,30 +3412,30 @@
         "registry+https://github.com/rust-lang/crates.io-index#hkdf@0.12.4",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
         "registry+https://github.com/rust-lang/crates.io-index#x25519-dalek@2.0.1",
         "registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-store#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-store#0.5.0",
       "dependsOn": [
-        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#ed25519-dalek@2.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.3.4",
@@ -3412,26 +3443,26 @@
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-store#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-witness#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-powerhouse#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-privacy#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-store#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-witness#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
         "registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228"
       ]
     },
     {
-      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-witness#0.4.0",
+      "ref": "path+file:///workspace/tessaryn/crates/tessaryn-witness#0.5.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#ed25519-dalek@2.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.3.4",
@@ -3439,9 +3470,9 @@
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150",
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
-        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.4.0",
-        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.4.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-canonical#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
+        "path+file:///workspace/tessaryn/crates/tessaryn-transport#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
         "registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0"
       ]
@@ -3837,6 +3868,9 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186"
     },
     {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.33"
+    },
+    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3"
     },
     {
@@ -4080,6 +4114,7 @@
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44",
       "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#log@0.4.33",
         "registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17",
         "registry+https://github.com/rust-lang/crates.io-index#tracing-attributes@0.1.31",
         "registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36"

@@ -1,6 +1,6 @@
 # Security Review Record
 
-Status: engineering review for `0.3.0`.
+Status: engineering review for `0.5.0`.
 
 ## Boundaries reviewed
 
@@ -36,8 +36,21 @@ Status: engineering review for `0.3.0`.
   never converted into one complete JavaScript string or buffer;
 - EuRoC, KITTI, and ScanNet adapters reject symlinks, unsorted indexes,
   modality-count mismatches, resource overrun, and file-content mutation;
-- the web build has no analytics, upload endpoint, map SDK, tile client, or
-  remote world model.
+- public publication uses a browser-origin Ed25519 identity and signs exact
+  object metadata, complete artifact SHA-256, byte count, nonce, and timestamp;
+- upload sessions are deterministic and resumable; every chunk has an exact
+  expected length and independently checked SHA-256;
+- commit reassembles into a temporary file, recalculates the signed artifact
+  digest, reruns reconstruction/cinematic and Power House verification, fsyncs,
+  then atomically renames into a content-addressed store;
+- discovery revocation requires the original publisher key and cannot mutate
+  or claim erasure of artifact identity;
+- node, Nginx, and systemd policies independently bound object size,
+  publisher allocation, pending and retained bytes, active upload sessions,
+  publication counts, idle-session lifetime, request body, request rate,
+  connections, filesystem access, and exposed network surface;
+- the web build has no analytics, map SDK, tile client, or remote world model;
+  its only write path is the explicit signed Weave publication operation.
 
 ## Automated evidence
 

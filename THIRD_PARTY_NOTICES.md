@@ -2,7 +2,7 @@
 
 ## TartanAir V2: `ArchVizTinyHouseDay/Data_easy/P000`
 
-TESSARYN `0.4.0` retains the `0.3.0` derived validation Locus generated from the
+TESSARYN `0.5.0` retains the `0.3.0` derived validation Locus generated from the
 TartanAir V2 `ArchVizTinyHouseDay` environment and `P000` easy trajectory.
 
 - Project: <https://tartanair.org/>

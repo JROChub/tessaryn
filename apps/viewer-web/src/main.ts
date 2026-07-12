@@ -1,23 +1,30 @@
 import {
   Box,
+  CloudUpload,
   Code2,
   Database,
   Download,
+  EyeOff,
   Fingerprint,
   FlaskConical,
   GitBranch,
+  HardDrive,
+  HardDriveDownload,
   Landmark,
   Layers3,
+  Library,
   Maximize2,
   MessageSquareText,
   Move3d,
   Pause,
   Play,
   RotateCcw,
+  RadioTower,
   Scan,
   Search,
   Share2,
   ShieldCheck,
+  Trash2,
   Upload,
   Waypoints,
   X,
@@ -60,6 +67,23 @@ import {
   type ScaleMode,
   type TemporalObservation,
 } from "./world";
+import {
+  fetchPublicWeave,
+  hashFile,
+  listPersonalWeave,
+  loadWeaveClientConfig,
+  markPersonalObjectPublished,
+  markPersonalObjectUnpublished,
+  personalWeaveFile,
+  publishArtifact,
+  removePersonalObject,
+  revokePublication,
+  saveToPersonalWeave,
+  type PersonalWeaveObject,
+  type PublicationMetadata,
+  type PublicationProgress,
+  type WeaveClientConfig,
+} from "./weave-client";
 
 declare global {
   interface Window {
@@ -164,6 +188,7 @@ const elements = {
   verifyDetail: byId<HTMLElement>("verify-detail"),
   verifyButton: byId<HTMLButtonElement>("verify-button"),
   importButton: byId<HTMLButtonElement>("import-button"),
+  constructButton: byId<HTMLButtonElement>("construct-button"),
   importInput: byId<HTMLInputElement>("import-input"),
   verifyClose: byId<HTMLButtonElement>("verify-close"),
   fullscreenButton: byId<HTMLButtonElement>("fullscreen-button"),
@@ -178,11 +203,15 @@ const elements = {
   sourcesButton: byId<HTMLButtonElement>("sources-button"),
   sourcesDialog: byId<HTMLDialogElement>("sources-dialog"),
   sourcesClose: byId<HTMLButtonElement>("sources-close"),
+  openValidationOrigin: byId<HTMLButtonElement>("open-validation-origin"),
   objectsButton: byId<HTMLButtonElement>("objects-button"),
   objectsDialog: byId<HTMLDialogElement>("objects-dialog"),
   objectsClose: byId<HTMLButtonElement>("objects-close"),
   objectSearch: byId<HTMLInputElement>("object-search"),
   objectList: byId<HTMLElement>("object-list"),
+  weaveNodeState: byId<HTMLElement>("weave-node-state"),
+  publicWeaveCount: byId<HTMLElement>("public-weave-count"),
+  personalWeaveCount: byId<HTMLElement>("personal-weave-count"),
   sourceName: byId<HTMLElement>("source-name"),
   sourceClass: byId<HTMLElement>("source-class"),
   sourceEnvironment: byId<HTMLElement>("source-environment"),
@@ -205,6 +234,22 @@ const elements = {
   cinematicPlay: byId<HTMLButtonElement>("cinematic-play"),
   cinematicTime: byId<HTMLInputElement>("cinematic-time"),
   cinematicClock: byId<HTMLOutputElement>("cinematic-clock"),
+  publishDialog: byId<HTMLDialogElement>("publish-dialog"),
+  publishClose: byId<HTMLButtonElement>("publish-close"),
+  publishKind: byId<HTMLElement>("publish-kind"),
+  publishFile: byId<HTMLElement>("publish-file"),
+  publishCell: byId<HTMLElement>("publish-cell"),
+  publishObjectId: byId<HTMLInputElement>("publish-object-id"),
+  publishTitle: byId<HTMLInputElement>("publish-title"),
+  publishSummary: byId<HTMLTextAreaElement>("publish-summary"),
+  publishConsent: byId<HTMLInputElement>("publish-consent"),
+  publishProgress: byId<HTMLElement>("publish-progress"),
+  publishStage: byId<HTMLElement>("publish-stage"),
+  publishPercent: byId<HTMLElement>("publish-percent"),
+  publishProgressBar: byId<HTMLElement>("publish-progress-bar"),
+  publishDetail: byId<HTMLElement>("publish-detail"),
+  keepObject: byId<HTMLButtonElement>("keep-object"),
+  publishObject: byId<HTMLButtonElement>("publish-object"),
 };
 
 interface ValidationPortfolio {
@@ -226,6 +271,7 @@ interface ValidationPortfolio {
 let worldData: DemoWorld;
 let scene: TessarynWorld;
 let selected: DemoCell;
+let referenceVerification: VerificationReport | null = null;
 let latestVerification: VerificationReport | null = null;
 let importedArtifact: ReconstructionArtifactView | null = null;
 let importedVerification: ReconstructionBrowserReport | null = null;
@@ -241,6 +287,13 @@ let activeLocalImport: ActiveLocalImport | null = null;
 let activeLocalTask: LocalIngestTask | null = null;
 let activeCinematicObject: ActiveCinematicObject | null = null;
 let publicObjectCatalog: PublicObjectCatalog | null = null;
+let bundledObjectCatalog: PublicObjectCatalog | null = null;
+let weaveConfig: WeaveClientConfig | null = null;
+let personalWeaveObjects: PersonalWeaveObject[] = [];
+let weaveScope: "public" | "personal" = "public";
+let activeArtifactFile: File | null = null;
+let activePublicEntry: PublicObjectCatalogEntry | null = null;
+let publishAbort: AbortController | null = null;
 let cinematicScrubbing = false;
 const MAX_INLINE_RECONSTRUCTION_BYTES = 64 * 1024 * 1024;
 const runtimeMetrics: RuntimeMetrics = {
@@ -252,11 +305,20 @@ void boot();
 async function boot(): Promise<void> {
   try {
     elements.bootStatus.textContent = "READING LOCAL CELL MANIFESTS";
-    const [worldResponse, validationResponse, portfolioResponse, catalogResponse] = await Promise.all([
+    const [
+      worldResponse,
+      validationResponse,
+      portfolioResponse,
+      catalogResponse,
+      clientConfig,
+      personalObjects,
+    ] = await Promise.all([
       fetch("./world/vesper-court.json", { cache: "no-store" }),
       fetch("./world/archviz-tiny-house-locus.json", { cache: "no-store" }),
       fetch("./validation/portfolio.json", { cache: "no-store" }),
       fetch("./objects/catalog.json", { cache: "no-store" }),
+      loadWeaveClientConfig(),
+      listPersonalWeave().catch(() => []),
     ]);
     if (!worldResponse.ok) throw new Error("world fixture unavailable");
     if (!validationResponse.ok) throw new Error("validation Locus unavailable");
@@ -281,27 +343,39 @@ async function boot(): Promise<void> {
     if (!isPublicObjectCatalog(parsedCatalog)) {
       throw new Error("unsupported public Object Weave catalog");
     }
+    bundledObjectCatalog = parsedCatalog;
     publicObjectCatalog = parsedCatalog;
+    weaveConfig = clientConfig;
+    personalWeaveObjects = personalObjects;
     validationArtifact = parsedValidation;
-    elements.bootStatus.textContent = "VERIFYING EXACT RGB-D GROUND TRUTH";
-    validationVerification = await verifyValidationOffThread(parsedValidation);
+    elements.bootStatus.textContent = "VERIFYING REFERENCE + GROUND TRUTH";
+    const [verifiedReference, verifiedValidation] = await Promise.all([
+      verifyWorldOffThread(worldData),
+      verifyValidationOffThread(parsedValidation),
+    ]);
+    referenceVerification = verifiedReference;
+    validationVerification = verifiedValidation;
+    if (verifiedReference.errors.length > 0) {
+      throw new Error(verifiedReference.errors.join(" / "));
+    }
     if (validationVerification.errors.length > 0 || !validationVerification.alternate) {
       throw new Error(
         validationVerification.errors.join(" / ") || "validation Locus rejected",
       );
     }
-    const observations = temporalObservations(validationVerification);
     selected =
-      observations.find((observation) => observation.id === "moment-c")?.cell ??
-      observations[0]?.cell ??
-      fail("temporal Locus contains no observations");
-    populateTemporalMoments(validationVerification);
+      worldData.cells.find((cell) => cell.key === "archive-c") ??
+      worldData.cells[0] ??
+      fail("reference Origin contains no Cells");
+    populateMoments(worldData.moments);
     populateValidationPortfolio(parsedValidation.source.profile, parsedPortfolio);
     populatePublicObjects(parsedCatalog.objects);
-    elements.originName.textContent = parsedValidation.origin;
-    elements.cellCount.textContent = String(validationVerification.cellsValid) + " CELLS";
+    updateWeaveCounts();
+    elements.app.dataset.source = "reference";
+    elements.originName.textContent = "LOCAL CONSTRUCTION FIELD";
+    elements.cellCount.textContent = `${String(worldData.cells.length)} REFERENCE CELLS`;
     elements.anchorShort.textContent = shortDigest(selected.manifest.anchor_id, 8);
-    elements.momentShort.textContent = "MOMENT C";
+    elements.momentShort.textContent = "REFERENCE";
     elements.evidenceShort.textContent = "ASSEMBLING";
     scene = new TessarynWorld(elements.canvas, worldData, {
       onCellSelected: openTrace,
@@ -310,7 +384,6 @@ async function boot(): Promise<void> {
       onScaleChanged: updateScaleButtons,
       onScaleDepthChanged: updateScaleDepth,
     });
-    scene.loadTemporalObservations(observations);
     window.addEventListener(
       "pagehide",
       () => {
@@ -323,7 +396,7 @@ async function boot(): Promise<void> {
     );
     window.__tessaryn = {
       world: worldData,
-      verification: validationVerificationReport(validationVerification),
+      verification: verifiedReference,
       validationArtifact: parsedValidation,
       validationVerification,
       publicObjectCatalog: parsedCatalog,
@@ -338,31 +411,38 @@ async function boot(): Promise<void> {
         Code2,
         Database,
         Download,
+        EyeOff,
         Fingerprint,
         FlaskConical,
         GitBranch,
+        HardDrive,
+        HardDriveDownload,
         Landmark,
         Layers3,
+        Library,
         Maximize2,
         MessageSquareText,
         Move3d,
         Pause,
         Play,
+        RadioTower,
         RotateCcw,
         Scan,
         Search,
         Share2,
         ShieldCheck,
+        Trash2,
         Upload,
         Waypoints,
         X,
+        CloudUpload,
       },
     });
     elements.bootStatus.textContent = "ORIGIN FRAME ACCEPTED";
     await delay(380);
     elements.app.dataset.ready = "true";
     document.body.dataset.ready = "true";
-    latestVerification = validationVerificationReport(validationVerification);
+    latestVerification = verifiedReference;
     window.__tessaryn.verification = latestVerification;
     runtimeMetrics.verificationMs = performance.now() - runtimeMetrics.bootStartedAtMs;
     elements.evidenceShort.textContent =
@@ -372,7 +452,7 @@ async function boot(): Promise<void> {
     window.addEventListener("online", updateNetworkState);
     window.addEventListener("offline", updateNetworkState);
     requestAnimationFrame(updateWorldLabel);
-    void enterInitialPublicObject();
+    void initializeObjectWeave();
   } catch (error) {
     console.error(error);
     elements.bootStatus.textContent =
@@ -381,33 +461,62 @@ async function boot(): Promise<void> {
   }
 }
 
+async function initializeObjectWeave(): Promise<void> {
+  await refreshPublicWeave();
+  if (new URLSearchParams(location.search).get("origin") === "validation") {
+    openValidationOrigin(false);
+    return;
+  }
+  await enterInitialPublicObject();
+}
+
 function bindControls(): void {
   elements.verifyButton.addEventListener("click", () => void showVerification());
   elements.sourcesButton.addEventListener("click", () => {
     if (!elements.sourcesDialog.open) elements.sourcesDialog.showModal();
   });
   elements.sourcesClose.addEventListener("click", () => elements.sourcesDialog.close());
+  elements.openValidationOrigin.addEventListener("click", () => {
+    elements.sourcesDialog.close();
+    openValidationOrigin();
+  });
   elements.objectsButton.addEventListener("click", () => {
     if (!elements.objectsDialog.open) elements.objectsDialog.showModal();
+    renderWeaveScope();
     elements.objectSearch.focus();
   });
   elements.objectsClose.addEventListener("click", () => elements.objectsDialog.close());
   elements.objectSearch.addEventListener("input", () => {
-    populatePublicObjects(
-      publicObjectCatalog?.objects ?? [],
-      elements.objectSearch.value,
-    );
+    renderWeaveScope();
+  });
+  document.querySelectorAll<HTMLButtonElement>("[data-weave-scope]").forEach((button) => {
+    button.addEventListener("click", () => {
+      weaveScope = button.dataset.weaveScope === "personal" ? "personal" : "public";
+      document.querySelectorAll<HTMLButtonElement>("[data-weave-scope]").forEach((candidate) => {
+        const active = candidate === button;
+        candidate.classList.toggle("active", active);
+        candidate.setAttribute("aria-selected", String(active));
+      });
+      renderWeaveScope();
+    });
   });
   elements.importButton.addEventListener("click", () => elements.importInput.click());
+  elements.constructButton.addEventListener("click", () => elements.importInput.click());
   elements.importInput.addEventListener("change", () => void importLocalFile());
   elements.localClose.addEventListener("click", () => {
-    if (activeCinematicObject) restoreValidationOrigin();
+    if (activeCinematicObject || importedArtifact) restoreReferenceOrigin();
     else closeLocalFile();
   });
   elements.localExport.addEventListener("click", () => {
     if (activeLocalImport) exportLocalFileIndex(activeLocalImport);
   });
-  elements.localShare.addEventListener("click", () => void shareActiveObject());
+  elements.localShare.addEventListener("click", () => {
+    if (activePublicEntry) void shareActiveObject();
+    else openPublishDialog();
+  });
+  elements.publishClose.addEventListener("click", closePublishDialog);
+  elements.keepObject.addEventListener("click", () => void keepActiveObject());
+  elements.publishObject.addEventListener("click", () => void publishActiveObject());
   elements.verifyClose.addEventListener("click", () => elements.verificationDialog.close());
   elements.fullscreenButton.addEventListener("click", () => void toggleFullscreen());
   elements.traceClose.addEventListener("click", closeTrace);
@@ -416,11 +525,19 @@ function bindControls(): void {
   elements.exportButton.addEventListener("click", exportCapsule);
   elements.resetButton.addEventListener("click", () => {
     if (activeCinematicObject) {
-      restoreValidationOrigin();
+      restoreReferenceOrigin();
+      return;
+    }
+    if (importedArtifact) {
+      restoreReferenceOrigin();
       return;
     }
     if (activeLocalImport) {
       closeLocalFile();
+      return;
+    }
+    if (elements.app.dataset.source === "validation") {
+      restoreReferenceOrigin();
       return;
     }
     scene.reset();
@@ -480,6 +597,9 @@ function bindControls(): void {
   elements.objectsDialog.addEventListener("click", (event) => {
     if (event.target === elements.objectsDialog) elements.objectsDialog.close();
   });
+  elements.publishDialog.addEventListener("click", (event) => {
+    if (event.target === elements.publishDialog) closePublishDialog();
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (activeLocalImport) closeLocalFile();
@@ -488,6 +608,7 @@ function bindControls(): void {
     if (elements.verificationDialog.open) elements.verificationDialog.close();
     if (elements.sourcesDialog.open) elements.sourcesDialog.close();
     if (elements.objectsDialog.open) elements.objectsDialog.close();
+    if (elements.publishDialog.open) closePublishDialog();
   });
 }
 
@@ -571,14 +692,186 @@ function populatePublicObjects(
   }
 }
 
+function populatePersonalObjects(entries: PersonalWeaveObject[], query = ""): void {
+  const needle = query.trim().toLocaleLowerCase();
+  const visible = entries.filter((entry) =>
+    [entry.objectId, entry.title, entry.summary, entry.artifactKind]
+      .join(" ")
+      .toLocaleLowerCase()
+      .includes(needle),
+  );
+  elements.objectList.replaceChildren();
+  if (visible.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "object-empty";
+    empty.textContent = "NO CONSTRUCTIONS ARE RETAINED ON THIS DEVICE";
+    elements.objectList.append(empty);
+    return;
+  }
+  for (const entry of visible) {
+    const row = document.createElement("div");
+    row.className = "personal-object-row";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "object-entry";
+    const mark = document.createElement("span");
+    mark.className = "object-entry-mark";
+    mark.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+    const identity = document.createElement("span");
+    const title = document.createElement("b");
+    const id = document.createElement("code");
+    title.textContent = entry.title;
+    id.textContent = entry.objectId;
+    identity.append(title, id);
+    const detail = document.createElement("span");
+    const summary = document.createElement("small");
+    const metrics = document.createElement("em");
+    summary.textContent = entry.summary;
+    metrics.textContent = `${entry.artifactKind === "rgbd_reconstruction" ? "REAL RGB-D" : "TEMPORAL OBJECT"} / ${formatBytes(entry.bytes)}${entry.publicationId ? " / PUBLIC" : " / PRIVATE"}`;
+    detail.append(summary, metrics);
+    button.append(mark, identity, detail);
+    button.addEventListener("click", () => void openPersonalObject(entry));
+    const actions = document.createElement("span");
+    actions.className = "personal-object-actions";
+    if (entry.publicationId) {
+      const unpublish = document.createElement("button");
+      unpublish.type = "button";
+      unpublish.className = "icon-button personal-unpublish";
+      unpublish.title = "Remove from public discovery";
+      unpublish.setAttribute("aria-label", `Remove ${entry.title} from public discovery`);
+      unpublish.innerHTML = '<i data-lucide="eye-off"></i>';
+      unpublish.addEventListener("click", () => void unpublishPersonalWeaveEntry(entry));
+      actions.append(unpublish);
+    }
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "icon-button personal-remove";
+    remove.title = "Remove device copy";
+    remove.setAttribute("aria-label", `Remove ${entry.title} from this device`);
+    remove.innerHTML = '<i data-lucide="trash-2"></i>';
+    remove.addEventListener("click", () => void removePersonalWeaveEntry(entry));
+    actions.append(remove);
+    row.append(button, actions);
+    elements.objectList.append(row);
+  }
+  createIcons({ icons: { EyeOff, Trash2 } });
+}
+
+function renderWeaveScope(): void {
+  if (weaveScope === "personal") {
+    populatePersonalObjects(personalWeaveObjects, elements.objectSearch.value);
+  } else {
+    populatePublicObjects(publicObjectCatalog?.objects ?? [], elements.objectSearch.value);
+  }
+}
+
+async function refreshPublicWeave(): Promise<void> {
+  if (!weaveConfig) {
+    elements.weaveNodeState.dataset.state = "offline";
+    elements.weaveNodeState.textContent = "RELEASE CATALOG";
+    return;
+  }
+  elements.weaveNodeState.dataset.state = "connecting";
+  elements.weaveNodeState.textContent = "SYNCHRONIZING";
+  try {
+    const dynamic = await fetchPublicWeave(weaveConfig.api);
+    publicObjectCatalog = mergePublicCatalogs(dynamic, bundledObjectCatalog);
+    if (window.__tessaryn) window.__tessaryn.publicObjectCatalog = publicObjectCatalog;
+    elements.weaveNodeState.dataset.state = "live";
+    elements.weaveNodeState.textContent = "WRITE NODE LIVE";
+  } catch {
+    publicObjectCatalog = bundledObjectCatalog;
+    elements.weaveNodeState.dataset.state = "offline";
+    elements.weaveNodeState.textContent = "OFFLINE / DEVICE WEAVE LIVE";
+  }
+  updateWeaveCounts();
+  renderWeaveScope();
+}
+
+function mergePublicCatalogs(
+  primary: PublicObjectCatalog,
+  fallback: PublicObjectCatalog | null,
+): PublicObjectCatalog {
+  const objects: PublicObjectCatalogEntry[] = [];
+  const seen = new Set<string>();
+  for (const entry of [...primary.objects, ...(fallback?.objects ?? [])]) {
+    const key = entry.publication_id ?? entry.artifact_sha256 ?? `${entry.object_id}:${entry.cell_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    objects.push(entry);
+  }
+  return {
+    schema: "tessaryn/public-object-catalog/v2",
+    updated_at_unix_us: Math.max(primary.updated_at_unix_us, fallback?.updated_at_unix_us ?? 0),
+    objects,
+  };
+}
+
+function updateWeaveCounts(): void {
+  elements.publicWeaveCount.textContent = String(publicObjectCatalog?.objects.length ?? 0);
+  elements.personalWeaveCount.textContent = String(personalWeaveObjects.length);
+}
+
+async function openPersonalObject(entry: PersonalWeaveObject): Promise<void> {
+  elements.objectsDialog.close();
+  try {
+    const file = await personalWeaveFile(entry);
+    if (entry.artifactKind === "rgbd_reconstruction") {
+      await importReconstructionFile(file);
+    } else {
+      await importCinematicFile(file);
+    }
+  } catch (error) {
+    showToast(error instanceof Error ? error.message.toUpperCase() : "DEVICE OBJECT FAILED");
+  }
+}
+
+async function removePersonalWeaveEntry(entry: PersonalWeaveObject): Promise<void> {
+  if (!confirm(`Remove ${entry.title} from this device?`)) return;
+  await removePersonalObject(entry);
+  personalWeaveObjects = personalWeaveObjects.filter((candidate) => candidate.localId !== entry.localId);
+  updateWeaveCounts();
+  renderWeaveScope();
+  showToast("DEVICE COPY REMOVED / PUBLIC IDENTITY UNCHANGED");
+}
+
+async function unpublishPersonalWeaveEntry(entry: PersonalWeaveObject): Promise<void> {
+  if (!entry.publicationId || !weaveConfig) return;
+  if (!confirm(`Remove ${entry.title} from public discovery? Its content identity will remain unchanged.`)) {
+    return;
+  }
+  try {
+    await revokePublication(weaveConfig.api, entry.publicationId);
+    await markPersonalObjectUnpublished(entry.localId);
+    const publicationId = entry.publicationId;
+    delete entry.publicationId;
+    delete entry.publicArtifact;
+    if (publicObjectCatalog) {
+      publicObjectCatalog.objects = publicObjectCatalog.objects.filter(
+        (candidate) => candidate.publication_id !== publicationId,
+      );
+    }
+    updateWeaveCounts();
+    renderWeaveScope();
+    showToast("PUBLIC DISCOVERY REVOKED / OBJECT IDENTITY UNCHANGED");
+  } catch (error) {
+    showToast(error instanceof Error ? error.message.toUpperCase() : "REVOCATION FAILED");
+  }
+}
+
 async function enterInitialPublicObject(): Promise<void> {
   if (!publicObjectCatalog || new URLSearchParams(location.search).get("origin") === "validation") {
     return;
   }
   const requested = new URLSearchParams(location.search).get("object");
-  const entry = requested
-    ? publicObjectCatalog.objects.find((candidate) => candidate.object_id === requested)
-    : publicObjectCatalog.objects[0];
+  const requestedPublication = new URLSearchParams(location.search).get("publication");
+  const entry = requestedPublication
+    ? publicObjectCatalog.objects.find(
+        (candidate) => candidate.publication_id === requestedPublication,
+      )
+    : requested
+      ? publicObjectCatalog.objects.find((candidate) => candidate.object_id === requested)
+      : undefined;
   if (entry) await loadPublicObject(entry);
 }
 
@@ -590,15 +883,20 @@ async function loadPublicObject(entry: PublicObjectCatalogEntry): Promise<void> 
     const response = await fetch(new URL(entry.artifact, location.href), { cache: "no-store" });
     if (!response.ok) throw new Error(`public object unavailable (${String(response.status)})`);
     const blob = await response.blob();
-    const file = new File([blob], `${entry.object_id}.tessaryn`, {
-      type: "application/vnd.tessaryn.object",
+    if (entry.artifact_sha256 && (await hashFile(blob)) !== entry.artifact_sha256) {
+      throw new Error("public artifact digest does not match its publication receipt");
+    }
+    const reconstruction = entry.artifact_kind === "rgbd_reconstruction";
+    const file = new File([blob], `${entry.object_id}.${reconstruction ? "json" : "tessaryn"}`, {
+      type: reconstruction ? "application/json" : "application/vnd.tessaryn.object",
       lastModified: 0,
     });
-    await importCinematicFile(file, entry);
+    if (reconstruction) await importReconstructionFile(file, entry);
+    else await importCinematicFile(file, entry);
   } catch (error) {
     console.error(error);
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "OPEN";
+    elements.importButton.querySelector("span")!.textContent = "ADD";
     showToast(error instanceof Error ? error.message.toUpperCase() : "PUBLIC OBJECT FAILED");
   }
 }
@@ -607,10 +905,10 @@ function isPublicObjectCatalog(value: unknown): value is PublicObjectCatalog {
   if (!value || typeof value !== "object") return false;
   const catalog = value as Record<string, unknown>;
   return (
-    catalog.schema === "tessaryn/public-object-catalog/v1" &&
+    (catalog.schema === "tessaryn/public-object-catalog/v1" ||
+      catalog.schema === "tessaryn/public-object-catalog/v2") &&
     typeof catalog.updated_at_unix_us === "number" &&
     Array.isArray(catalog.objects) &&
-    catalog.objects.length > 0 &&
     catalog.objects.every((entry) => {
       if (!entry || typeof entry !== "object") return false;
       const object = entry as Record<string, unknown>;
@@ -705,12 +1003,17 @@ function finishCondensation(): void {
   runtimeMetrics.materializedMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   document.body.dataset.materialized = "true";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
-  elements.originStatus.textContent = validationArtifact
-    ? "ARCHVIZ TINY HOUSE / CONTINUUM STABLE"
-    : "VESPER COURT / CONTINUUM STABLE";
+  elements.originStatus.textContent =
+    elements.app.dataset.source === "validation"
+      ? "GROUND-TRUTH LAB / CONTINUUM STABLE"
+      : "PRIVATE ORIGIN READY / ADD YOUR CAPTURE";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
+  const materializedCells =
+    elements.app.dataset.source === "validation"
+      ? (validationVerification?.cellsValid ?? 0)
+      : worldData.cells.length;
   showToast(
-    `${String(validationVerification?.cellsValid ?? latestVerification?.cellsValid ?? worldData.cells.length)} WORLD CELLS / CONTINUUM ASSEMBLED`,
+    `${String(materializedCells)} WORLD CELLS / CONTINUUM ASSEMBLED`,
   );
 }
 
@@ -879,7 +1182,7 @@ async function showVerification(): Promise<void> {
     renderImportedVerification(report);
     return;
   }
-  if (validationArtifact) {
+  if (elements.app.dataset.source === "validation" && validationArtifact) {
     if (validationVerification) {
       renderValidationVerification(validationVerification);
       return;
@@ -949,7 +1252,10 @@ async function importLocalFile(): Promise<void> {
   await openFileBackedArtifact(file);
 }
 
-async function importReconstructionFile(file: File): Promise<void> {
+async function importReconstructionFile(
+  file: File,
+  requestedEntry: PublicObjectCatalogEntry | null = null,
+): Promise<void> {
   elements.importButton.disabled = true;
   elements.importButton.querySelector("span")!.textContent = "READING";
   try {
@@ -965,11 +1271,27 @@ async function importReconstructionFile(file: File): Promise<void> {
     const cell = reconstructionCell(parsed);
     importedArtifact = parsed;
     importedVerification = verification;
+    activeArtifactFile = file;
+    activePublicEntry = requestedEntry;
+    activeCinematicObject = null;
     if (window.__tessaryn) {
       window.__tessaryn.importedArtifact = parsed;
       window.__tessaryn.importedVerification = verification;
     }
     elements.app.dataset.source = "imported";
+    elements.localStage.hidden = false;
+    elements.localStage.dataset.kind = "reconstruction";
+    elements.localKind.textContent = requestedEntry
+      ? "PUBLIC REAL-CAPTURE LOCUS / LOCALLY VERIFIED"
+      : "LOCAL REAL-CAPTURE LOCUS / LOCALLY VERIFIED";
+    elements.localName.textContent = requestedEntry?.title ?? file.name;
+    elements.localStatus.textContent = `${String(verification.surfels.length)} SURFELS + POWER HOUSE ACCEPTED`;
+    elements.localSize.textContent = `${formatBytes(file.size)} / REAL RGB-D`;
+    elements.localRoot.textContent = shortDigest(parsed.report.sdf_cell_id, 24);
+    elements.localProgress.style.width = "100%";
+    elements.localExport.disabled = true;
+    elements.localShare.disabled = false;
+    elements.localShare.title = requestedEntry ? "Share public Locus" : "Place in Object Weave";
     selected = cell;
     scene.loadSurfelObservation(cell, verification.surfels);
     elements.originName.textContent = "LOCAL RGB-D LOCUS";
@@ -983,6 +1305,15 @@ async function importReconstructionFile(file: File): Promise<void> {
     elements.chronofoldButton.disabled = true;
     elements.chronofoldButton.classList.remove("active");
     populateImportedMoment(cell);
+    const route = new URL(location.href);
+    if (requestedEntry) route.searchParams.set("object", requestedEntry.object_id);
+    else route.searchParams.delete("object");
+    if (requestedEntry?.publication_id) {
+      route.searchParams.set("publication", requestedEntry.publication_id);
+    } else {
+      route.searchParams.delete("publication");
+    }
+    history.replaceState(null, "", route);
     showToast(`${String(verification.surfels.length)} SURFELS VERIFIED LOCALLY`);
     await showVerification();
   } catch (error) {
@@ -990,7 +1321,7 @@ async function importReconstructionFile(file: File): Promise<void> {
     showToast(error instanceof Error ? error.message.toUpperCase() : "IMPORT REJECTED");
   } finally {
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "OPEN";
+    elements.importButton.querySelector("span")!.textContent = "ADD";
   }
 }
 
@@ -1041,6 +1372,8 @@ async function importCinematicFile(
       verification: parsed.report,
       publicEntry,
     };
+    activeArtifactFile = file;
+    activePublicEntry = publicEntry;
     if (window.__tessaryn) {
       window.__tessaryn.cinematicObject = parsed.envelope;
       window.__tessaryn.cinematicVerification = parsed.report;
@@ -1057,7 +1390,8 @@ async function importCinematicFile(
     elements.localName.textContent = parsed.envelope.descriptor.title;
     elements.localStatus.textContent = `${String(parsed.report.verifiedMediaChunks)} MEDIA CHUNKS + POWER HOUSE ACCEPTED`;
     elements.localSize.textContent = `${formatBytes(file.size)} / FILE-BACKED`;
-    elements.localShare.disabled = publicEntry === null;
+    elements.localShare.disabled = false;
+    elements.localShare.title = publicEntry ? "Share public object" : "Place in Object Weave";
     elements.cinematicControls.hidden = false;
     elements.cinematicTime.value = "0";
     updateCinematicClock(0);
@@ -1084,6 +1418,8 @@ async function importCinematicFile(
     const route = new URL(location.href);
     if (publicEntry) route.searchParams.set("object", publicEntry.object_id);
     else route.searchParams.delete("object");
+    if (publicEntry?.publication_id) route.searchParams.set("publication", publicEntry.publication_id);
+    else route.searchParams.delete("publication");
     history.replaceState(null, "", route);
     showToast(
       publicEntry
@@ -1094,11 +1430,11 @@ async function importCinematicFile(
     console.error(error);
     activeLocalTask?.cancel();
     await indexing;
-    restoreValidationOrigin(false);
+    restoreReferenceOrigin(false);
     showToast(error instanceof Error ? error.message.toUpperCase() : "OBJECT REJECTED");
   } finally {
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "OPEN";
+    elements.importButton.querySelector("span")!.textContent = "ADD";
   }
 }
 
@@ -1603,11 +1939,248 @@ function updateWorldLabel(): void {
   requestAnimationFrame(updateWorldLabel);
 }
 
-function restoreValidationOrigin(notify = true): void {
+function openPublishDialog(): void {
+  const metadata = activePublicationMetadata();
+  if (!activeArtifactFile || !metadata) {
+    showToast("OPEN A VERIFIED CONSTRUCTION FIRST");
+    return;
+  }
+  elements.publishKind.textContent =
+    metadata.artifactKind === "rgbd_reconstruction"
+      ? "REAL RGB-D CONSTRUCTION"
+      : "NATIVE TEMPORAL OBJECT";
+  elements.publishFile.textContent = activeArtifactFile.name;
+  elements.publishCell.textContent = metadata.cellId;
+  elements.publishObjectId.value = metadata.objectId;
+  elements.publishTitle.value = metadata.title;
+  elements.publishSummary.value = metadata.summary;
+  elements.publishConsent.checked = false;
+  setPublishBusy(false);
+  updatePublicationProgress({
+    stage: "identity",
+    bytesProcessed: 0,
+    totalBytes: activeArtifactFile.size,
+    completedChunks: 0,
+    totalChunks: 0,
+  });
+  elements.publishStage.textContent = "READY";
+  elements.publishDetail.textContent = weaveConfig
+    ? "LOCAL PUBLISHER KEY / RESUMABLE VERIFIED ADMISSION"
+    : "PUBLIC NODE OFFLINE / DEVICE WEAVE AVAILABLE";
+  if (!elements.publishDialog.open) elements.publishDialog.showModal();
+}
+
+function closePublishDialog(): void {
+  publishAbort?.abort();
+  publishAbort = null;
+  setPublishBusy(false);
+  if (elements.publishDialog.open) elements.publishDialog.close();
+}
+
+async function keepActiveObject(): Promise<void> {
+  const metadata = publicationFormMetadata();
+  const file = activeArtifactFile;
+  if (!file || !metadata) return;
+  setPublishBusy(true);
+  elements.publishStage.textContent = "RETAINING ON DEVICE";
+  elements.publishDetail.textContent = "REQUESTING DURABLE BROWSER STORAGE";
+  try {
+    const record = await saveToPersonalWeave(file, metadata);
+    personalWeaveObjects = [
+      record,
+      ...personalWeaveObjects.filter((candidate) => candidate.localId !== record.localId),
+    ];
+    updateWeaveCounts();
+    elements.publishProgress.dataset.state = "complete";
+    elements.publishProgressBar.style.width = "100%";
+    elements.publishPercent.textContent = "100%";
+    elements.publishStage.textContent = "RETAINED ON THIS DEVICE";
+    elements.publishDetail.textContent = record.artifactSha256;
+    showToast("CONSTRUCTION RETAINED IN YOUR PERSONAL WEAVE");
+  } catch (error) {
+    elements.publishProgress.dataset.state = "error";
+    elements.publishStage.textContent = "DEVICE RETENTION FAILED";
+    elements.publishDetail.textContent = error instanceof Error ? error.message.toUpperCase() : "STORAGE FAILED";
+  } finally {
+    setPublishBusy(false);
+  }
+}
+
+async function publishActiveObject(): Promise<void> {
+  const metadata = publicationFormMetadata();
+  const file = activeArtifactFile;
+  if (!file || !metadata) return;
+  if (!weaveConfig) {
+    elements.publishStage.textContent = "PUBLIC NODE OFFLINE";
+    elements.publishDetail.textContent = "KEEP ON DEVICE REMAINS AVAILABLE";
+    return;
+  }
+  if (!elements.publishConsent.checked) {
+    elements.publishConsent.focus();
+    elements.publishStage.textContent = "PUBLICATION AUTHORIZATION REQUIRED";
+    return;
+  }
+  publishAbort?.abort();
+  publishAbort = new AbortController();
+  setPublishBusy(true);
+  try {
+    const receipt = await publishArtifact(
+      weaveConfig.api,
+      file,
+      metadata,
+      updatePublicationProgress,
+      publishAbort.signal,
+    );
+    const record = await saveToPersonalWeave(
+      file,
+      metadata,
+      receipt.intent.artifact_sha256,
+    );
+    await markPersonalObjectPublished(record.localId, receipt);
+    record.publicationId = receipt.publication_id;
+    record.publicArtifact = receipt.artifact_url;
+    personalWeaveObjects = [
+      record,
+      ...personalWeaveObjects.filter((candidate) => candidate.localId !== record.localId),
+    ];
+    const entry: PublicObjectCatalogEntry = {
+      publication_id: receipt.publication_id,
+      publisher_id: receipt.publisher_id,
+      object_id: receipt.intent.object_id,
+      title: receipt.intent.title,
+      artifact: receipt.artifact_url,
+      artifact_sha256: receipt.intent.artifact_sha256,
+      artifact_bytes: receipt.intent.artifact_bytes,
+      artifact_kind: receipt.artifact_kind,
+      cell_id: receipt.cell_id,
+      rootprint_branch: receipt.rootprint_branch,
+      media: receipt.media,
+      dimensions: receipt.dimensions,
+      moments: receipt.moments,
+      summary: receipt.intent.summary,
+      accepted_at_unix_us: receipt.accepted_at_unix_us,
+    };
+    publicObjectCatalog = mergePublicCatalogs(
+      {
+        schema: "tessaryn/public-object-catalog/v2",
+        updated_at_unix_us: receipt.accepted_at_unix_us,
+        objects: [entry],
+      },
+      publicObjectCatalog,
+    );
+    activePublicEntry = entry;
+    if (activeCinematicObject) activeCinematicObject.publicEntry = entry;
+    elements.localKind.textContent =
+      metadata.artifactKind === "rgbd_reconstruction"
+        ? "PUBLIC REAL-CAPTURE LOCUS / LOCALLY VERIFIED"
+        : "PUBLIC OBJECT WEAVE / LOCALLY VERIFIED";
+    elements.localShare.title = "Share public construction";
+    const route = new URL(location.href);
+    route.searchParams.set("object", entry.object_id);
+    route.searchParams.set("publication", receipt.publication_id);
+    history.replaceState(null, "", route);
+    updateWeaveCounts();
+    elements.publishProgress.dataset.state = "complete";
+    elements.publishStage.textContent = "PUBLIC WEAVE ACCEPTED";
+    elements.publishDetail.textContent = receipt.publication_id;
+    showToast("SIGNED CONSTRUCTION PUBLISHED / NO GITHUB WORKFLOW");
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    elements.publishProgress.dataset.state = "error";
+    elements.publishStage.textContent = "PUBLICATION REJECTED";
+    elements.publishDetail.textContent = error instanceof Error ? error.message.toUpperCase() : "PUBLICATION FAILED";
+    showToast("PUBLICATION REJECTED / LOCAL OBJECT UNCHANGED");
+  } finally {
+    publishAbort = null;
+    setPublishBusy(false);
+  }
+}
+
+function publicationFormMetadata(): PublicationMetadata | null {
+  const active = activePublicationMetadata();
+  if (!active) return null;
+  return {
+    ...active,
+    objectId: elements.publishObjectId.value,
+    title: elements.publishTitle.value,
+    summary: elements.publishSummary.value,
+  };
+}
+
+function activePublicationMetadata(): PublicationMetadata | null {
+  if (activeCinematicObject) {
+    const envelope = activeCinematicObject.envelope;
+    return {
+      objectId: envelope.descriptor.object_id,
+      title: envelope.descriptor.title,
+      summary: envelope.descriptor.slbit.summary,
+      mediaType: activeArtifactFile?.type || "application/vnd.tessaryn.object",
+      cellId: envelope.cell_proof.cell_id,
+      rootprintBranch: envelope.cell_proof.rootprint.root_branch,
+      artifactKind: "cinematic_object",
+    };
+  }
+  if (importedArtifact) {
+    const base = (activeArtifactFile?.name ?? "real-capture")
+      .replace(/\.[^.]+$/u, "")
+      .toLocaleLowerCase()
+      .replace(/[^a-z0-9]+/gu, "-")
+      .replace(/^-+|-+$/gu, "");
+    return {
+      objectId:
+        base.length >= 3
+          ? base
+          : `capture-${importedArtifact.report.sdf_cell_id.replace(/^sha256:/u, "").slice(0, 12)}`,
+      title: activePublicEntry?.title ?? "LOCAL RGB-D LOCUS",
+      summary:
+        activePublicEntry?.summary ??
+        "A privacy-filtered real sensor reconstruction with locally verified surfels, sparse SDF, Rootprint lineage, and replay.",
+      mediaType: "application/json",
+      cellId: importedArtifact.report.sdf_cell_id,
+      rootprintBranch: importedArtifact.lineage.rootprint.root_branch,
+      artifactKind: "rgbd_reconstruction",
+    };
+  }
+  return null;
+}
+
+function updatePublicationProgress(progress: PublicationProgress): void {
+  const percent =
+    progress.totalBytes === 0
+      ? progress.stage === "complete"
+        ? 100
+        : 0
+      : Math.min(100, Math.round((progress.bytesProcessed / progress.totalBytes) * 100));
+  elements.publishProgress.dataset.state = progress.stage;
+  elements.publishStage.textContent = progress.stage.replaceAll("_", " ").toUpperCase();
+  elements.publishPercent.textContent = `${String(percent)}%`;
+  elements.publishProgressBar.style.width = `${String(percent)}%`;
+  elements.publishDetail.textContent =
+    progress.totalChunks > 0
+      ? `${String(progress.completedChunks)} / ${String(progress.totalChunks)} CHUNKS / ${formatBytes(progress.bytesProcessed)}`
+      : `${formatBytes(progress.bytesProcessed)} / ${formatBytes(progress.totalBytes)}`;
+}
+
+function setPublishBusy(busy: boolean): void {
+  elements.keepObject.disabled = busy;
+  elements.publishObject.disabled = busy;
+  elements.publishObjectId.disabled = busy;
+  elements.publishTitle.disabled = busy;
+  elements.publishSummary.disabled = busy;
+  elements.publishConsent.disabled = busy;
+}
+
+function clearActiveConstruction(): void {
   activeCinematicObject = null;
+  activeArtifactFile = null;
+  activePublicEntry = null;
+  importedArtifact = null;
+  importedVerification = null;
   if (window.__tessaryn) {
     delete window.__tessaryn.cinematicObject;
     delete window.__tessaryn.cinematicVerification;
+    delete window.__tessaryn.importedArtifact;
+    delete window.__tessaryn.importedVerification;
   }
   closeLocalFile(false);
   elements.cinematicControls.hidden = true;
@@ -1615,6 +2188,12 @@ function restoreValidationOrigin(notify = true): void {
   chronofoldOpen = false;
   elements.chronofoldButton.classList.remove("active");
   elements.chronofoldButton.setAttribute("aria-pressed", "false");
+  closeTrace();
+  closeChallenge();
+}
+
+function openValidationOrigin(notify = true): void {
+  clearActiveConstruction();
   if (!validationVerification) return;
   const observations = temporalObservations(validationVerification);
   scene.loadTemporalObservations(observations);
@@ -1634,7 +2213,7 @@ function restoreValidationOrigin(notify = true): void {
   elements.momentShort.textContent = "MOMENT C";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
-  elements.originStatus.textContent = "ARCHVIZ TINY HOUSE / CONTINUUM STABLE";
+  elements.originStatus.textContent = "GROUND-TRUTH LAB / CONTINUUM STABLE";
   elements.condensation.style.width = "100%";
   elements.chronofoldButton.disabled = false;
   elements.challengeButton.disabled = false;
@@ -1643,16 +2222,56 @@ function restoreValidationOrigin(notify = true): void {
   populateTemporalMoments(validationVerification);
   const route = new URL(location.href);
   route.searchParams.delete("object");
+  route.searchParams.delete("publication");
+  route.searchParams.set("origin", "validation");
   history.replaceState(null, "", route);
-  if (notify) showToast("VALIDATION ORIGIN RESTORED");
+  latestVerification = validationVerificationReport(validationVerification);
+  if (window.__tessaryn) window.__tessaryn.verification = latestVerification;
+  if (notify) showToast("GROUND-TRUTH VALIDATION LOCUS OPEN");
+}
+
+function restoreReferenceOrigin(notify = true): void {
+  clearActiveConstruction();
+  scene.loadReferenceWorld();
+  selected =
+    worldData.cells.find((cell) => cell.key === "archive-c") ??
+    worldData.cells[0] ??
+    selected;
+  evidenceVisible = true;
+  scene.setEvidence(true);
+  elements.evidenceButton.classList.add("active");
+  elements.evidenceButton.setAttribute("aria-pressed", "true");
+  elements.app.dataset.source = "reference";
+  elements.originName.textContent = "LOCAL CONSTRUCTION FIELD";
+  elements.cellCount.textContent = `${String(worldData.cells.length)} REFERENCE CELLS`;
+  elements.anchorShort.textContent = shortDigest(worldData.anchor_id, 8);
+  elements.momentShort.textContent = "REFERENCE";
+  elements.evidenceShort.textContent = "LOCALLY VERIFIED";
+  elements.originPhase.textContent = "PRIVATE ORIGIN / READY";
+  elements.originStatus.textContent = "PRIVATE ORIGIN READY / ADD YOUR CAPTURE";
+  elements.condensation.style.width = "100%";
+  elements.chronofoldButton.disabled = false;
+  elements.challengeButton.disabled = false;
+  elements.exportButton.disabled = false;
+  elements.scaleBreath.disabled = false;
+  populateMoments(worldData.moments);
+  const route = new URL(location.href);
+  route.searchParams.delete("object");
+  route.searchParams.delete("publication");
+  route.searchParams.delete("origin");
+  history.replaceState(null, "", route);
+  latestVerification = referenceVerification;
+  if (window.__tessaryn) window.__tessaryn.verification = latestVerification;
+  if (notify) showToast("PRIVATE ORIGIN READY / ADD A CAPTURE");
 }
 
 async function shareActiveObject(): Promise<void> {
-  const entry = activeCinematicObject?.publicEntry;
+  const entry = activePublicEntry;
   if (!entry) return;
   const url = new URL(location.href);
   url.search = "";
   url.searchParams.set("object", entry.object_id);
+  if (entry.publication_id) url.searchParams.set("publication", entry.publication_id);
   try {
     if (navigator.share) {
       await navigator.share({ title: entry.title, text: entry.summary, url: url.toString() });

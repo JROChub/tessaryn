@@ -1,9 +1,7 @@
-mod cinematic;
 mod datasets;
 mod layout;
 mod tartanair;
 
-use cinematic::{pack_cinematic_object, verify_cinematic_object};
 use datasets::{tartanair_profile, validation_portfolio};
 use layout::inspect_dataset_layout;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -13,6 +11,11 @@ use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use tartanair::{load_tartanair_validation_capture, ValidationSelectionRecord};
 use tessaryn_canonical::{chunk_id, chunk_merkle_root, parse_strict_json_bounded};
+use tessaryn_cli::artifact::{
+    build_reconstruction_artifact, verify_reconstruction_artifact, ReconstructionArtifactV0,
+    RECONSTRUCTION_ARTIFACT_SCHEMA_V0,
+};
+use tessaryn_cli::cinematic::{pack_cinematic_object, verify_cinematic_object};
 use tessaryn_cli::{generate_demo_world, verify_demo_world, DemoWorld};
 use tessaryn_forge::CapturePolicy;
 use tessaryn_powerhouse::{
@@ -20,9 +23,8 @@ use tessaryn_powerhouse::{
     CellProofBundle, CellProofReport, WorldLineageBundle, WorldLineageReport,
 };
 use tessaryn_reconstruct::{
-    reconstruct_rgbd_session, rgbd_frame_id, verify_reconstruction_report, ReconstructionPolicy,
-    ReconstructionReport, ReconstructionVerificationReport, RgbdCalibrationV0, RgbdFrameV0,
-    RgbdSessionV0, RigidPoseQ30,
+    rgbd_frame_id, verify_reconstruction_report, ReconstructionPolicy, RgbdCalibrationV0,
+    RgbdFrameV0, RgbdSessionV0, RigidPoseQ30,
 };
 use tessaryn_schema::{
     CellClass, CellManifestV0, ChannelDescriptor, Criticality, DatasetProfileV1, Digest,
@@ -33,7 +35,6 @@ use tessaryn_sync::PortableLocusV0;
 const MAX_TOOL_INPUT_BYTES: usize = 256 * 1024 * 1024;
 const RECONSTRUCTION_REQUEST_SCHEMA_V0: &str = "tessaryn/reconstruction-request/v0";
 const RGBD_FILE_REQUEST_SCHEMA_V0: &str = "tessaryn/rgbd-file-request/v0";
-const RECONSTRUCTION_ARTIFACT_SCHEMA_V0: &str = "tessaryn/reconstruction-artifact/v0";
 const VALIDATION_LOCUS_ARTIFACT_SCHEMA_V1: &str = "tessaryn/validation-locus-artifact/v1";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,20 +69,6 @@ struct RgbdFileFrameV0 {
     color_rgba8: PathBuf,
     #[serde(default)]
     privacy_mask_u8: Option<PathBuf>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ReconstructionArtifactV0 {
-    schema: String,
-    reconstruction_policy: ReconstructionPolicy,
-    report: ReconstructionReport,
-    verification: ReconstructionVerificationReport,
-    observation_proof: CellProofBundle,
-    observation_proof_report: CellProofReport,
-    sdf_proof: CellProofBundle,
-    sdf_proof_report: CellProofReport,
-    lineage: WorldLineageBundle,
-    lineage_report: WorldLineageReport,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -207,12 +194,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if artifact.schema != RECONSTRUCTION_ARTIFACT_SCHEMA_V0 {
                 return Err("unsupported reconstruction artifact schema".into());
             }
-            let report =
-                verify_reconstruction_report(&artifact.report, &artifact.reconstruction_policy)?;
-            if report != artifact.verification {
-                return Err("stored reconstruction verification report mismatch".into());
-            }
-            verify_artifact_provenance(&artifact)?;
+            let report = verify_reconstruction_artifact(&artifact)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Some("construct-tartanair-locus") => {
@@ -389,60 +371,6 @@ fn run_reconstruction(
         output.display()
     );
     Ok(())
-}
-
-fn build_reconstruction_artifact(
-    session: RgbdSessionV0,
-    capture_policy: CapturePolicy,
-    reconstruction_policy: ReconstructionPolicy,
-) -> Result<ReconstructionArtifactV0, Box<dyn std::error::Error>> {
-    let report = reconstruct_rgbd_session(session, capture_policy, reconstruction_policy.clone())?;
-    let verification = verify_reconstruction_report(&report, &reconstruction_policy)?;
-    let observation_proof = prove_cell(
-        report.observation.manifest.clone(),
-        Some(serde_json::json!({
-            "claim_state": "SOURCE_OBSERVATION_COMMITTED",
-            "schema": "slbit/viz-packet/v3",
-            "summary": "Privacy-filtered RGB-D observation Cell with locally verifiable identity.",
-        })),
-    )?;
-    let observation_proof_report = verify_bundle(&observation_proof)?;
-    let sdf_proof = prove_cell(
-        report.sdf_manifest.clone(),
-        Some(serde_json::json!({
-            "claim_state": "DERIVED_FROM_VERIFIED_BYTES",
-            "schema": "slbit/viz-packet/v3",
-            "summary": "Sparse SDF derived from the privacy-filtered observation Cell.",
-        })),
-    )?;
-    let sdf_proof_report = verify_bundle(&sdf_proof)?;
-    let lineage = prove_lineage(vec![
-        CellLineageStep {
-            label: "observation".to_string(),
-            parent_labels: Vec::new(),
-            manifest: report.observation.manifest.clone(),
-        },
-        CellLineageStep {
-            label: "sdf-derived".to_string(),
-            parent_labels: vec!["observation".to_string()],
-            manifest: report.sdf_manifest.clone(),
-        },
-    ])?;
-    let lineage_report = verify_lineage_bundle(&lineage)?;
-    let artifact = ReconstructionArtifactV0 {
-        schema: RECONSTRUCTION_ARTIFACT_SCHEMA_V0.to_string(),
-        reconstruction_policy,
-        report,
-        verification,
-        observation_proof,
-        observation_proof_report,
-        sdf_proof,
-        sdf_proof_report,
-        lineage,
-        lineage_report,
-    };
-    verify_artifact_provenance(&artifact)?;
-    Ok(artifact)
 }
 
 fn run_tartanair_validation_locus(
@@ -888,7 +816,7 @@ fn verify_validation_locus(
         if verified != moment.artifact.verification {
             return Err(format!("stored verification mismatch for {}", moment.id).into());
         }
-        verify_artifact_provenance(&moment.artifact)?;
+        verify_reconstruction_artifact(&moment.artifact)?;
         surfels = surfels
             .checked_add(verified.verified_surfels)
             .ok_or("surfel count overflow")?;
@@ -969,41 +897,6 @@ fn verify_validation_locus(
         "surfels_valid": surfels,
         "voxels_valid": voxels,
     }))
-}
-
-fn verify_artifact_provenance(
-    artifact: &ReconstructionArtifactV0,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if artifact.observation_proof.cell_id != artifact.report.observation.cell_id
-        || artifact.sdf_proof.cell_id != artifact.report.sdf_cell_id
-    {
-        return Err("Power House proof bundle does not bind reconstruction Cells".into());
-    }
-    if verify_bundle(&artifact.observation_proof)? != artifact.observation_proof_report
-        || verify_bundle(&artifact.sdf_proof)? != artifact.sdf_proof_report
-        || verify_lineage_bundle(&artifact.lineage)? != artifact.lineage_report
-    {
-        return Err("stored Power House verification report mismatch".into());
-    }
-    verify_lineage_cell_binding(
-        &artifact.lineage,
-        "observation",
-        &artifact.report.observation.cell_id,
-    )?;
-    verify_lineage_cell_binding(
-        &artifact.lineage,
-        "sdf-derived",
-        &artifact.report.sdf_cell_id,
-    )?;
-    for proof in [&artifact.observation_proof, &artifact.sdf_proof] {
-        let challenge = proof
-            .memory_capsule
-            .challenge_all(power_house::MemoryVerificationPolicy::strict())?;
-        if challenge.mismatches != 0 || challenge.expected_rejections != challenge.total {
-            return Err("Power House Memory Capsule challenge mismatch".into());
-        }
-    }
-    Ok(())
 }
 
 fn verify_lineage_cell_binding(

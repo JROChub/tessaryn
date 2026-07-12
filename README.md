@@ -8,12 +8,16 @@ service, panorama provider, globe, or provider-owned world model.
 
 ## Release State
 
-This repository is `0.4.0`. It contains the tested World Cell kernel,
+This repository is `0.5.0`. It contains the tested World Cell kernel,
 capture-to-Cell reconstruction, authenticated private Locus exchange, signed
-witness receipts, Power House packaging, a browser-local verifier, and the
-TartanAir V2 ArchViz Tiny House validation Origin. Vesper Court remains a
-deterministic protocol vector. See [STATUS.md](STATUS.md) for the software
-release contract.
+witness receipts, Power House packaging, a browser-local verifier, a durable
+Personal Weave, and a signed write-capable public Object Weave. The browser now
+starts in a private local construction field: opening, retaining, and publishing
+an owned capture is the primary path. TartanAir V2 remains available only as an
+opt-in exact-ground-truth Validation Lab. Real RGB-D reconstructions are
+first-class objects rather than secondary inspection receipts, and Vesper Court
+remains a deterministic protocol vector. See [STATUS.md](STATUS.md) for the
+software release contract.
 
 The release implements:
 
@@ -30,7 +34,7 @@ The release implements:
 - signed witness receipts with explicit attestation classes and independence
   groups that never acquire core proof authority;
 - Power House `.pha`, Rootprint, replay, Memory Capsule, and SLBIT bindings;
-- a reproducible 640x640 RGB-D Origin with 48 archive-bound frames, 212,565
+- an opt-in reproducible 640x640 RGB-D validation Locus with 48 archive-bound frames, 212,565
   verified surfels, and 224,867 verified sparse-SDF voxels;
 - a provenance-bound dataset profile that keeps synthetic ground truth and
   real sensor evidence cryptographically distinct;
@@ -45,6 +49,15 @@ The release implements:
   Rootprint, replay identity, Memory Capsule, and SLBIT binding;
 - the public Object Weave catalog with stable object IDs, search, direct viewer
   routes, local reverification, and shareable public artifacts;
+- browser-origin Ed25519 publisher identities that remain on the originating
+  device;
+- a Personal Weave backed by origin-private browser storage, with a persistence
+  request and verified reopen path;
+- resumable fixed-size public publication, server-side artifact reverification,
+  atomic content-addressed storage, deduplication, byte-range retrieval, and
+  signed publication receipts without a GitHub submission;
+- independently revocable public discovery that never rewrites artifact, Cell,
+  PHA, or Rootprint identity;
 - a diamond-plan Continuum Monument with open entrances, inhabitable Cell
   walls, disclosure boundaries, a volumetric memory core, four separable
   Moments, and deterministic architectural World Cell placement;
@@ -61,7 +74,7 @@ The release implements:
   adaptive software-renderer path;
 - service-worker-backed offline operation after the first successful load.
 
-## Run The Origin
+## Run The Private Origin
 
 ```bash
 cargo run -p tessaryn-cli -- generate-demo
@@ -74,8 +87,10 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. The viewer reads only local, same-origin fixture
-data. It does not upload proof or world data.
+Open `http://localhost:5173`. The first screen is the local construction field,
+not a synthetic scene or public catalog object. `CONSTRUCT A PLACE` opens a
+capture artifact directly from the device. Local artifacts remain private unless
+their owner explicitly chooses `PUBLISH TO WEAVE` and authorizes disclosure.
 
 The production Origin is available at [tessaryn.com](https://tessaryn.com/).
 
@@ -94,12 +109,35 @@ cargo run -p tessaryn-cli -- \
   verify-reconstruction capture/artifact.json
 ```
 
-The browser `OPEN` control imports the same artifact without uploading it. It
+The browser `ADD` control imports the same artifact without uploading it. It
 also indexes arbitrary local files directly from their original storage while
 a dedicated worker builds the deterministic
 `tessaryn/local-file-index/v1` stream root in bounded memory. Bulk channels stay
 file-backed; only compact reconstruction manifests use strict whole-document
 JSON parsing.
+
+After local verification, the object can be retained in the Personal Weave or
+published directly from the product. The same path accepts both real RGB-D
+reconstructions and authored temporal objects while preserving their different
+source classes.
+
+## Publish Without GitHub
+
+Run an independent write-capable node:
+
+```bash
+TESSARYN_WEAVE_ROOT=./weave-data \
+TESSARYN_WEAVE_PUBLIC_URL=http://127.0.0.1:8790 \
+TESSARYN_WEAVE_ALLOWED_ORIGINS=http://127.0.0.1:5173 \
+cargo run -p tessaryn-weave-node
+```
+
+The browser signs publication metadata against the complete artifact SHA-256,
+resumes only missing chunks, and accepts the returned publication only when it
+binds the Cell and Rootprint values already verified locally. The node then
+reconstructs the complete artifact, re-runs all admitted protocol and Power
+House verification, commits bytes atomically by digest, and publishes a
+searchable receipt. See [Write-Capable Object Weave v1](specs/publication-v1.md).
 
 ## Build And Verify A Cinematic Object
 
@@ -119,13 +157,13 @@ cargo run -p tessaryn-cli -- verify-cinematic-object \
   apps/viewer-web/public/objects/nostalgia-continuum-monument-01.tessaryn
 ```
 
-Published catalog objects are discoverable under `OBJECTS` and through
+Published catalog objects are discoverable under `WEAVE` and through
 `?object=<object-id>`. Opening the same file locally recalculates every media
 chunk and proof layer before the renderer accepts it.
 
-## Reproduce The Validation Origin
+## Reproduce The Validation Lab
 
-The committed visual Origin is derived from the official TartanAir V2
+The opt-in ground-truth Locus is derived from the official TartanAir V2
 `ArchVizTinyHouseDay/Data_easy/P000/lcam_front` sequence under CC BY 4.0. Its
 profile binds source class, exact RGB and depth archive digests and byte counts,
 640x640 calibration, simulator depth and pose ground truth, ordered frame
@@ -162,8 +200,9 @@ cd apps/viewer-web && npm test && npm run build
 ## Architecture
 
 ```text
-Cell schema -> canonical identity -> local store -> Anchor Graph
-     -> World Weave -> bounded Locus -> native renderer
+real/synthetic capture -> Cell Forge -> canonical identity -> local store
+     -> Anchor Graph -> World Weave -> bounded Locus -> native renderer
+     -> Personal Weave / signed public publication -> independent Weave nodes
      -> TESSARYN Power House bridge -> .pha / Rootprint / Memory Capsule
 ```
 
@@ -195,6 +234,8 @@ witnesses, and meaning as independently inspectable dimensions.
 - `crates/tessaryn-witness`: scoped signed witness receipts and evidence dimensions.
 - `crates/tessaryn-powerhouse`: narrow Power House integration boundary.
 - `tools/tessaryn-cli`: reference generation, capture reconstruction, and offline verification.
+- `services/tessaryn-weave-node`: signed resumable admission, durable
+  content-addressed publication, discovery, and byte-range retrieval.
 - `apps/viewer-web`: local-first native 4D viewer.
 - `specs`: versioned protocol contracts.
 - `conformance`: canonical vectors and expected reports.
@@ -210,13 +251,14 @@ and leaked workstation paths.
 
 ## Public Origin
 
-The tested static viewer and read-only public Object Weave are published at
+The tested static viewer and write-capable Object Weave client are published at
 `https://tessaryn.com/`. GitHub Pages
 deploys only after the conformance workflow succeeds. The apex and `www` hosts
 use HTTPS, with `www` redirected to the apex. The distribution contains no
 runtime map dependency, analytics SDK, or remote world model. Local files are
-never published implicitly; objects become publicly discoverable when their
-committed artifact and catalog entry ship together.
+never published implicitly. User objects become discoverable through signed
+publication receipts issued by an independent Weave node after complete
+reverification; no source-code contribution is involved.
 
 [Open TESSARYN](https://tessaryn.com/)
 

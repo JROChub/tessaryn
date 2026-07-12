@@ -1,6 +1,6 @@
 # Public Object Catalog v1
 
-`tessaryn/public-object-catalog/v1` is the read-only discovery index for public
+`tessaryn/public-object-catalog/v1` is the release-bundled read-only discovery index for public
 Tessaryn objects. It provides names and locations; it is never an authority for
 object validity.
 
@@ -23,5 +23,12 @@ offline replay.
 
 Publication is explicit. A local file selected with `OPEN` remains local unless
 the same committed artifact and catalog entry are included in a public release.
+
+`tessaryn/public-object-catalog/v2` is the write-capable node projection. It
+adds publication and publisher IDs, artifact digest and byte count, artifact
+class, and acceptance time. Entries are created through the signed,
+server-reverified flow in [publication-v1.md](publication-v1.md), not through a
+source-code contribution. Clients merge v2 node catalogs with bundled v1
+release objects and recalculate artifact identity before rendering.
 This prevents accidental disclosure while giving every released object a stable
 public address.

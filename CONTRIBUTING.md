@@ -1,5 +1,9 @@
 # Contributing
 
+This document governs changes to TESSARYN software and protocols. Publishing a
+place or temporal object does not require a pull request, repository account, or
+source contribution; use the in-product Personal/Public Weave flow instead.
+
 TESSARYN uses conformance-bound engineering. A visually persuasive demo is not
 a protocol result.
 
