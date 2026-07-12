@@ -1,4 +1,4 @@
-const CACHE = "tessaryn-origin-v0-3-0-validation-locus1-video1";
+const CACHE = "tessaryn-origin-v0-3-0-validation-locus1-stream1";
 const CORE = [
   "./",
   "./world/archviz-tiny-house-locus.json",
@@ -6,8 +6,6 @@ const CORE = [
   "./validation/portfolio.json",
   "./manifest.webmanifest",
   "./tessaryn-mark.svg",
-  "./models/onnx-community/depth-anything-v2-small/config.json",
-  "./models/onnx-community/depth-anything-v2-small/preprocessor_config.json",
 ];
 
 self.addEventListener("install", (event) => {

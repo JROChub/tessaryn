@@ -50,13 +50,8 @@ The exported index records the root, byte length, chunk size, chunk count, local
 filename, media type, and modification time. Filename, media type, and
 modification time are descriptive and do not enter the stream root.
 
-Video decoding uses a short-lived object URL that is never attached to a visible
-media player. The URL exists only while the browser seeks and rasterizes bounded
-source frames for `tessaryn/video-locus-artifact/v1`; it is revoked in both the
-success and rejection paths. Closing the construction rail aborts unfinished
-indexing and reconstruction.
-
-Arbitrary non-video files retain the stream-index path. Reconstruction JSON
-remains a strict manifest profile. Large source channels remain file-backed;
-portable Locus JSON contains only the admitted, quantized world channels and
-their verification structures.
+Video and image files are presented through a revocable local object URL while
+the worker indexes them. This path is file-backed: presentation does not wait for
+the entire file, and closing the file revokes the URL and cancels unfinished
+indexing. Reconstruction JSON remains a strict manifest profile. Large channel
+data belongs in file-backed chunks rather than one enormous JSON string.

@@ -50,12 +50,6 @@ import {
   type ScaleMode,
   type TemporalObservation,
 } from "./world";
-import {
-  hydrateVideoLocusArtifact,
-  reconstructVideoToLocus,
-  type VideoReconstructionProgress,
-  type VideoReconstructionResult,
-} from "./video-reconstruction";
 
 declare global {
   interface Window {
@@ -67,8 +61,6 @@ declare global {
       validationArtifact?: ValidationLocusArtifactView;
       validationVerification?: ValidationLocusBrowserReport;
       localImport?: LocalImportView;
-      videoReconstruction?: VideoReconstructionResult;
-      videoVerification?: VerificationReport;
       verifyValidationArtifact: typeof verifyValidationOffThread;
       scene: TessarynWorld;
       metrics: RuntimeMetrics;
@@ -84,12 +76,7 @@ interface RuntimeMetrics {
 }
 
 type LocalFileKind = "video" | "image" | "audio" | "binary";
-type LocalImportStatus =
-  | "indexing"
-  | "indexed"
-  | "reconstructing"
-  | "materialized"
-  | "error";
+type LocalImportStatus = "indexing" | "indexed" | "error";
 
 interface LocalImportView {
   name: string;
@@ -100,13 +87,11 @@ interface LocalImportView {
   bytesRead: number;
   chunkCount: number;
   streamRoot?: string;
-  worldCells?: number;
-  surfels?: number;
-  surfaceVoxels?: number;
 }
 
 interface ActiveLocalImport {
   file: File;
+  objectUrl: string;
   kind: LocalFileKind;
   status: LocalImportStatus;
   identity: LocalFileIdentity | null;
@@ -115,7 +100,6 @@ interface ActiveLocalImport {
   previousOriginName: string;
   previousCellCount: string;
   error?: string;
-  reconstruction?: VideoReconstructionResult;
 }
 
 const elements = {
@@ -184,6 +168,9 @@ const elements = {
   sourceProfileId: byId<HTMLElement>("source-profile-id"),
   portfolioList: byId<HTMLElement>("portfolio-list"),
   localStage: byId<HTMLElement>("local-stage"),
+  localVideo: byId<HTMLVideoElement>("local-video"),
+  localImage: byId<HTMLImageElement>("local-image"),
+  localField: byId<HTMLElement>("local-field"),
   localClose: byId<HTMLButtonElement>("local-close"),
   localExport: byId<HTMLButtonElement>("local-export"),
   localKind: byId<HTMLElement>("local-kind"),
@@ -218,7 +205,6 @@ let importedArtifact: ReconstructionArtifactView | null = null;
 let importedVerification: ReconstructionBrowserReport | null = null;
 let validationArtifact: ValidationLocusArtifactView | null = null;
 let validationVerification: ValidationLocusBrowserReport | null = null;
-let validationPortfolio: ValidationPortfolio | null = null;
 const temporalArtifactsByCell = new Map<string, ReconstructionArtifactView>();
 const temporalCellsByMoment = new Map<string, DemoCell>();
 let chronofoldOpen = false;
@@ -227,9 +213,6 @@ let condensationComplete = false;
 let toastTimer = 0;
 let activeLocalImport: ActiveLocalImport | null = null;
 let activeLocalTask: LocalIngestTask | null = null;
-let activeReconstructionAbort: AbortController | null = null;
-let videoReconstruction: VideoReconstructionResult | null = null;
-let videoVerification: VerificationReport | null = null;
 const MAX_INLINE_RECONSTRUCTION_BYTES = 64 * 1024 * 1024;
 const runtimeMetrics: RuntimeMetrics = {
   bootStartedAtMs: performance.now(),
@@ -263,7 +246,6 @@ async function boot(): Promise<void> {
     if (!isValidationPortfolio(parsedPortfolio)) {
       throw new Error("unsupported validation portfolio");
     }
-    validationPortfolio = parsedPortfolio;
     validationArtifact = parsedValidation;
     elements.bootStatus.textContent = "VERIFYING EXACT RGB-D GROUND TRUTH";
     validationVerification = await verifyValidationOffThread(parsedValidation);
@@ -366,9 +348,12 @@ function bindControls(): void {
   elements.importInput.addEventListener("change", () => void importLocalFile());
   elements.localClose.addEventListener("click", () => closeLocalFile());
   elements.localExport.addEventListener("click", () => {
-    if (!activeLocalImport) return;
-    if (activeLocalImport.reconstruction) exportVideoLocus(activeLocalImport.reconstruction);
-    else exportLocalFileIndex(activeLocalImport);
+    if (activeLocalImport) exportLocalFileIndex(activeLocalImport);
+  });
+  elements.localVideo.addEventListener("loadedmetadata", updateLocalMediaMetadata);
+  elements.localVideo.addEventListener("error", () => {
+    if (!activeLocalImport || activeLocalImport.kind !== "video") return;
+    elements.localKind.textContent = "LOCAL VIDEO / CODEC PREVIEW UNAVAILABLE";
   });
   elements.verifyClose.addEventListener("click", () => elements.verificationDialog.close());
   elements.fullscreenButton.addEventListener("click", () => void toggleFullscreen());
@@ -377,7 +362,7 @@ function bindControls(): void {
   elements.challengeButton.addEventListener("click", openChallenge);
   elements.exportButton.addEventListener("click", exportCapsule);
   elements.resetButton.addEventListener("click", () => {
-    if (activeLocalImport && !activeLocalImport.reconstruction) {
+    if (activeLocalImport) {
       closeLocalFile();
       return;
     }
@@ -465,68 +450,6 @@ function populateValidationPortfolio(
   }
 }
 
-function populateVideoSource(result: VideoReconstructionResult): void {
-  elements.sourceName.textContent = result.source.name;
-  elements.sourceClass.textContent = "LOCAL VIDEO / PRIVATE BY DEFAULT";
-  elements.sourceEnvironment.textContent = `${String(result.source.width)}x${String(result.source.height)} / ${(result.source.durationMs / 1_000).toFixed(2)} SEC`;
-  elements.sourceSensor.textContent = `${String(result.profile.sampledFrames)} DECODED FRAMES / SOURCE STREAM`;
-  elements.sourceGroundTruth.textContent = "RELATIVE DEPTH / IMAGE REGISTRATION";
-  elements.sourceAssets.textContent = `1 / ${formatBytes(result.source.bytes)}`;
-  elements.sourceProfileId.textContent = `${result.profile.depthModel}@${result.profile.depthModelRevision.slice(0, 12)}`;
-  const rows = [
-    {
-      title: "SOURCE COMMITMENT",
-      layer: "FILE-BACKED / LOCAL",
-      summary: shortDigest(result.source.streamRoot, 28),
-      modalities: "4 MIB STREAM WINDOWS / BOUNDED MEMORY",
-      state: "BOUND",
-    },
-    {
-      title: "RELATIVE DEPTH",
-      layer: result.profile.depthMode.replaceAll("-", " ").toUpperCase(),
-      summary: result.profile.depthModel,
-      modalities: result.profile.depthModelSha256,
-      state: "PINNED",
-    },
-    {
-      title: "TEMPORAL REGISTRATION",
-      layer: "SHOT-AWARE / THREE MOMENTS",
-      summary: `${String(result.profile.shotDiscontinuities)} discontinuities retained during temporal grouping.`,
-      modalities: result.profile.poseMode.replaceAll("-", " ").toUpperCase(),
-      state: "REPLAYABLE",
-    },
-    {
-      title: "WORLD CONSTRUCTION",
-      layer: `${String(result.metrics.worldCells)} CELLS / ${String(result.metrics.rootprintBranches)} ROOTPRINT STATES`,
-      summary: `${String(result.metrics.surfels)} surfels and ${String(result.metrics.surfaceVoxels)} surface-field cells.`,
-      modalities: "PHA + ROOTPRINT + MEMORY CAPSULE + SLBIT",
-      state: "VERIFIED",
-    },
-  ];
-  elements.portfolioList.replaceChildren(
-    ...rows.map((entry) => {
-      const row = document.createElement("div");
-      row.className = "portfolio-row";
-      const identity = document.createElement("span");
-      const title = document.createElement("b");
-      const layer = document.createElement("small");
-      title.textContent = entry.title;
-      layer.textContent = entry.layer;
-      identity.append(title, layer);
-      const evidence = document.createElement("span");
-      const summary = document.createElement("p");
-      const modalities = document.createElement("small");
-      summary.textContent = entry.summary;
-      modalities.textContent = entry.modalities;
-      evidence.append(summary, modalities);
-      const state = document.createElement("em");
-      state.textContent = entry.state;
-      row.append(identity, evidence, state);
-      return row;
-    }),
-  );
-}
-
 function populateMoments(moments: DemoMoment[]): void {
   elements.momentRail.replaceChildren();
   moments.forEach((moment, index) => {
@@ -606,14 +529,12 @@ function finishCondensation(): void {
   runtimeMetrics.materializedMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   document.body.dataset.materialized = "true";
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
-  elements.originStatus.textContent = videoReconstruction
-    ? "4D LOCUS / CONTINUUM STABLE"
-    : validationArtifact
-      ? "ARCHVIZ TINY HOUSE / CONTINUUM STABLE"
-      : "VESPER COURT / CONTINUUM STABLE";
+  elements.originStatus.textContent = validationArtifact
+    ? "ARCHVIZ TINY HOUSE / CONTINUUM STABLE"
+    : "VESPER COURT / CONTINUUM STABLE";
   elements.evidenceShort.textContent = "LOCALLY VERIFIED";
   showToast(
-    `${String(videoReconstruction?.metrics.worldCells ?? validationVerification?.cellsValid ?? latestVerification?.cellsValid ?? worldData.cells.length)} WORLD CELLS / CONTINUUM ASSEMBLED`,
+    `${String(validationVerification?.cellsValid ?? latestVerification?.cellsValid ?? worldData.cells.length)} WORLD CELLS / CONTINUUM ASSEMBLED`,
   );
 }
 
@@ -737,11 +658,9 @@ async function executeMutation(mutation: string): Promise<void> {
   try {
     const temporalSelected = temporalArtifactsByCell.get(selected.key);
     const semanticCapsule =
-      videoReconstruction?.memoryCapsule ??
       importedArtifact?.observation_proof.memory_capsule ??
       temporalSelected?.sdf_proof.memory_capsule;
-    const mutationWorld = videoReconstruction?.world ?? worldData;
-    const result = await runMutation(mutationWorld, selected, mutation, semanticCapsule);
+    const result = await runMutation(worldData, selected, mutation, semanticCapsule);
     const values = elements.rejectionTrace.querySelectorAll("dd");
     elements.rejectionTrace.querySelector("small")!.textContent = result.id.toUpperCase();
     elements.rejectionTrace.querySelector("b")!.textContent = result.code;
@@ -770,11 +689,7 @@ async function showVerification(): Promise<void> {
     element.textContent = "PENDING";
   }
   if (activeLocalImport) {
-    if (activeLocalImport.reconstruction && videoVerification) {
-      renderVideoVerification(activeLocalImport.reconstruction, videoVerification);
-    } else {
-      renderLocalFileVerification(activeLocalImport);
-    }
+    renderLocalFileVerification(activeLocalImport);
     return;
   }
   if (importedArtifact) {
@@ -842,15 +757,8 @@ async function importLocalFile(): Promise<void> {
   const file = elements.importInput.files?.[0];
   elements.importInput.value = "";
   if (!file) return;
-  if (
-    file.size <= MAX_INLINE_RECONSTRUCTION_BYTES &&
-    (isJsonFile(file) || (await hasJsonObjectPrefix(file)))
-  ) {
+  if (isJsonFile(file) && file.size <= MAX_INLINE_RECONSTRUCTION_BYTES) {
     await importReconstructionFile(file);
-    return;
-  }
-  if (localFileKind(file) === "video") {
-    await reconstructVideoFile(file);
     return;
   }
   await openFileBackedArtifact(file);
@@ -861,19 +769,6 @@ async function importReconstructionFile(file: File): Promise<void> {
   elements.importButton.querySelector("span")!.textContent = "READING";
   try {
     const parsed = parseStrictIntegerJson(await file.text());
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      (parsed as { schema?: unknown }).schema === "tessaryn/video-locus-artifact/v1"
-    ) {
-      const reconstruction = await hydrateVideoLocusArtifact(parsed);
-      const verification = await verifyWorldOffThread(reconstruction.world);
-      if (verification.errors.length > 0) throw new Error(verification.errors.join(" / "));
-      const state = beginLocalImport(file, "video-reconstruction");
-      state.kind = "video";
-      materializeVideoResult(state, reconstruction, verification);
-      return;
-    }
     if (!isReconstructionArtifact(parsed)) {
       throw new Error("unsupported reconstruction artifact");
     }
@@ -915,8 +810,44 @@ async function importReconstructionFile(file: File): Promise<void> {
 }
 
 async function openFileBackedArtifact(file: File): Promise<void> {
-  const state = beginLocalImport(file, "local-file");
+  const previousSource = activeLocalImport?.previousSource ?? elements.app.dataset.source;
+  const previousOriginName =
+    activeLocalImport?.previousOriginName ?? elements.originName.textContent ?? "";
+  const previousCellCount =
+    activeLocalImport?.previousCellCount ?? elements.cellCount.textContent ?? "";
+  closeLocalFile(false);
+  const state: ActiveLocalImport = {
+    file,
+    objectUrl: URL.createObjectURL(file),
+    kind: localFileKind(file),
+    status: "indexing",
+    identity: null,
+    progress: { bytesRead: 0, totalBytes: file.size, chunksRead: 0 },
+    previousSource,
+    previousOriginName,
+    previousCellCount,
+  };
+  activeLocalImport = state;
+  elements.app.dataset.source = "local-file";
+  elements.localStage.dataset.kind = state.kind;
+  elements.localStage.hidden = false;
+  elements.localName.textContent = file.name || "UNNAMED LOCAL FILE";
+  elements.originName.textContent = file.name || "UNNAMED LOCAL FILE";
+  elements.cellCount.textContent = "1 LOCAL FILE";
+  elements.localKind.textContent = `LOCAL ${state.kind.toUpperCase()} / FILE-BACKED`;
+  elements.localStatus.textContent = "INDEXING LOCAL BYTES";
+  elements.localSize.textContent = `${formatBytes(file.size)} / 0%`;
+  elements.localRoot.textContent = "STREAM ROOT PENDING";
+  elements.localProgress.style.width = "0%";
+  elements.localExport.disabled = true;
+  elements.chronofoldButton.disabled = true;
+  elements.challengeButton.disabled = true;
+  elements.exportButton.disabled = true;
+  elements.scaleBreath.disabled = true;
+  presentLocalMedia(state);
+  syncLocalImportView();
   showToast(`LOCAL STREAM OPEN / ${formatBytes(file.size)} / NO UPLOAD`);
+
   const task = indexLocalFileOffThread(file, (progress) => {
     if (activeLocalImport !== state) return;
     state.progress = progress;
@@ -929,6 +860,7 @@ async function openFileBackedArtifact(file: File): Promise<void> {
     syncLocalImportView();
   });
   activeLocalTask = task;
+
   try {
     const identity = await task.result;
     if (activeLocalImport !== state) return;
@@ -940,7 +872,6 @@ async function openFileBackedArtifact(file: File): Promise<void> {
       chunksRead: identity.chunkCount,
     };
     activeLocalTask = null;
-    elements.localStage.dataset.state = "materialized";
     elements.localStatus.textContent = `LOCAL STREAM INDEXED / ${String(identity.chunkCount)} CHUNKS`;
     elements.localSize.textContent = `${formatBytes(file.size)} / 100%`;
     elements.localRoot.textContent = identity.streamRoot;
@@ -950,114 +881,59 @@ async function openFileBackedArtifact(file: File): Promise<void> {
     syncLocalImportView();
     showToast("LOCAL STREAM ROOT COMPLETE");
   } catch (error) {
-    handleLocalImportError(state, error, "LOCAL INDEX FAILED");
-  }
-}
-
-async function reconstructVideoFile(file: File): Promise<void> {
-  const state = beginLocalImport(file, "video-reconstruction");
-  state.status = "indexing";
-  elements.localKind.textContent = "VIDEO / SOURCE COMMITMENT";
-  elements.localStatus.textContent = "COMMITTING SOURCE BYTES";
-  showToast(`CONSTRUCTING LOCAL 4D LOCUS / ${formatBytes(file.size)} / NO UPLOAD`);
-  const task = indexLocalFileOffThread(file, (progress) => {
-    if (activeLocalImport !== state) return;
-    state.progress = progress;
-    const fraction = progress.totalBytes === 0 ? 1 : progress.bytesRead / progress.totalBytes;
-    elements.localStatus.textContent = `SOURCE COMMITMENT / ${String(progress.chunksRead)} CHUNKS`;
-    elements.localSize.textContent = `${formatBytes(progress.bytesRead)} / ${formatBytes(file.size)}`;
-    elements.localProgress.style.width = `${(fraction * 8).toFixed(3)}%`;
-    syncLocalImportView();
-  });
-  activeLocalTask = task;
-  try {
-    const identity = await task.result;
-    if (activeLocalImport !== state) return;
+    if (
+      activeLocalImport !== state ||
+      (error instanceof DOMException && error.name === "AbortError")
+    ) {
+      return;
+    }
+    state.status = "error";
+    state.error = error instanceof Error ? error.message : String(error);
     activeLocalTask = null;
-    state.identity = identity;
-    state.status = "reconstructing";
-    state.progress = {
-      bytesRead: identity.byteLength,
-      totalBytes: identity.byteLength,
-      chunksRead: identity.chunkCount,
-    };
+    elements.localStatus.textContent = "LOCAL INDEX FAILED";
+    elements.localRoot.textContent = state.error.toUpperCase();
     syncLocalImportView();
-    elements.localRoot.textContent = identity.streamRoot;
-    elements.localKind.textContent = "VIDEO / NATIVE WORLD CONSTRUCTION";
-    activeReconstructionAbort = new AbortController();
-    const reconstruction = await reconstructVideoToLocus(
-      file,
-      identity,
-      (progress) => updateVideoReconstructionProgress(state, progress),
-      activeReconstructionAbort.signal,
-    );
-    if (activeLocalImport !== state) return;
-    const verification = await verifyWorldOffThread(reconstruction.world);
-    if (verification.errors.length > 0) throw new Error(verification.errors.join(" / "));
-    materializeVideoResult(state, reconstruction, verification);
-  } catch (error) {
-    activeReconstructionAbort = null;
-    handleLocalImportError(state, error, "VIDEO RECONSTRUCTION FAILED");
+    showToast("LOCAL INDEX FAILED");
   }
 }
 
-function beginLocalImport(file: File, source: "local-file" | "video-reconstruction"): ActiveLocalImport {
-  const previousSource = activeLocalImport?.previousSource ?? elements.app.dataset.source;
-  const previousOriginName =
-    activeLocalImport?.previousOriginName ?? elements.originName.textContent ?? "";
-  const previousCellCount =
-    activeLocalImport?.previousCellCount ?? elements.cellCount.textContent ?? "";
-  closeLocalFile(false);
-  const state: ActiveLocalImport = {
-    file,
-    kind: localFileKind(file),
-    status: "indexing",
-    identity: null,
-    progress: { bytesRead: 0, totalBytes: file.size, chunksRead: 0 },
-    previousSource,
-    previousOriginName,
-    previousCellCount,
-  };
-  activeLocalImport = state;
-  elements.app.dataset.source = source;
-  elements.localStage.dataset.kind = state.kind;
-  elements.localStage.dataset.state = "working";
-  elements.localStage.hidden = false;
-  elements.localName.textContent = file.name || "UNNAMED LOCAL FILE";
-  if (source === "local-file") {
-    elements.originName.textContent = file.name || "UNNAMED LOCAL FILE";
-    elements.cellCount.textContent = "1 LOCAL SOURCE";
+function presentLocalMedia(state: ActiveLocalImport): void {
+  elements.localVideo.hidden = true;
+  elements.localImage.hidden = true;
+  elements.localField.hidden = true;
+  elements.localVideo.pause();
+  elements.localVideo.removeAttribute("src");
+  elements.localImage.removeAttribute("src");
+
+  if (state.kind === "video" || state.kind === "audio") {
+    elements.localVideo.hidden = false;
+    elements.localVideo.src = state.objectUrl;
+    elements.localVideo.muted = state.kind === "video";
+    elements.localField.hidden = state.kind !== "audio";
+    elements.localVideo.load();
+    void elements.localVideo.play().catch(() => undefined);
+  } else if (state.kind === "image") {
+    elements.localImage.hidden = false;
+    elements.localImage.src = state.objectUrl;
+  } else {
+    elements.localField.hidden = false;
   }
-  elements.localKind.textContent = `LOCAL ${state.kind.toUpperCase()} / FILE-BACKED`;
-  elements.localStatus.textContent = "INDEXING LOCAL BYTES";
-  elements.localSize.textContent = `${formatBytes(file.size)} / 0%`;
-  elements.localRoot.textContent = "STREAM ROOT PENDING";
-  elements.localProgress.style.width = "0%";
-  elements.localExport.disabled = true;
-  elements.chronofoldButton.disabled = true;
-  elements.challengeButton.disabled = true;
-  elements.exportButton.disabled = true;
-  elements.scaleBreath.disabled = true;
-  syncLocalImportView();
-  return state;
 }
 
 function closeLocalFile(restoreSource = true): void {
   const active = activeLocalImport;
   activeLocalTask?.cancel();
   activeLocalTask = null;
-  activeReconstructionAbort?.abort();
-  activeReconstructionAbort = null;
+  elements.localVideo.pause();
+  elements.localVideo.removeAttribute("src");
+  elements.localVideo.load();
+  elements.localImage.removeAttribute("src");
   elements.localStage.hidden = true;
   elements.localExport.disabled = true;
   elements.localStage.removeAttribute("data-kind");
-  elements.localStage.removeAttribute("data-state");
+  if (active) URL.revokeObjectURL(active.objectUrl);
   activeLocalImport = null;
-  if (window.__tessaryn) {
-    delete window.__tessaryn.localImport;
-    delete window.__tessaryn.videoReconstruction;
-    delete window.__tessaryn.videoVerification;
-  }
+  if (window.__tessaryn) delete window.__tessaryn.localImport;
   if (!restoreSource) return;
   if (active?.previousSource) elements.app.dataset.source = active.previousSource;
   else delete elements.app.dataset.source;
@@ -1065,9 +941,6 @@ function closeLocalFile(restoreSource = true): void {
     elements.originName.textContent = active.previousOriginName;
     elements.cellCount.textContent = active.previousCellCount;
   }
-  if (active?.reconstruction) restoreReferenceOrigin();
-  videoReconstruction = null;
-  videoVerification = null;
   elements.chronofoldButton.disabled = importedArtifact !== null;
   elements.challengeButton.disabled = false;
   elements.exportButton.disabled = false;
@@ -1075,99 +948,13 @@ function closeLocalFile(restoreSource = true): void {
   showToast("LOCAL STREAM CLOSED");
 }
 
-function updateVideoReconstructionProgress(
-  state: ActiveLocalImport,
-  progress: VideoReconstructionProgress,
-): void {
-  if (activeLocalImport !== state) return;
-  const ranges: Record<VideoReconstructionProgress["phase"], [number, number]> = {
-    decode: [8, 18],
-    model: [18, 30],
-    motion: [30, 38],
-    depth: [38, 72],
-    cells: [72, 91],
-    verify: [91, 98],
-    complete: [98, 100],
-  };
-  const range = ranges[progress.phase];
-  const percent = range[0] + (range[1] - range[0]) * progress.progress;
-  elements.localStatus.textContent = progress.detail;
-  elements.localSize.textContent = progress.phase.toUpperCase();
-  elements.localProgress.style.width = `${percent.toFixed(3)}%`;
-  syncLocalImportView();
-}
-
-function materializeVideoResult(
-  state: ActiveLocalImport,
-  reconstruction: VideoReconstructionResult,
-  verification: VerificationReport,
-): void {
-  if (activeLocalImport !== state) return;
-  state.status = "materialized";
-  state.reconstruction = reconstruction;
-  videoReconstruction = reconstruction;
-  videoVerification = verification;
-  activeReconstructionAbort = null;
-  elements.localStage.dataset.kind = "video";
-  elements.localStage.dataset.state = "materialized";
-  elements.localKind.textContent = "VIDEO / NATIVE 4D LOCUS";
-  elements.localName.textContent = reconstruction.source.name;
-  elements.localStatus.textContent = "NATIVE 4D LOCUS / LOCALLY REVERIFIED";
-  elements.localSize.textContent = `${String(reconstruction.metrics.surfels)} SURFELS / ${String(reconstruction.metrics.surfaceVoxels)} SURFACE CELLS`;
-  elements.localRoot.textContent = reconstruction.source.streamRoot;
-  elements.localProgress.style.width = "100%";
-  elements.localExport.disabled = false;
-  elements.chronofoldButton.disabled = false;
-  elements.challengeButton.disabled = false;
-  elements.exportButton.disabled = false;
-  elements.scaleBreath.disabled = false;
-  importedArtifact = null;
-  importedVerification = null;
-  condensationComplete = false;
-  document.body.removeAttribute("data-materialized");
-  selected =
-    reconstruction.observations.at(-1)?.cell ?? reconstruction.world.cells.at(-1) ?? selected;
-  scene.loadTemporalObservations(reconstruction.observations);
-  populateVideoMoments(reconstruction);
-  populateVideoSource(reconstruction);
-  elements.originName.textContent = reconstruction.source.name;
-  elements.cellCount.textContent = `${String(reconstruction.metrics.worldCells)} CELLS`;
-  elements.anchorShort.textContent = shortDigest(reconstruction.world.anchor_id, 8);
-  elements.momentShort.textContent = "MOMENT C";
-  elements.evidenceShort.textContent = "LOCALLY VERIFIED";
-  elements.originPhase.textContent = "ORIGIN / VIDEO LOCUS";
-  elements.originStatus.textContent = "4D LOCUS / CONTINUUM STABLE";
-  if (window.__tessaryn) {
-    window.__tessaryn.world = reconstruction.world;
-    window.__tessaryn.videoReconstruction = reconstruction;
-    window.__tessaryn.videoVerification = verification;
-    window.__tessaryn.verification = verification;
-  }
-  syncLocalImportView();
-  showToast(
-    `${String(reconstruction.metrics.worldCells)} WORLD CELLS / ${String(reconstruction.metrics.rootprintBranches)} ROOTPRINT STATES`,
-  );
-}
-
-function handleLocalImportError(
-  state: ActiveLocalImport,
-  error: unknown,
-  fallback: string,
-): void {
-  if (
-    activeLocalImport !== state ||
-    (error instanceof DOMException && error.name === "AbortError")
-  ) {
-    return;
-  }
-  state.status = "error";
-  state.error = error instanceof Error ? error.message : String(error);
-  activeLocalTask = null;
-  elements.localStage.dataset.state = "error";
-  elements.localStatus.textContent = fallback;
-  elements.localRoot.textContent = state.error.toUpperCase();
-  syncLocalImportView();
-  showToast(fallback);
+function updateLocalMediaMetadata(): void {
+  if (!activeLocalImport || activeLocalImport.kind !== "video") return;
+  const width = elements.localVideo.videoWidth;
+  const height = elements.localVideo.videoHeight;
+  const seconds = elements.localVideo.duration;
+  const duration = Number.isFinite(seconds) ? ` / ${formatDuration(seconds)}` : "";
+  elements.localKind.textContent = `LOCAL VIDEO / ${String(width)}x${String(height)}${duration}`;
 }
 
 function syncLocalImportView(): void {
@@ -1182,9 +969,6 @@ function syncLocalImportView(): void {
     bytesRead: active.progress.bytesRead,
     chunkCount: active.identity?.chunkCount ?? active.progress.chunksRead,
     streamRoot: active.identity?.streamRoot,
-    worldCells: active.reconstruction?.metrics.worldCells,
-    surfels: active.reconstruction?.metrics.surfels,
-    surfaceVoxels: active.reconstruction?.metrics.surfaceVoxels,
   };
 }
 
@@ -1343,66 +1127,6 @@ function populateImportedMoment(cell: DemoCell): void {
   elements.momentRail.append(button);
 }
 
-function populateVideoMoments(result: VideoReconstructionResult): void {
-  elements.momentRail.replaceChildren();
-  temporalCellsByMoment.clear();
-  result.observations.forEach((observation, index) => {
-    temporalCellsByMoment.set(observation.id, observation.cell);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.moment = observation.id;
-    const active = index === result.observations.length - 1;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-    const label = document.createElement("b");
-    const state = document.createElement("small");
-    label.textContent = `0${String(index + 1)} / ${observation.label}`;
-    state.textContent = `${String(observation.surfels.length)} SPATIAL SAMPLES`;
-    button.append(label, state);
-    button.addEventListener("click", () => {
-      document.querySelectorAll<HTMLButtonElement>("[data-moment]").forEach((candidate) => {
-        const selectedMoment = candidate === button;
-        candidate.classList.toggle("active", selectedMoment);
-        candidate.setAttribute("aria-pressed", String(selectedMoment));
-      });
-      scene.setMoment(observation.id);
-      selected = observation.cell;
-      elements.momentShort.textContent = `MOMENT ${String.fromCharCode(65 + index)}`;
-      elements.originStatus.textContent = `${observation.label} / SPATIAL-TEMPORAL STATE`;
-      showToast(`${observation.label} / ${String(observation.sdfVoxels.length)} SURFACE CELLS`);
-    });
-    elements.momentRail.append(button);
-  });
-}
-
-function restoreReferenceOrigin(): void {
-  if (!validationVerification || !validationArtifact) return;
-  chronofoldOpen = false;
-  elements.chronofoldButton.classList.remove("active");
-  elements.chronofoldButton.setAttribute("aria-pressed", "false");
-  const observations = temporalObservations(validationVerification);
-  selected =
-    observations.find((observation) => observation.id === "moment-c")?.cell ??
-    observations[0]?.cell ??
-    selected;
-  scene.loadTemporalObservations(observations);
-  populateTemporalMoments(validationVerification);
-  if (validationPortfolio) {
-    populateValidationPortfolio(validationArtifact.source.profile, validationPortfolio);
-  }
-  elements.originName.textContent = validationArtifact.origin;
-  elements.cellCount.textContent = `${String(validationVerification.cellsValid)} CELLS`;
-  elements.anchorShort.textContent = shortDigest(selected.manifest.anchor_id, 8);
-  elements.momentShort.textContent = "MOMENT C";
-  elements.evidenceShort.textContent = "LOCALLY VERIFIED";
-  elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
-  elements.originStatus.textContent = "ARCHVIZ TINY HOUSE / CONTINUUM STABLE";
-  if (window.__tessaryn) {
-    window.__tessaryn.world = worldData;
-    window.__tessaryn.verification = validationVerificationReport(validationVerification);
-  }
-}
-
 function renderImportedVerification(report: ReconstructionBrowserReport): void {
   elements.verifyCells.textContent = `${String(report.cellsValid)} / 2 VALID`;
   elements.verifyPha.textContent = `${String(report.phaValid)} / 2 VALID`;
@@ -1445,32 +1169,9 @@ function renderLocalFileVerification(state: ActiveLocalImport): void {
       `${formatBytes(state.progress.bytesRead)} of ${formatBytes(state.file.size)} read directly from local storage.`;
 }
 
-function renderVideoVerification(
-  result: VideoReconstructionResult,
-  report: VerificationReport,
-): void {
-  const valid = report.errors.length === 0;
-  elements.verifyCells.textContent = `${String(report.cellsValid)} / ${String(result.metrics.worldCells)} VALID`;
-  elements.verifyPha.textContent = `${String(report.phaValid)} / ${String(result.metrics.phaBindings)} VALID`;
-  elements.verifyRootprint.textContent = report.rootprintValid ? "VALID" : "INVALID";
-  elements.verifyReplay.textContent = report.replayValid ? "VALID" : "INVALID";
-  elements.verifyMemory.textContent = report.memoryValid ? "VALID" : "INVALID";
-  elements.verifyTitle.textContent = valid ? "LOCAL VIDEO LOCUS ACCEPTED" : "VERIFICATION CAUTION";
-  elements.verifyDetail.textContent = valid
-    ? `${String(result.metrics.surfels)} source-derived surfels and ${String(result.metrics.surfaceVoxels)} surface-field cells bind three temporal Moments to source stream ${shortDigest(result.source.streamRoot, 18)}.`
-    : report.errors.join(" / ");
-}
-
 function exportCapsule(): void {
   if (activeLocalImport) {
-    if (activeLocalImport.reconstruction) {
-      exportMemoryCapsule(
-        activeLocalImport.reconstruction.memoryCapsule,
-        `${safeFileStem(activeLocalImport.file.name)}.phm`,
-      );
-    } else {
-      exportLocalFileIndex(activeLocalImport);
-    }
+    exportLocalFileIndex(activeLocalImport);
     return;
   }
   const temporalSelected = temporalArtifactsByCell.get(selected.key);
@@ -1478,20 +1179,15 @@ function exportCapsule(): void {
     importedArtifact?.sdf_proof.memory_capsule ??
     temporalSelected?.sdf_proof.memory_capsule ??
     worldData.origin_memory_capsule;
-  const name = importedArtifact
-    ? "tessaryn-imported-sdf.phm"
-    : temporalSelected
-      ? `${selected.key}.phm`
-      : "vesper-court-origin.phm";
-  exportMemoryCapsule(capsule, name);
-}
-
-function exportMemoryCapsule(capsule: Record<string, any>, name: string): void {
   const bytes = JSON.stringify(capsule, null, 2) + "\n";
   const blob = new Blob([bytes], { type: "application/vnd.powerhouse.memory+json" });
   const anchor = document.createElement("a");
   anchor.href = URL.createObjectURL(blob);
-  anchor.download = name;
+  anchor.download = importedArtifact
+    ? "tessaryn-imported-sdf.phm"
+    : temporalSelected
+      ? `${selected.key}.phm`
+      : "vesper-court-origin.phm";
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(anchor.href), 1_000);
   showToast("MEMORY CAPSULE EXPORTED");
@@ -1519,27 +1215,6 @@ function exportLocalFileIndex(state: ActiveLocalImport): void {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(anchor.href), 1_000);
   showToast("LOCAL FILE INDEX EXPORTED");
-}
-
-function exportVideoLocus(result: VideoReconstructionResult): void {
-  const artifact = {
-    schema: result.schema,
-    source: result.source,
-    profile: result.profile,
-    world: result.world,
-    moments: result.moments,
-    memory_capsule: result.memoryCapsule,
-    metrics: result.metrics,
-  };
-  const blob = new Blob([JSON.stringify(artifact) + "\n"], {
-    type: "application/vnd.tessaryn.locus+json",
-  });
-  const anchor = document.createElement("a");
-  anchor.href = URL.createObjectURL(blob);
-  anchor.download = `${safeFileStem(result.source.name)}.tessaryn-locus.json`;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(anchor.href), 1_000);
-  showToast("NATIVE 4D LOCUS EXPORTED");
 }
 
 function updateScaleButtons(scale: ScaleMode): void {
@@ -1612,21 +1287,6 @@ function showToast(message: string): void {
 
 function isJsonFile(file: File): boolean {
   return file.type === "application/json" || file.name.toLowerCase().endsWith(".json");
-}
-
-async function hasJsonObjectPrefix(file: File): Promise<boolean> {
-  const prefix = new Uint8Array(await file.slice(0, 256).arrayBuffer());
-  let offset = 0;
-  if (prefix[0] === 0xef && prefix[1] === 0xbb && prefix[2] === 0xbf) offset = 3;
-  while (offset < prefix.length) {
-    const byte = prefix[offset];
-    if (byte === 0x20 || byte === 0x09 || byte === 0x0a || byte === 0x0d) {
-      offset += 1;
-      continue;
-    }
-    return byte === 0x7b;
-  }
-  return false;
 }
 
 function localFileKind(file: File): LocalFileKind {
