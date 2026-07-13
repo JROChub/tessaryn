@@ -1,6 +1,6 @@
 {
   "schema": "tessaryn/public-object-catalog/v1",
-  "updated_at_unix_us": 1783843200000000,
+  "updated_at_unix_us": 1783900800000000,
   "objects": [
     {
       "object_id": "nostalgia-continuum-monument-01",
@@ -12,6 +12,21 @@
       "dimensions": "NATIVE 3D + TIME",
       "moments": 4,
       "summary": "A logo-derived temporal monument whose cinematic memory moves through committed matter."
+    },
+    {
+      "object_id": "tessaryn-logo-mansion-01",
+      "title": "TESSARYN / LOGO MANSION",
+      "artifact": "./objects/tessaryn-logo-mansion-01.tessaryn.gz",
+      "artifact_sha256": "sha256:a6ebfa36caea2199783bf51337d2fb0862e884dd523902bfe6a5a3e9957636d9",
+      "artifact_bytes": 32004,
+      "artifact_kind": "cinematic_object",
+      "cell_id": "sha256:23f9fd2d6e4df3863fb9da45b72346daeacbf1b10364c3c1541de1646450bf28",
+      "rootprint_branch": "sha256:8013ac81253b2aeb9606ad2ad65ebb17b6ba08d2b5c16465a883346d3332346c",
+      "media": "1280x720 H.264",
+      "dimensions": "NATIVE 3D + TIME",
+      "moments": 4,
+      "summary": "A navigable mansion derived from the three interlocking TESSARYN diamonds, with temporal rooms and committed material memory.",
+      "transport_encoding": "gzip"
     }
   ]
 }

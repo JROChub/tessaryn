@@ -1,0 +1,68 @@
+{
+  "schema": "tessaryn/cinematic-object-descriptor/v1",
+  "object_id": "tessaryn-logo-mansion-01",
+  "title": "TESSARYN / LOGO MANSION",
+  "created_at_unix_us": 1783900800000000,
+  "duration_ms": 12000,
+  "geometry": {
+    "profile": "tessaryn/continuum-monument/v1",
+    "seed": 1296125523,
+    "cell_count": 96,
+    "shell_count": 5,
+    "ribbon_count": 6,
+    "phase_count": 4,
+    "bounds_um": [15000000, 9000000, 14000000],
+    "quality_tier": 4
+  },
+  "media": {
+    "mime": "video/mp4",
+    "width": 1280,
+    "height": 720,
+    "frame_rate_millihz": 24000,
+    "codec": "h264",
+    "codec_version": "high-4.1"
+  },
+  "moments": [
+    {
+      "id": "foundation",
+      "label": "FOUNDATION",
+      "time_ms": 0,
+      "phase_milli": 0,
+      "meaning": "Three diamond foundations establish the mansion as one inhabitable logo-form."
+    },
+    {
+      "id": "habitation",
+      "label": "HABITATION",
+      "time_ms": 3000,
+      "phase_milli": 250,
+      "meaning": "Rooms, bridges, courtyards, and disclosure boundaries become navigable living space."
+    },
+    {
+      "id": "memory",
+      "label": "MEMORY",
+      "time_ms": 6000,
+      "phase_milli": 500,
+      "meaning": "Committed cinematic matter moves through windows, pools, and the central memory atrium."
+    },
+    {
+      "id": "continuum",
+      "label": "CONTINUUM",
+      "time_ms": 9000,
+      "phase_milli": 750,
+      "meaning": "Chronofold separates four architectural states while Rootprint preserves one identity."
+    }
+  ],
+  "slbit": {
+    "schema": "slbit/viz-packet/v3",
+    "claim_state": "AUTHORED_TEMPORAL_OBJECT",
+    "summary": "A navigable mansion derived from the three interlocking TESSARYN diamonds, with temporal rooms, committed material memory, and one verified World Cell identity.",
+    "statements": [
+      "The mansion footprint is authored from the three interlocking TESSARYN diamond frames.",
+      "The sage, teal, and terracotta wings remain distinct while sharing one central atrium.",
+      "The cinematic payload drives material state and light but never supplies geometry.",
+      "Four Moments expose foundation, habitation, memory, and continuum states.",
+      "World Cell identity commits the mansion descriptor and every cinematic media chunk.",
+      "Power House binds PHA identity, Rootprint replay, and a portable Memory Capsule."
+    ]
+  }
+}
