@@ -1,4 +1,4 @@
-const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake";
+const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake-mansion-purge";
 const CORE = [
   "./",
   "./world/archviz-tiny-house-locus.json",
@@ -28,6 +28,12 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname === "/mansion" || url.pathname === "/mansion/" || url.pathname === "/mansion.html") {
+    event.respondWith(
+      Response.redirect(new URL("./", self.location.href), 302),
+    );
+    return;
+  }
   if (
     event.request.mode === "navigate" ||
     url.pathname.endsWith("/world/archviz-tiny-house-locus.json") ||
