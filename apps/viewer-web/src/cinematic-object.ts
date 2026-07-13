@@ -15,6 +15,10 @@ const MAGIC = new TextEncoder().encode("TESSARYN-CIN4D\0\0");
 const VERSION = 1;
 const HEADER_BYTES = 80;
 const MAX_MANIFEST_BYTES = 16 * 1024 * 1024;
+const SUPPORTED_GEOMETRY_PROFILES = new Set([
+  "tessaryn/continuum-monument/v1",
+  "tessaryn/logo-mansion/v1",
+]);
 
 export interface CinematicObjectProgress {
   bytesRead: number;
@@ -173,9 +177,10 @@ export async function parseAndVerifyCinematicObject(
 
 function validateDescriptor(envelope: CinematicObjectEnvelopeView): void {
   const descriptor = envelope.descriptor;
+  const profile = descriptor.geometry.profile as string;
   if (
     descriptor.schema !== "tessaryn/cinematic-object-descriptor/v1" ||
-    descriptor.geometry.profile !== "tessaryn/continuum-monument/v1" ||
+    !SUPPORTED_GEOMETRY_PROFILES.has(profile) ||
     descriptor.media.mime !== "video/mp4" ||
     descriptor.media.codec !== "h264" ||
     descriptor.duration_ms <= 0 ||
