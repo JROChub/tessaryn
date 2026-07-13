@@ -7,6 +7,7 @@ export default defineConfig({
     sourcemap: true,
     assetsInlineLimit: 2048,
     rolldownOptions: {
+      input: ["index.html", "mansion.html"],
       output: {
         codeSplitting: {
           maxSize: 420_000,
