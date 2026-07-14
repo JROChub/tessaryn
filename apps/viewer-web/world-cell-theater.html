@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#05080d">
-  <meta name="description" content="Capture, reconstruct, replay, verify, and transfer sovereign TESSARYN World Cells between devices.">
+  <meta name="description" content="Capture, reconstruct, replay, verify, and transfer metric sovereign TESSARYN World Cells between devices.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./tessaryn-mark.svg" type="image/svg+xml">
-  <title>World Cell Theater / TESSARYN</title>
+  <title>Metric World Cell Theater / TESSARYN</title>
 </head>
 <body>
 <div class="theater-shell">
   <header class="topbar theater-topbar">
     <a class="brand" href="./"><span class="brand-mark"><i></i><i></i><i></i></span><span><b>TESSARYN</b><small>NATIVE 4D CONTINUUM</small></span></a>
-    <div class="origin-title"><small>ACTIVE INSTRUMENT</small><b>WORLD CELL THEATER</b></div>
+    <div class="origin-title"><small>ACTIVE INSTRUMENT</small><b>METRIC WORLD CELL THEATER</b></div>
     <div class="top-states"><span id="capture-state"><i></i>READY</span><span id="compute-state">CPU</span><span id="peer-state">UNPAIRED</span></div>
     <div class="top-actions"><button id="evidence-button" class="icon-command secondary">EVIDENCE</button><a class="icon-button" href="./">×</a></div>
   </header>
@@ -29,25 +29,40 @@
         <span><small>POSE</small><b id="pose-state">ORIGIN</b></span>
         <span><small>ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
       </div>
-      <div id="stage-message" class="stage-message"><b>CAPTURE REALITY</b><span>Start the camera and move around a place or object.</span></div>
+      <div id="stage-message" class="stage-message"><b>RECONSTRUCT REALITY</b><span>Start the camera, move slowly around the subject, and build parallax.</span></div>
     </section>
 
     <aside class="instrument-stack">
       <section class="instrument-panel accent-cyan">
-        <header><span><small>CAPTURE PIPELINE</small><b>SPATIAL INPUT</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
+        <header><span><small>CAPTURE PIPELINE</small><b>METRIC SPATIAL INPUT</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
         <div class="command-grid">
           <button id="start-button" class="icon-command">START CAMERA</button>
           <button id="capture-button" class="icon-command" disabled>CAPTURE MOMENT</button>
           <button id="stop-button" class="icon-command secondary" disabled>STOP</button>
           <button id="sensor-button" class="icon-command secondary">SENSOR ADAPTER</button>
+          <button id="calibrate-button" class="icon-command secondary">SET METRIC SCALE</button>
         </div>
-        <p id="sensor-detail">Camera RGB + motion pose. Depth upgrades automatically when a depth adapter is available.</p>
+        <p id="sensor-detail">Feature tracks and multi-view disparity recover geometry. Set a real reference length or attach depth hardware to establish metric scale.</p>
+      </section>
+
+      <section class="instrument-panel accent-gold metric-quality-panel">
+        <header><span><small>GEOMETRIC EVIDENCE</small><b>RECONSTRUCTION QUALITY</b></span><span id="scale-value" class="state-pill">RELATIVE</span></header>
+        <div class="quality-meter"><i id="quality-meter"></i></div>
+        <dl class="quality-grid">
+          <div><dt>TRACKING</dt><dd id="tracking-value">0%</dd></div>
+          <div><dt>PARALLAX</dt><dd id="parallax-value">0.00°</dd></div>
+          <div><dt>POSE ERROR</dt><dd id="error-value">—</dd></div>
+          <div><dt>COVERAGE</dt><dd id="coverage-value">0%</dd></div>
+          <div><dt>CONFIRMED</dt><dd id="confirmed-value">0</dd></div>
+          <div><dt>UNCERTAIN</dt><dd id="uncertain-value">0</dd></div>
+          <div><dt>REJECTED</dt><dd id="rejected-value">0</dd></div>
+        </dl>
       </section>
 
       <section class="instrument-panel accent-gold">
         <header><span><small>COMPUTE</small><b>RECONSTRUCTION ENGINE</b></span><span id="gpu-badge" class="state-pill">PROBING</span></header>
         <div class="compute-meter"><i id="compute-meter"></i></div>
-        <dl><div><dt>BACKEND</dt><dd id="backend-name">CPU REFERENCE</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">PORTABLE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">—</dd></div></dl>
+        <dl><div><dt>BACKEND</dt><dd id="backend-name">CPU MULTI-VIEW</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">PORTABLE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">—</dd></div></dl>
       </section>
 
       <section class="instrument-panel accent-moss timeline-panel">
@@ -57,11 +72,11 @@
       </section>
 
       <section class="instrument-panel accent-rust">
-        <header><span><small>CROSS-DEVICE</small><b>WEBRTC WORLD CELL LINK</b></span><span id="channel-state" class="state-pill">CLOSED</span></header>
+        <header><span><small>CROSS-DEVICE</small><b>WEBRTC METRIC WORLD CELL LINK</b></span><span id="channel-state" class="state-pill">CLOSED</span></header>
         <div class="pair-actions"><button id="host-button" class="icon-command">CREATE OFFER</button><button id="join-button" class="icon-command secondary">JOIN OFFER</button><button id="answer-button" class="icon-command secondary">APPLY ANSWER</button><button id="send-button" class="icon-command" disabled>SEND WORLD CELL</button></div>
         <textarea id="pairing-text" spellcheck="false" placeholder="Offer/answer appears here. Copy it to the other device."></textarea>
         <div class="transfer-track"><i id="transfer-meter"></i></div>
-        <p id="transfer-state">Pair two browsers. The receiver verifies every chunk and the complete canonical World Cell before rendering.</p>
+        <p id="transfer-state">Pair two browsers. The receiver verifies the complete v0.22 Metric World Cell before rendering.</p>
       </section>
     </aside>
   </main>
@@ -73,8 +88,12 @@
   </footer>
 </div>
 
-<dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><b>DEPTH + EVENT CAMERA</b></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Use browser camera and motion immediately. Connect supported event cameras through WebSerial or WebUSB. WebXR depth sensing is used when the browser exposes it.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
-<dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><b>WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
+<dialog id="calibration-dialog" class="theater-dialog">
+  <header><span><small>METRIC CALIBRATION</small><b>KNOWN REFERENCE LENGTH</b></span><button class="icon-button" data-close="calibration-dialog">×</button></header>
+  <div class="dialog-body"><p>Enter a known real-world reference length visible during capture. The trajectory and triangulated geometry will use this scale.</p><label class="metric-input-label">REFERENCE LENGTH / METERS<input id="scale-input" type="number" min="0.01" max="20" step="0.01" value="0.12"></label><button id="apply-calibration" class="icon-command">APPLY METRIC SCALE</button></div>
+</dialog>
+<dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><b>DEPTH + EVENT CAMERA</b></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Use browser multi-view reconstruction immediately. Connect supported event cameras through WebSerial or depth hardware through WebUSB. WebXR depth sensing is used when exposed.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
+<dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><b>METRIC WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
 <script type="module" src="/src/world-cell-theater.ts"></script>
 </body>
 </html>
