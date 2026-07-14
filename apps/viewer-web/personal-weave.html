@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#07110d">
+    <meta name="description" content="Reopen, preview, share, and delete objects retained in the local TESSARYN Personal Weave.">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./tessaryn-mark.svg" type="image/svg+xml">
+    <title>Personal Weave / TESSARYN</title>
+  </head>
+  <body>
+    <main class="mobile-demo-shell weave-shell">
+      <header class="demo-header">
+        <a href="./" class="demo-brand" aria-label="Back to TESSARYN"><span class="demo-mark" aria-hidden="true"></span><span><b>TESSARYN</b><small>PERSONAL WEAVE</small></span></a>
+        <nav class="demo-nav"><a href="./keyxym-mobile.html">DEVICE DEMO</a><span class="state-pill">PRIVATE</span></nav>
+      </header>
+      <section class="hero-card weave-hero"><p class="eyebrow">THIS BROWSER / THIS DEVICE</p><h1>Reopen what you retained.</h1><p class="hero-copy">Every item listed here is loaded from this browser's private IndexedDB. Source bytes are never published by this route.</p></section>
+      <section class="status-grid"><article><small>OBJECTS</small><b id="weave-count">0</b></article><article><small>OBJECT BYTES</small><b id="weave-bytes">0 B</b></article><article class="quota-card"><small>BROWSER STORAGE</small><b id="weave-quota">CALCULATING</b></article></section>
+      <section class="weave-toolbar"><label><span>SEARCH</span><input id="weave-search" type="search" placeholder="Name or digest"></label><button id="weave-clear" class="danger-action" type="button">DELETE ALL</button></section>
+      <section id="weave-list" class="weave-list" aria-live="polite"></section>
+      <footer class="demo-footer"><a href="./keyxym-mobile.html">ADD AN OBJECT</a><a href="./">RETURN TO TESSARYN</a></footer>
+    </main>
+    <dialog id="preview-dialog" class="preview-dialog"><header><span><small>PERSONAL OBJECT PREVIEW</small><b id="preview-title">OBJECT</b></span><button id="preview-close" type="button">CLOSE</button></header><div id="preview-body" class="preview-body"></div></dialog>
+    <script type="module" src="/src/personal-weave.ts"></script>
+  </body>
+</html>
