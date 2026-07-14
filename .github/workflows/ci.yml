@@ -105,7 +105,21 @@ jobs:
           cache: npm
           cache-dependency-path: apps/viewer-web/package-lock.json
       - run: npm ci
-      - run: npm test
+      - name: Run viewer tests
+        shell: bash
+        run: |
+          set +e
+          npm test > viewer-test.log 2>&1
+          status=$?
+          cat viewer-test.log
+          exit $status
+      - name: Upload viewer test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-test-diagnostics
+          path: apps/viewer-web/viewer-test.log
+          if-no-files-found: ignore
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
