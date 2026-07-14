@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: "index.html",
         keyxymMobile: "keyxym-mobile.html",
+        personalWeave: "personal-weave.html",
       },
       output: {
         codeSplitting: {
@@ -22,7 +23,5 @@ export default defineConfig({
       },
     },
   },
-  server: {
-    strictPort: true,
-  },
+  server: { strictPort: true },
 });

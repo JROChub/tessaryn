@@ -7,76 +7,59 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Keyxym Demo">
-    <meta name="description" content="An on-device Keyxym mobile replication demonstration for iPhone.">
+    <meta name="description" content="A local-first Keyxym replication demonstration for phones, tablets, and desktop browsers.">
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./tessaryn-mark.svg" type="image/svg+xml">
-    <title>Keyxym Mobile Demo / TESSARYN</title>
+    <title>Keyxym Cross-Device Demo / TESSARYN</title>
   </head>
   <body>
     <main class="mobile-demo-shell">
       <header class="demo-header">
-        <a href="./" class="demo-brand" aria-label="Back to TESSARYN">
-          <span class="demo-mark" aria-hidden="true"></span>
-          <span><b>TESSARYN</b><small>KEYXYM MOBILE LAB</small></span>
-        </a>
-        <span id="install-state" class="state-pill">ON-DEVICE</span>
+        <a href="./" class="demo-brand" aria-label="Back to TESSARYN"><span class="demo-mark" aria-hidden="true"></span><span><b>TESSARYN</b><small>KEYXYM DEVICE LAB</small></span></a>
+        <nav class="demo-nav"><a href="./personal-weave.html">PERSONAL WEAVE</a><span class="state-pill">ON-DEVICE</span></nav>
       </header>
 
       <section class="hero-card">
-        <p class="eyebrow">IPHONE-READY / LOCAL-FIRST</p>
-        <h1>Carry a verifiable object weave in your pocket.</h1>
-        <p class="hero-copy">Create an object from a photo or file, hash and chunk it locally, interrupt transfer, resume from durable state, and watch two simulated peers converge without uploading your source file.</p>
-        <div class="hero-actions">
-          <button id="capture-button" class="primary-action" type="button">CAPTURE OR CHOOSE FILE</button>
-          <button id="sample-button" class="secondary-action" type="button">RUN SAMPLE</button>
-        </div>
-        <input id="file-input" type="file" accept="image/*,video/*,application/json,.tessaryn" capture="environment" hidden>
+        <p class="eyebrow">ALL DEVICES / LOCAL-FIRST</p>
+        <h1>Carry a verifiable object weave on every device.</h1>
+        <p class="hero-copy">Create an object from a photo or file, retain the source locally, preview or share it, interrupt transfer, resume from durable state, and watch two simulated peers converge without publishing your source file.</p>
+        <div class="hero-actions"><button id="capture-button" class="primary-action" type="button">CAPTURE OR CHOOSE FILE</button><button id="sample-button" class="secondary-action" type="button">RUN SAMPLE</button></div>
+        <input id="file-input" type="file" accept="image/*,video/*,audio/*,text/*,application/pdf,application/json,.tessaryn" hidden>
       </section>
 
       <section class="status-grid" aria-live="polite">
         <article><small>DEVICE ID</small><b id="device-id">INITIALIZING</b></article>
         <article><small>OBJECTS</small><b id="object-count">0</b></article>
-        <article><small>LOCAL BYTES</small><b id="local-bytes">0 B</b></article>
+        <article><small>OBJECT BYTES</small><b id="local-bytes">0 B</b></article>
         <article><small>NETWORK</small><b id="network-state">OFFLINE-CAPABLE</b></article>
+        <article class="quota-card"><small>BROWSER STORAGE</small><b id="storage-quota">CALCULATING</b></article>
       </section>
 
       <section class="pipeline-card">
         <header><span><small>LIVE PIPELINE</small><b id="pipeline-title">READY FOR A LOCAL OBJECT</b></span><output id="pipeline-percent">0%</output></header>
         <div class="pipeline-track"><i id="pipeline-bar"></i></div>
         <ol id="pipeline-steps" class="pipeline-steps">
-          <li data-step="read"><i></i><span><b>READ</b><small>Bounded slices</small></span></li>
-          <li data-step="hash"><i></i><span><b>HASH</b><small>SHA-256 identity</small></span></li>
-          <li data-step="chunk"><i></i><span><b>CHUNK</b><small>256 KiB records</small></span></li>
-          <li data-step="persist"><i></i><span><b>PERSIST</b><small>IndexedDB journal</small></span></li>
-          <li data-step="sync"><i></i><span><b>SYNC</b><small>Resume + convergence</small></span></li>
+          <li data-step="read"><i></i><span><b>READ</b><small>Bounded slices</small></span></li><li data-step="hash"><i></i><span><b>HASH</b><small>SHA-256 identity</small></span></li><li data-step="chunk"><i></i><span><b>CHUNK</b><small>256 KiB records</small></span></li><li data-step="persist"><i></i><span><b>PERSIST</b><small>Blob + journal</small></span></li><li data-step="sync"><i></i><span><b>SYNC</b><small>Resume + convergence</small></span></li>
         </ol>
       </section>
 
       <section class="object-card">
-        <header><span><small>LATEST LOCAL OBJECT</small><b id="object-name">NONE</b></span><button id="clear-button" type="button">CLEAR</button></header>
-        <dl>
-          <div><dt>DIGEST</dt><dd id="object-digest">—</dd></div>
-          <div><dt>SIZE</dt><dd id="object-size">—</dd></div>
-          <div><dt>CHUNKS</dt><dd id="object-chunks">—</dd></div>
-          <div><dt>JOURNAL</dt><dd id="object-journal">EMPTY</dd></div>
-        </dl>
+        <header><span><small>LATEST PERSONAL OBJECT</small><b id="object-name">NONE</b></span><button id="clear-button" type="button">CLEAR ALL</button></header>
+        <dl><div><dt>DIGEST</dt><dd id="object-digest">—</dd></div><div><dt>SIZE</dt><dd id="object-size">—</dd></div><div><dt>CHUNKS</dt><dd id="object-chunks">—</dd></div><div><dt>JOURNAL</dt><dd id="object-journal">EMPTY</dd></div></dl>
+        <div class="object-actions"><button id="view-button" class="primary-action" type="button" disabled>VIEW OBJECT</button><button id="share-button" type="button" disabled>SHARE OBJECT</button><button id="delete-button" class="danger-action" type="button" disabled>DELETE OBJECT</button></div>
       </section>
 
       <section class="sync-card">
         <header><span><small>DEMO PEER</small><b>SIMULATED REMOTE NODE</b></span><span id="peer-state" class="state-pill idle">IDLE</span></header>
-        <p>This demo exercises local identity, durable chunk journals, interruption, resume, and anti-entropy planning. It does not claim that browser storage is the native C++ runtime or a live production peer.</p>
-        <div class="sync-actions">
-          <button id="interrupt-button" type="button" disabled>INTERRUPT AT 40%</button>
-          <button id="sync-button" class="primary-action" type="button" disabled>SYNC OBJECT</button>
-        </div>
+        <p>This demo exercises local source retention, durable chunk journals, interruption, resume, and anti-entropy planning. Browser storage is not represented as the native C++ runtime or a live production peer.</p>
+        <div class="sync-actions"><button id="interrupt-button" type="button" disabled>INTERRUPT AT 40%</button><button id="sync-button" class="primary-action" type="button" disabled>SYNC OBJECT</button></div>
         <pre id="event-log" aria-label="Replication event log">READY / Waiting for a local object.</pre>
       </section>
 
-      <footer class="demo-footer">
-        <p>Your selected file remains in this browser session and local IndexedDB. The demo stores chunk digests and metadata; it does not publish source bytes.</p>
-        <a href="./">RETURN TO TESSARYN</a>
-      </footer>
+      <footer class="demo-footer"><p>Source bytes, metadata, and journals remain in this browser's private storage until you explicitly delete them.</p><a href="./personal-weave.html">OPEN PERSONAL WEAVE</a><a href="./">RETURN TO TESSARYN</a></footer>
     </main>
+
+    <dialog id="preview-dialog" class="preview-dialog"><header><span><small>LOCAL OBJECT PREVIEW</small><b id="preview-title">OBJECT</b></span><button id="preview-close" type="button">CLOSE</button></header><div id="preview-body" class="preview-body"></div></dialog>
     <script type="module" src="/src/keyxym-mobile.ts"></script>
   </body>
 </html>
