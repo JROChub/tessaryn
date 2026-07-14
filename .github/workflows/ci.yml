@@ -120,6 +120,20 @@ jobs:
           name: viewer-test-diagnostics
           path: apps/viewer-web/viewer-test.log
           if-no-files-found: ignore
-      - run: npm run build
+      - name: Build viewer
+        shell: bash
+        run: |
+          set +e
+          npm run build > viewer-build.log 2>&1
+          status=$?
+          cat viewer-build.log
+          exit $status
+      - name: Upload viewer build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-build-diagnostics
+          path: apps/viewer-web/viewer-build.log
+          if-no-files-found: ignore
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
