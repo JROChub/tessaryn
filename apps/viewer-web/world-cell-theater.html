@@ -17,7 +17,6 @@
     <div class="top-states"><span id="capture-state"><i></i>READY</span><span id="compute-state">LOADING</span><span id="peer-state">UNPAIRED</span></div>
     <div class="top-actions"><button id="evidence-button" class="icon-command secondary">EVIDENCE</button><a class="icon-button" href="./">×</a></div>
   </header>
-
   <main class="theater-main">
     <section class="stage-panel">
       <video id="camera" autoplay muted playsinline></video>
@@ -31,7 +30,6 @@
       </div>
       <div id="stage-message" class="stage-message"><b>RECONSTRUCT REALITY</b><span>Start the camera, move slowly around the subject, and build parallax.</span></div>
     </section>
-
     <aside class="instrument-stack">
       <section class="instrument-panel accent-cyan">
         <header><span><small>CAPTURE PIPELINE</small><b>METRIC SPATIAL INPUT</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
@@ -44,7 +42,6 @@
         </div>
         <p id="sensor-detail">Compiled Keyxym v0.22 tracks multi-view evidence and reconstructs persistent geometry. Add calibration or depth hardware to establish metric scale.</p>
       </section>
-
       <section class="instrument-panel accent-gold metric-quality-panel">
         <header><span><small>GEOMETRIC EVIDENCE</small><b>RECONSTRUCTION QUALITY</b></span><span id="scale-value" class="state-pill">RELATIVE</span></header>
         <div class="quality-meter"><i id="quality-meter"></i></div>
@@ -58,19 +55,16 @@
           <div><dt>REJECTED</dt><dd id="rejected-value">0</dd></div>
         </dl>
       </section>
-
       <section class="instrument-panel accent-gold">
         <header><span><small>COMPUTE</small><b>RECONSTRUCTION ENGINE</b></span><span id="gpu-badge" class="state-pill">LOADING</span></header>
         <div class="compute-meter"><i id="compute-meter"></i></div>
         <dl><div><dt>BACKEND</dt><dd id="backend-name">KEYXYM V0.22 WASM</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">C++ METRIC CORE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">—</dd></div></dl>
       </section>
-
       <section class="instrument-panel accent-moss timeline-panel">
         <header><span><small>4D LINEAGE</small><b>MOMENTS</b></span><button id="seal-button" class="icon-command secondary" disabled>SEAL CELL</button></header>
         <div id="timeline" class="timeline"><span class="empty">No Moments committed.</span></div>
         <div class="replay-controls"><button id="prev-button" disabled>◀</button><input id="replay-slider" type="range" min="0" max="0" value="0"><button id="play-button" disabled>PLAY</button><button id="next-button" disabled>▶</button></div>
       </section>
-
       <section class="instrument-panel accent-rust">
         <header><span><small>CROSS-DEVICE</small><b>WEBRTC METRIC WORLD CELL LINK</b></span><span id="channel-state" class="state-pill">CLOSED</span></header>
         <div class="pair-actions"><button id="host-button" class="icon-command">CREATE OFFER</button><button id="join-button" class="icon-command secondary">JOIN OFFER</button><button id="answer-button" class="icon-command secondary">APPLY ANSWER</button><button id="send-button" class="icon-command" disabled>SEND WORLD CELL</button></div>
@@ -80,20 +74,19 @@
       </section>
     </aside>
   </main>
-
   <footer class="world-controls theater-controls">
     <div class="control-group"><a href="./personal-weave.html">PERSONAL WEAVE</a><a href="./keyxym-mobile.html">DEVICE LAB</a></div>
     <div class="control-group"><span id="cell-state">WORLD CELL / EMPTY</span></div>
     <div class="control-group control-end"><button id="reset-button">RESET</button></div>
   </footer>
 </div>
-
 <dialog id="calibration-dialog" class="theater-dialog">
   <header><span><small>METRIC CALIBRATION</small><b>KNOWN REFERENCE LENGTH</b></span><button class="icon-button" data-close="calibration-dialog">×</button></header>
   <div class="dialog-body"><p>Enter a known real-world reference length visible during capture. New frames will commit this scale state.</p><label class="metric-input-label">REFERENCE LENGTH / METERS<input id="scale-input" type="number" min="0.01" max="20" step="0.01" value="0.12"></label><button id="apply-calibration" class="icon-command">APPLY METRIC SCALE</button></div>
 </dialog>
 <dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><b>DEPTH + EVENT CAMERA</b></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Use the compiled browser runtime immediately. Connect event cameras through WebSerial or depth hardware through WebUSB. WebXR depth sensing is used when exposed.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
 <dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><b>METRIC WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
+<script type="module" src="/src/world-cell-metric-ui.ts"></script>
 <script type="module" src="/src/world-cell-theater-v22.ts"></script>
 </body>
 </html>
