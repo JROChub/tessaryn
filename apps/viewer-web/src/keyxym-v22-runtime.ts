@@ -58,120 +58,205 @@ export interface KeyxymQuality {
   metricScale: boolean;
 }
 
-type WasmExports = {
-  memory: WebAssembly.Memory;
-  malloc(size: number): number;
-  free(pointer: number): void;
-  keyxym_v22_session_create(branch: number, voxel: number, maximum: number, output: number): number;
-  keyxym_v22_session_destroy(session: number): void;
-  keyxym_v22_session_ingest_packed(...args: number[]): number;
-  keyxym_v22_session_copy_geometry_packed(session: number, output: number, capacity: number, required: number): number;
-  keyxym_v22_session_quality_packed(session: number, output: number, count: number): number;
+type EmscriptenModule = {
+  HEAPU8: Uint8Array;
+  HEAPF32: Float32Array;
+  _malloc(size: number): number;
+  _free(pointer: number): void;
+  _keyxym_v22_session_create(branch: number, voxel: number, maximum: number, output: number): number;
+  _keyxym_v22_session_destroy(session: number): void;
+  _keyxym_v22_session_ingest_packed(...args: number[]): number;
+  _keyxym_v22_session_copy_geometry_packed(session: number, output: number, capacity: number, required: number): number;
+  _keyxym_v22_session_quality_packed(session: number, output: number, count: number): number;
 };
+
+type EmscriptenFactory = (options?: {
+  locateFile?: (path: string) => string;
+  noInitialRun?: boolean;
+}) => Promise<EmscriptenModule>;
 
 const OK = 0;
 const BUFFER_TOO_SMALL = 2;
 const encoder = new TextEncoder();
 
 export class KeyxymV22Runtime {
-  private constructor(private readonly wasm: WasmExports, private readonly session: number) {}
+  private destroyed = false;
 
-  static async load(url = "/keyxym/keyxym-v22.wasm"): Promise<KeyxymV22Runtime> {
-    const response = await fetch(url, { cache: "no-store", integrity: "" });
-    if (!response.ok) throw new Error(`Keyxym v0.22 runtime unavailable (${response.status})`);
-    const imports = { env: { abort: () => { throw new Error("Keyxym WASM aborted"); } } };
-    const result = await WebAssembly.instantiateStreaming(response, imports);
-    const wasm = result.instance.exports as unknown as WasmExports;
-    for (const name of ["memory", "malloc", "free", "keyxym_v22_session_create", "keyxym_v22_session_ingest_packed", "keyxym_v22_session_copy_geometry_packed", "keyxym_v22_session_quality_packed"]) {
-      if (!(name in wasm)) throw new Error(`Keyxym v0.22 ABI missing ${name}`);
+  private constructor(
+    private readonly module: EmscriptenModule,
+    private readonly session: number,
+  ) {}
+
+  static async load(
+    moduleUrl = "/keyxym/keyxym-v22.mjs",
+    wasmUrl = "/keyxym/keyxym-v22.wasm",
+  ): Promise<KeyxymV22Runtime> {
+    const imported = await import(/* @vite-ignore */ moduleUrl) as { default?: EmscriptenFactory };
+    if (typeof imported.default !== "function") {
+      throw new Error("Keyxym v0.22 module factory is missing");
     }
-    const branch = KeyxymV22Runtime.writeBytes(wasm, encoder.encode("agent/v022-metric-world-cell\0"));
-    const output = wasm.malloc(4);
+    const module = await imported.default({
+      noInitialRun: true,
+      locateFile: (path) => path.endsWith(".wasm") ? wasmUrl : path,
+    });
+    for (const name of [
+      "HEAPU8", "HEAPF32", "_malloc", "_free",
+      "_keyxym_v22_session_create", "_keyxym_v22_session_destroy",
+      "_keyxym_v22_session_ingest_packed",
+      "_keyxym_v22_session_copy_geometry_packed",
+      "_keyxym_v22_session_quality_packed",
+    ] as const) {
+      if (!(name in module)) throw new Error(`Keyxym v0.22 ABI missing ${name}`);
+    }
+
+    const branch = KeyxymV22Runtime.writeBytes(module, encoder.encode("agent/v022-metric-world-cell\0"));
+    const output = module._malloc(4);
     try {
-      const status = wasm.keyxym_v22_session_create(branch.pointer, 0.018, 48_000, output);
+      const status = module._keyxym_v22_session_create(branch, 0.018, 48_000, output);
       if (status !== OK) throw new Error(`Keyxym session create failed (${status})`);
-      const session = new DataView(wasm.memory.buffer).getUint32(output, true);
+      const session = new DataView(module.HEAPU8.buffer).getUint32(output, true);
       if (!session) throw new Error("Keyxym returned a null session");
-      return new KeyxymV22Runtime(wasm, session);
+      return new KeyxymV22Runtime(module, session);
     } finally {
-      wasm.free(branch.pointer);
-      wasm.free(output);
+      module._free(branch);
+      module._free(output);
     }
   }
 
   ingest(frame: KeyxymFrame): KeyxymPoseEstimate {
+    this.assertAlive();
+    if (frame.rgb.length !== frame.width * frame.height * 3) {
+      throw new Error("Keyxym RGB payload does not match frame dimensions");
+    }
     const featureData = new Float32Array(frame.features.length * KEYXYM_V22_FEATURE_FLOATS);
     frame.features.forEach((feature, index) => featureData.set([
       feature.id, feature.x, feature.y, feature.score, feature.disparity, feature.matchError,
     ], index * KEYXYM_V22_FEATURE_FLOATS));
-    const rgb = KeyxymV22Runtime.writeFloats(this.wasm, frame.rgb);
-    const features = KeyxymV22Runtime.writeFloats(this.wasm, featureData);
-    const commitment = KeyxymV22Runtime.writeBytes(this.wasm, frame.sourceCommitment);
-    const pose = this.wasm.malloc(KEYXYM_V22_POSE_FLOATS * 4);
+    const rgb = KeyxymV22Runtime.writeFloats(this.module, frame.rgb);
+    const features = KeyxymV22Runtime.writeFloats(this.module, featureData);
+    const commitment = KeyxymV22Runtime.writeBytes(this.module, frame.sourceCommitment);
+    const pose = this.module._malloc(KEYXYM_V22_POSE_FLOATS * 4);
     try {
-      const status = this.wasm.keyxym_v22_session_ingest_packed(
-        this.session, Number(frame.timestampNs), frame.width, frame.height,
-        frame.fx, frame.fy, frame.cx, frame.cy, frame.scaleMetersPerUnit,
-        frame.metricScale ? 1 : 0, rgb.pointer, frame.rgb.length / 3,
-        features.pointer, frame.features.length, commitment.pointer,
-        frame.sourceCommitment.length, pose, KEYXYM_V22_POSE_FLOATS,
+      const status = this.module._keyxym_v22_session_ingest_packed(
+        this.session,
+        Number(frame.timestampNs),
+        frame.width,
+        frame.height,
+        frame.fx,
+        frame.fy,
+        frame.cx,
+        frame.cy,
+        frame.scaleMetersPerUnit,
+        frame.metricScale ? 1 : 0,
+        rgb,
+        frame.rgb.length / 3,
+        features,
+        frame.features.length,
+        commitment,
+        frame.sourceCommitment.length,
+        pose,
+        KEYXYM_V22_POSE_FLOATS,
       );
       if (status !== OK) throw new Error(`Keyxym ingest failed (${status})`);
-      const values = new Float32Array(this.wasm.memory.buffer, pose, KEYXYM_V22_POSE_FLOATS).slice();
+      const offset = pose >>> 2;
+      const values = this.module.HEAPF32.slice(offset, offset + KEYXYM_V22_POSE_FLOATS);
       return {
-        worldFromCamera: values.slice(0, 16), matches: values[16]!, inliers: values[17]!,
-        tracking: values[18]!, parallaxDegrees: values[19]!,
-        reprojectionErrorPixels: values[20]!, recovered: values[21]! === 1,
+        worldFromCamera: values.slice(0, 16),
+        matches: values[16]!,
+        inliers: values[17]!,
+        tracking: values[18]!,
+        parallaxDegrees: values[19]!,
+        reprojectionErrorPixels: values[20]!,
+        recovered: values[21]! === 1,
       };
     } finally {
-      this.wasm.free(rgb.pointer); this.wasm.free(features.pointer);
-      this.wasm.free(commitment.pointer); this.wasm.free(pose);
+      this.module._free(rgb);
+      this.module._free(features);
+      this.module._free(commitment);
+      this.module._free(pose);
     }
   }
 
   geometry(): KeyxymSurfel[] {
-    const required = this.wasm.malloc(4);
+    this.assertAlive();
+    const required = this.module._malloc(4);
     try {
-      let status = this.wasm.keyxym_v22_session_copy_geometry_packed(this.session, 0, 0, required);
-      if (status !== BUFFER_TOO_SMALL && status !== OK) throw new Error(`Keyxym geometry size failed (${status})`);
-      const count = new DataView(this.wasm.memory.buffer).getUint32(required, true);
-      if (!count) return [];
-      const output = this.wasm.malloc(count * 4);
+      let status = this.module._keyxym_v22_session_copy_geometry_packed(this.session, 0, 0, required);
+      if (status !== BUFFER_TOO_SMALL && status !== OK) {
+        throw new Error(`Keyxym geometry size failed (${status})`);
+      }
+      const floatCount = new DataView(this.module.HEAPU8.buffer).getUint32(required, true);
+      if (!floatCount) return [];
+      if (floatCount % KEYXYM_V22_SURFEL_FLOATS !== 0) {
+        throw new Error("Keyxym returned malformed packed geometry");
+      }
+      const output = this.module._malloc(floatCount * 4);
       try {
-        status = this.wasm.keyxym_v22_session_copy_geometry_packed(this.session, output, count, required);
+        status = this.module._keyxym_v22_session_copy_geometry_packed(
+          this.session, output, floatCount, required,
+        );
         if (status !== OK) throw new Error(`Keyxym geometry copy failed (${status})`);
-        const values = new Float32Array(this.wasm.memory.buffer, output, count);
+        const offset = output >>> 2;
+        const values = this.module.HEAPF32.slice(offset, offset + floatCount);
         const surfels: KeyxymSurfel[] = [];
-        for (let i = 0; i < values.length; i += KEYXYM_V22_SURFEL_FLOATS) surfels.push({
-          x: values[i]!, y: values[i + 1]!, z: values[i + 2]!, nx: values[i + 3]!, ny: values[i + 4]!, nz: values[i + 5]!,
-          r: values[i + 6]!, g: values[i + 7]!, b: values[i + 8]!, confidence: values[i + 9]!, uncertainty: values[i + 10]!,
-          observations: values[i + 11]!, sourceKeyframe: values[i + 12]!,
-        });
+        for (let i = 0; i < values.length; i += KEYXYM_V22_SURFEL_FLOATS) {
+          surfels.push({
+            x: values[i]!, y: values[i + 1]!, z: values[i + 2]!,
+            nx: values[i + 3]!, ny: values[i + 4]!, nz: values[i + 5]!,
+            r: values[i + 6]!, g: values[i + 7]!, b: values[i + 8]!,
+            confidence: values[i + 9]!, uncertainty: values[i + 10]!,
+            observations: values[i + 11]!, sourceKeyframe: values[i + 12]!,
+          });
+        }
         return surfels;
-      } finally { this.wasm.free(output); }
-    } finally { this.wasm.free(required); }
+      } finally {
+        this.module._free(output);
+      }
+    } finally {
+      this.module._free(required);
+    }
   }
 
   quality(): KeyxymQuality {
-    const output = this.wasm.malloc(KEYXYM_V22_QUALITY_FLOATS * 4);
+    this.assertAlive();
+    const output = this.module._malloc(KEYXYM_V22_QUALITY_FLOATS * 4);
     try {
-      const status = this.wasm.keyxym_v22_session_quality_packed(this.session, output, KEYXYM_V22_QUALITY_FLOATS);
+      const status = this.module._keyxym_v22_session_quality_packed(
+        this.session, output, KEYXYM_V22_QUALITY_FLOATS,
+      );
       if (status !== OK) throw new Error(`Keyxym quality failed (${status})`);
-      const value = new Float32Array(this.wasm.memory.buffer, output, KEYXYM_V22_QUALITY_FLOATS);
-      return { tracking: value[0]!, parallaxDegrees: value[1]!, reprojectionErrorPixels: value[2]!, coverage: value[3]!, confirmed: value[4]!, uncertain: value[5]!, rejected: value[6]!, metricScale: value[7]! === 1 };
-    } finally { this.wasm.free(output); }
+      const offset = output >>> 2;
+      const value = this.module.HEAPF32.slice(offset, offset + KEYXYM_V22_QUALITY_FLOATS);
+      return {
+        tracking: value[0]!, parallaxDegrees: value[1]!,
+        reprojectionErrorPixels: value[2]!, coverage: value[3]!,
+        confirmed: value[4]!, uncertain: value[5]!, rejected: value[6]!,
+        metricScale: value[7]! === 1,
+      };
+    } finally {
+      this.module._free(output);
+    }
   }
 
-  destroy(): void { this.wasm.keyxym_v22_session_destroy(this.session); }
-
-  private static writeBytes(wasm: WasmExports, value: Uint8Array) {
-    const pointer = wasm.malloc(Math.max(1, value.byteLength));
-    new Uint8Array(wasm.memory.buffer, pointer, value.byteLength).set(value);
-    return { pointer };
+  destroy(): void {
+    if (this.destroyed) return;
+    this.module._keyxym_v22_session_destroy(this.session);
+    this.destroyed = true;
   }
-  private static writeFloats(wasm: WasmExports, value: Float32Array) {
-    const pointer = wasm.malloc(Math.max(4, value.byteLength));
-    new Float32Array(wasm.memory.buffer, pointer, value.length).set(value);
-    return { pointer };
+
+  private assertAlive(): void {
+    if (this.destroyed) throw new Error("Keyxym session has been destroyed");
+  }
+
+  private static writeBytes(module: EmscriptenModule, value: Uint8Array): number {
+    const pointer = module._malloc(Math.max(1, value.byteLength));
+    if (value.byteLength) module.HEAPU8.set(value, pointer);
+    return pointer;
+  }
+
+  private static writeFloats(module: EmscriptenModule, value: Float32Array): number {
+    const pointer = module._malloc(Math.max(4, value.byteLength));
+    if (value.length) module.HEAPF32.set(value, pointer >>> 2);
+    return pointer;
   }
 }
