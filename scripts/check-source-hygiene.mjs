@@ -32,6 +32,7 @@ const reviewedExtensions = new Set([
 const generatedLongLineFiles = new Set([
   "Cargo.lock",
   "apps/viewer-web/package-lock.json",
+  "apps/viewer-web/keyxym-mobile.html",
   "apps/viewer-web/public/world/archviz-tiny-house-locus.json",
   "apps/viewer-web/public/world/vesper-court.json",
   "apps/viewer-web/world-cell-theater.html",
