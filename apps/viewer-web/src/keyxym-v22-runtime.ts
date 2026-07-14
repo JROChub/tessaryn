@@ -65,7 +65,7 @@ type EmscriptenModule = {
   _free(pointer: number): void;
   _keyxym_v22_session_create(branch: number, voxel: number, maximum: number, output: number): number;
   _keyxym_v22_session_destroy(session: number): void;
-  _keyxym_v22_session_ingest_packed(...args: number[]): number;
+  _keyxym_v22_session_ingest_packed(...args: Array<number | bigint>): number;
   _keyxym_v22_session_copy_geometry_packed(session: number, output: number, capacity: number, required: number): number;
   _keyxym_v22_session_quality_packed(session: number, output: number, count: number): number;
 };
@@ -139,7 +139,7 @@ export class KeyxymV22Runtime {
     try {
       const status = this.module._keyxym_v22_session_ingest_packed(
         this.session,
-        Number(frame.timestampNs),
+        frame.timestampNs,
         frame.width,
         frame.height,
         frame.fx,
