@@ -46,5 +46,3 @@ The ordinary-phone path should use a dedicated worker and deterministic WASM geo
 ## Defensible novelty
 
 The invention is not a generic point cloud. It is fail-closed geometric admission, per-surfel uncertainty and lineage, temporally branching Moments, executable reconstruction receipts, sovereign cross-device verification, and exact replay of an evidence-bound physical memory.
-
-No release may describe itself as metric while the integrity gate rejects metric scale or sealing.
