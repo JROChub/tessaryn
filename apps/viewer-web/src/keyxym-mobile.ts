@@ -1,3 +1,4 @@
+import { sha256 } from "@noble/hashes/sha2.js";
 import "./keyxym-mobile.css";
 
 const CHUNK_BYTES = 256 * 1024;
@@ -95,13 +96,13 @@ async function ingestFile(file: File): Promise<void> {
 
   const chunkHashes: string[] = [];
   const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_BYTES));
-  const objectHasherParts: Uint8Array[] = [];
+  const objectHasher = sha256.create();
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
     const start = chunkIndex * CHUNK_BYTES;
     const end = Math.min(file.size, start + CHUNK_BYTES);
     const chunk = new Uint8Array(await file.slice(start, end).arrayBuffer());
-    objectHasherParts.push(chunk);
+    objectHasher.update(chunk);
     setStep("hash", "active");
     const chunkHash = await digestHex(chunk);
     chunkHashes.push(chunkHash);
@@ -114,8 +115,7 @@ async function ingestFile(file: File): Promise<void> {
   setStep("read", "done");
   setStep("hash", "done");
   setStep("chunk", "done");
-  const objectBytes = concatenate(objectHasherParts, file.size);
-  const id = await digestHex(objectBytes);
+  const id = bytesToHex(objectHasher.digest());
   const stored: StoredObject = {
     id,
     name: file.name,
@@ -354,17 +354,11 @@ function openDatabase(): Promise<IDBDatabase> {
 
 async function digestHex(bytes: Uint8Array): Promise<string> {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  return [...digest].map((value) => value.toString(16).padStart(2, "0")).join("");
+  return bytesToHex(digest);
 }
 
-function concatenate(parts: Uint8Array[], totalBytes: number): Uint8Array {
-  const output = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const part of parts) {
-    output.set(part, offset);
-    offset += part.byteLength;
-  }
-  return output;
+function bytesToHex(bytes: Uint8Array): string {
+  return [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
 
 function formatBytes(bytes: number): string {
