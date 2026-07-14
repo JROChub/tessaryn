@@ -1,6 +1,7 @@
-const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake-mansion-purge";
+const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake";
 const CORE = [
   "./",
+  "./keyxym-mobile.html",
   "./world/archviz-tiny-house-locus.json",
   "./world/vesper-court.json",
   "./validation/portfolio.json",
