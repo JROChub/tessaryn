@@ -82,7 +82,7 @@ async function runSample(): Promise<void> {
   const seed = crypto.getRandomValues(new Uint8Array(32));
   const bytes = new Uint8Array(768 * 1024);
   for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = seed[index % seed.length] ^ (index & 0xff);
+    bytes[index] = seed[index % seed.length]! ^ (index & 0xff);
   }
   await ingestFile(new File([bytes], "iphone-pocket-weave.sample", { type: "application/octet-stream" }));
 }
@@ -167,12 +167,12 @@ async function synchronize(): Promise<void> {
   appendEvent(`ANTI-ENTROPY / ${missing.length} missing chunks.`);
 
   for (let position = 0; position < missing.length; position += 1) {
-    const chunkIndex = missing[position];
+    const chunkIndex = missing[position]!;
     await sleep(90);
     acknowledged.add(chunkIndex);
     const progress = Math.round((acknowledged.size / activeObject.chunks.length) * 100);
     setProgress(progress, `Replicating chunk ${chunkIndex + 1}`);
-    appendEvent(`CHUNK ${chunkIndex + 1} / ${activeObject.chunks[chunkIndex].slice(0, 12)} / ACK`);
+    appendEvent(`CHUNK ${chunkIndex + 1} / ${activeObject.chunks[chunkIndex]!.slice(0, 12)} / ACK`);
     await putRecord(JOURNAL_STORE, {
       objectId: activeObject.id,
       acknowledged: [...acknowledged].sort((left, right) => left - right),
@@ -353,7 +353,9 @@ function openDatabase(): Promise<IDBDatabase> {
 }
 
 async function digestHex(bytes: Uint8Array): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const input = new Uint8Array(bytes.byteLength);
+  input.set(bytes);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", input.buffer));
   return bytesToHex(digest);
 }
 
