@@ -1,3 +1,4 @@
+// Device-shell refresh: TESSARYN origin visual system.
 const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake";
 const CORE = [
   "./",
