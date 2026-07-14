@@ -1,5 +1,5 @@
-// World Cell Theater refresh: live spatial capture, replay, and peer transfer.
-const CACHE = "tessaryn-origin-v0-5-0-world-cell-theater";
+// World Cell Theater route extends the stable TESSARYN offline contract.
+const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
