@@ -7,6 +7,10 @@ export default defineConfig({
     sourcemap: true,
     assetsInlineLimit: 2048,
     rolldownOptions: {
+      input: {
+        main: "index.html",
+        keyxymMobile: "keyxym-mobile.html",
+      },
       output: {
         codeSplitting: {
           maxSize: 420_000,
