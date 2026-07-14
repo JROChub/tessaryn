@@ -49,6 +49,7 @@ export interface ReconstructionQuality {
   metricScale: boolean;
 }
 
+const PREVIEW_KEYFRAME = -1;
 const clamp = (value: number, low: number, high: number) =>
   Math.max(low, Math.min(high, value));
 
@@ -70,7 +71,7 @@ export function rgbaToGray(
   return { width, height, gray, rgba, timestamp };
 }
 
-export function detectFeatures(frame: GrayFrame, maximum = 1100): Feature[] {
+export function detectFeatures(frame: GrayFrame, maximum = 520): Feature[] {
   const { width, height, gray } = frame;
   const candidates: Feature[] = [];
   for (let y = 4; y < height - 4; y += 2) {
@@ -90,7 +91,7 @@ export function detectFeatures(frame: GrayFrame, maximum = 1100): Feature[] {
       }
       const trace = xx + yy;
       const score = xx * yy - xy * xy - 0.042 * trace * trace;
-      if (score > 0.00025) candidates.push({ x, y, score });
+      if (score > 0.00035) candidates.push({ x, y, score });
     }
   }
   candidates.sort((left, right) => right.score - left.score);
@@ -99,7 +100,7 @@ export function detectFeatures(frame: GrayFrame, maximum = 1100): Feature[] {
     const separated = selected.every((feature) => {
       const dx = feature.x - candidate.x;
       const dy = feature.y - candidate.y;
-      return dx * dx + dy * dy > 12;
+      return dx * dx + dy * dy > 20;
     });
     if (separated) selected.push(candidate);
     if (selected.length >= maximum) break;
@@ -118,8 +119,8 @@ function patchError(
   let meanLeft = 0;
   let meanRight = 0;
   let samples = 0;
-  for (let oy = -2; oy <= 2; oy += 1) {
-    for (let ox = -2; ox <= 2; ox += 1) {
+  for (let oy = -1; oy <= 1; oy += 1) {
+    for (let ox = -1; ox <= 1; ox += 1) {
       meanLeft += left.gray[(ay + oy) * left.width + ax + ox]!;
       meanRight += right.gray[(by + oy) * right.width + bx + ox]!;
       samples += 1;
@@ -128,8 +129,8 @@ function patchError(
   meanLeft /= samples;
   meanRight /= samples;
   let error = 0;
-  for (let oy = -2; oy <= 2; oy += 1) {
-    for (let ox = -2; ox <= 2; ox += 1) {
+  for (let oy = -1; oy <= 1; oy += 1) {
+    for (let ox = -1; ox <= 1; ox += 1) {
       const a = left.gray[(ay + oy) * left.width + ax + ox]! - meanLeft;
       const b = right.gray[(by + oy) * right.width + bx + ox]! - meanRight;
       error += Math.abs(a - b);
@@ -138,29 +139,36 @@ function patchError(
   return error / samples;
 }
 
-function searchMatch(previous: GrayFrame, current: GrayFrame, feature: Feature): Match | null {
-  const search = 20;
+function searchMatch(
+  previous: GrayFrame,
+  current: GrayFrame,
+  feature: Feature,
+): Match | null {
   let bestError = Number.POSITIVE_INFINITY;
   let secondError = Number.POSITIVE_INFINITY;
   let bestX = feature.x;
   let bestY = feature.y;
-  for (let dy = -search; dy <= search; dy += 1) {
-    for (let dx = -search; dx <= search; dx += 1) {
-      const x = feature.x + dx;
-      const y = feature.y + dy;
-      if (x < 3 || y < 3 || x >= current.width - 3 || y >= current.height - 3) continue;
-      const error = patchError(previous, current, feature.x, feature.y, x, y);
-      if (error < bestError) {
-        secondError = bestError;
-        bestError = error;
-        bestX = x;
-        bestY = y;
-      } else if (error < secondError) {
-        secondError = error;
-      }
+  const consider = (x: number, y: number) => {
+    if (x < 2 || y < 2 || x >= current.width - 2 || y >= current.height - 2) return;
+    const error = patchError(previous, current, feature.x, feature.y, x, y);
+    if (error < bestError) {
+      secondError = bestError;
+      bestError = error;
+      bestX = x;
+      bestY = y;
+    } else if (error < secondError) {
+      secondError = error;
     }
+  };
+  for (let dy = -14; dy <= 14; dy += 2) {
+    for (let dx = -14; dx <= 14; dx += 2) consider(feature.x + dx, feature.y + dy);
   }
-  if (bestError > 0.2 || bestError > secondError * 0.96) return null;
+  const coarseX = bestX;
+  const coarseY = bestY;
+  for (let dy = -2; dy <= 2; dy += 1) {
+    for (let dx = -2; dx <= 2; dx += 1) consider(coarseX + dx, coarseY + dy);
+  }
+  if (bestError > 0.18 || bestError > secondError * 0.94) return null;
   return { ax: feature.x, ay: feature.y, bx: bestX, by: bestY, error: bestError };
 }
 
@@ -179,7 +187,7 @@ export function matchFeatures(
       score: feature.score,
     });
     if (!backward) continue;
-    if (Math.hypot(backward.bx - feature.x, backward.by - feature.y) <= 3) {
+    if (Math.hypot(backward.bx - feature.x, backward.by - feature.y) <= 2.5) {
       matches.push(forward);
     }
   }
@@ -192,8 +200,12 @@ function median(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)]!;
 }
 
-export function solvePose(matches: Match[], camera: CameraModel, prior: MetricPose): MetricPose {
-  if (matches.length < 6) {
+export function solvePose(
+  matches: Match[],
+  camera: CameraModel,
+  prior: MetricPose,
+): MetricPose {
+  if (matches.length < 8) {
     return {
       ...prior,
       inliers: matches.length,
@@ -208,25 +220,25 @@ export function solvePose(matches: Match[], camera: CameraModel, prior: MetricPo
   const my = median(dy);
   const residuals = matches.map((match) =>
     Math.hypot(match.bx - match.ax - mx, match.by - match.ay - my));
-  const threshold = Math.max(1.4, median(residuals) * 3);
+  const threshold = Math.max(1.35, median(residuals) * 2.8);
   const inliers = matches.filter((_, index) => residuals[index]! <= threshold);
   const error = inliers.reduce((sum, match) => sum + match.error, 0) /
     Math.max(1, inliers.length);
   const baselinePixels = Math.hypot(mx, my);
   const scale = camera.scaleMeters / Math.max(camera.fx, 1);
-  const support = inliers.length / Math.max(18, matches.length);
-  const photometric = clamp(1 - error / 0.2, 0, 1);
+  const support = inliers.length / Math.max(24, matches.length);
+  const photometric = clamp(1 - error / 0.18, 0, 1);
   return {
     tx: prior.tx - mx * scale,
     ty: prior.ty + my * scale,
-    tz: prior.tz + Math.min(0.025, baselinePixels * scale * 0.1),
-    yaw: prior.yaw - mx / camera.fx * 0.2,
-    pitch: prior.pitch + my / camera.fy * 0.14,
+    tz: prior.tz + Math.min(0.02, baselinePixels * scale * 0.08),
+    yaw: prior.yaw - mx / camera.fx * 0.18,
+    pitch: prior.pitch + my / camera.fy * 0.12,
     roll: prior.roll,
     inliers: inliers.length,
     reprojectionError: error * 8,
     parallaxDegrees: Math.atan2(baselinePixels, camera.fx) * 180 / Math.PI,
-    tracking: clamp(support * 0.72 + photometric * 0.28, 0, 1),
+    tracking: clamp(support * 0.75 + photometric * 0.25, 0, 1),
   };
 }
 
@@ -281,6 +293,34 @@ function makeSurfel(
   };
 }
 
+function buildTransientPreview(
+  current: GrayFrame,
+  pose: MetricPose,
+  camera: CameraModel,
+  depth: number,
+): MetricSurfel[] {
+  const preview: MetricSurfel[] = [];
+  for (let py = 1; py < current.height - 1; py += 1) {
+    for (let px = 1; px < current.width - 1; px += 1) {
+      const gray = current.gray[py * current.width + px]!;
+      const localDepth = depth * (0.94 + gray * 0.12);
+      preview.push(makeSurfel(
+        current,
+        px,
+        py,
+        localDepth,
+        pose,
+        camera,
+        0.08,
+        0.92,
+        PREVIEW_KEYFRAME,
+        current.timestamp,
+      ));
+    }
+  }
+  return preview;
+}
+
 export function triangulateSurfels(
   previous: GrayFrame,
   current: GrayFrame,
@@ -289,62 +329,39 @@ export function triangulateSurfels(
   camera: CameraModel,
   keyframe: number,
 ): { surfels: MetricSurfel[]; rejected: number } {
-  const surfels: MetricSurfel[] = [];
-  let rejected = 0;
-  const disparities = matches.map((match) => Math.hypot(match.bx - match.ax, match.by - match.ay))
-    .filter((value) => value >= 0.35 && value <= 80);
-  const representativeDisparity = Math.max(0.8, median(disparities));
+  const disparities = matches
+    .map((match) => Math.hypot(match.bx - match.ax, match.by - match.ay))
+    .filter((value) => value >= 0.45 && value <= 64);
+  const representativeDisparity = Math.max(1, median(disparities));
   const motionBaseline = Math.hypot(pose.tx, pose.ty, pose.tz);
-  const baseline = Math.max(0.008, motionBaseline, camera.scaleMeters * 0.05);
+  const baseline = Math.max(0.008, motionBaseline, camera.scaleMeters * 0.045);
   const representativeDepth = clamp(
     camera.fx * baseline / representativeDisparity,
-    0.18,
-    8,
+    0.2,
+    6,
   );
-
-  for (let py = 1; py < current.height - 1; py += 2) {
-    for (let px = 1; px < current.width - 1; px += 2) {
-      const gray = current.gray[py * current.width + px]!;
-      const gx = Math.abs(current.gray[py * current.width + px + 1]! -
-        current.gray[py * current.width + px - 1]!);
-      const gy = Math.abs(current.gray[(py + 1) * current.width + px]! -
-        current.gray[(py - 1) * current.width + px]!);
-      const structure = clamp((gx + gy) * 2.5, 0, 1);
-      const depth = representativeDepth * (0.88 + gray * 0.24);
-      surfels.push(makeSurfel(
-        current,
-        px,
-        py,
-        depth,
-        pose,
-        camera,
-        0.08 + structure * 0.12,
-        0.82 - structure * 0.18,
-        keyframe,
-        previous.timestamp,
-      ));
-    }
-  }
+  const surfels = buildTransientPreview(current, pose, camera, representativeDepth);
+  let rejected = 0;
 
   for (const match of matches) {
     const disparity = Math.hypot(match.bx - match.ax, match.by - match.ay);
-    if (disparity < 0.35 || disparity > 80) {
+    if (disparity < 0.45 || disparity > 64) {
       rejected += 1;
       continue;
     }
     const depth = clamp(camera.fx * baseline / disparity, 0.12, 10);
     const baseConfidence = clamp(
-      pose.tracking * (1 - match.error * 2.2) * Math.min(1, disparity / 2),
-      0.18,
+      pose.tracking * (1 - match.error * 2.3) * Math.min(1, disparity / 2.5),
+      0.16,
       1,
     );
     const uncertainty = clamp(
       pose.reprojectionError / Math.max(0.6, disparity) + 1 / Math.max(1, pose.inliers),
       0.002,
-      0.72,
+      0.75,
     );
-    for (let oy = -5; oy <= 5; oy += 1) {
-      for (let ox = -5; ox <= 5; ox += 1) {
+    for (let oy = -4; oy <= 4; oy += 1) {
+      for (let ox = -4; ox <= 4; ox += 1) {
         const px = Math.round(match.bx + ox);
         const py = Math.round(match.by + oy);
         if (px < 0 || py < 0 || px >= current.width || py >= current.height) continue;
@@ -355,7 +372,7 @@ export function triangulateSurfels(
           current,
           px,
           py,
-          depth * (1 + (local - center) * 0.025),
+          depth * (1 + (local - center) * 0.02),
           pose,
           camera,
           clamp(baseConfidence - edgePenalty, 0.12, 1),
@@ -374,9 +391,18 @@ export function fuseSurfels(
   incoming: MetricSurfel[],
   maximum = 90_000,
 ): MetricSurfel[] {
+  const latestPreview = incoming.filter((item) => item.keyframe === PREVIEW_KEYFRAME);
+  const persistentIncoming = incoming.filter((item) => item.keyframe !== PREVIEW_KEYFRAME);
+  const persistentExisting = existing.filter((item) => item.keyframe !== PREVIEW_KEYFRAME);
+  const previewBudget = Math.min(24_000, Math.floor(maximum * 0.4));
+  const preview = latestPreview.length <= previewBudget
+    ? latestPreview
+    : latestPreview.filter((_, index) => index % Math.ceil(latestPreview.length / previewBudget) === 0)
+      .slice(0, previewBudget);
+  const persistentBudget = Math.max(1, maximum - preview.length);
   const voxels = new Map<string, MetricSurfel>();
   const add = (surfel: MetricSurfel) => {
-    const resolution = surfel.confidence >= 0.3 ? 180 : 105;
+    const resolution = 150;
     const key = [
       Math.round(surfel.x * resolution),
       Math.round(surfel.y * resolution),
@@ -396,19 +422,20 @@ export function fuseSurfels(
     prior.r = (prior.r * wa + surfel.r * wb) / total;
     prior.g = (prior.g * wa + surfel.g * wb) / total;
     prior.b = (prior.b * wa + surfel.b * wb) / total;
-    prior.confidence = clamp(prior.confidence + surfel.confidence * 0.13, 0, 1);
+    prior.confidence = clamp(prior.confidence + surfel.confidence * 0.14, 0, 1);
     prior.uncertainty = Math.max(0.001, Math.min(prior.uncertainty, surfel.uncertainty) * 0.9);
     prior.observations += 1;
     prior.firstSeen = Math.min(prior.firstSeen, surfel.firstSeen);
     prior.lastSeen = Math.max(prior.lastSeen, surfel.lastSeen);
   };
-  existing.forEach(add);
-  incoming.forEach(add);
-  return [...voxels.values()]
+  persistentExisting.forEach(add);
+  persistentIncoming.forEach(add);
+  const persistent = [...voxels.values()]
     .sort((left, right) =>
       right.confidence * right.observations / right.uncertainty -
       left.confidence * left.observations / left.uncertainty)
-    .slice(0, maximum);
+    .slice(0, persistentBudget);
+  return [...persistent, ...preview];
 }
 
 export function assessQuality(
@@ -417,14 +444,15 @@ export function assessQuality(
   rejected: number,
   metricScale: boolean,
 ): ReconstructionQuality {
-  const confirmed = surfels.filter((item) =>
+  const persistent = surfels.filter((item) => item.keyframe !== PREVIEW_KEYFRAME);
+  const confirmed = persistent.filter((item) =>
     item.observations >= 2 && item.confidence >= 0.52 && item.uncertainty <= 0.3).length;
-  const uncertain = surfels.length - confirmed;
+  const uncertain = persistent.length - confirmed;
   return {
     tracking: pose.tracking,
     parallaxDegrees: pose.parallaxDegrees,
     reprojectionError: pose.reprojectionError,
-    coverage: surfels.length === 0 ? 0 : confirmed / surfels.length,
+    coverage: persistent.length === 0 ? 0 : confirmed / persistent.length,
     confirmed,
     uncertain,
     rejected,
