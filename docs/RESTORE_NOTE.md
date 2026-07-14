@@ -1,0 +1,1 @@
+The World Cell Theater browser runtime has been restored to the last responsive v0.21 baseline while the authoritative v0.22 metric runtime remains in `keyxym_map`. Browser-generated preview geometry is not represented as metric reconstruction.
