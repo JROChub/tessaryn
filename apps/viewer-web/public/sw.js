@@ -1,9 +1,10 @@
-// Device-shell refresh: TESSARYN origin visual system.
-const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake";
+// World Cell Theater refresh: live spatial capture, replay, and peer transfer.
+const CACHE = "tessaryn-origin-v0-5-0-world-cell-theater";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
   "./personal-weave.html",
+  "./world-cell-theater.html",
   "./world/archviz-tiny-house-locus.json",
   "./world/vesper-court.json",
   "./validation/portfolio.json",
