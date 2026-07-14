@@ -11,6 +11,7 @@ export default defineConfig({
         main: "index.html",
         keyxymMobile: "keyxym-mobile.html",
         personalWeave: "personal-weave.html",
+        worldCellTheater: "world-cell-theater.html",
       },
       output: {
         codeSplitting: {

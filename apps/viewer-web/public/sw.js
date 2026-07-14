@@ -1,9 +1,10 @@
-// Device-shell refresh: TESSARYN origin visual system.
+// World Cell Theater route extends the stable TESSARYN offline contract.
 const CACHE = "tessaryn-origin-v0-5-0-write-weave2-intake";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
   "./personal-weave.html",
+  "./world-cell-theater.html",
   "./world/archviz-tiny-house-locus.json",
   "./world/vesper-court.json",
   "./validation/portfolio.json",
