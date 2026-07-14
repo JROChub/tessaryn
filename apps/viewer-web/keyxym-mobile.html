@@ -15,64 +15,21 @@
   <body>
     <div class="device-app-shell">
       <header class="topbar device-topbar">
-        <a class="brand" href="./" aria-label="TESSARYN home">
-          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span><b>TESSARYN</b><small>NATIVE 4D CONTINUUM</small></span>
-        </a>
+        <a class="brand" href="./" aria-label="TESSARYN home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span><b>TESSARYN</b><small>NATIVE 4D CONTINUUM</small></span></a>
         <div class="origin-title"><small>ACTIVE INSTRUMENT</small><b>KEYXYM DEVICE LAB</b></div>
         <div class="top-states"><span><i></i>LOCAL</span><span id="network-state">ONLINE</span></div>
-        <div class="top-actions">
-          <a class="icon-command secondary" href="./personal-weave.html">PERSONAL WEAVE</a>
-          <a class="icon-button" href="./" aria-label="Return to Origin">×</a>
-        </div>
+        <div class="top-actions"><a class="icon-command" href="./world-cell-theater.html">WORLD CELL THEATER</a><a class="icon-command secondary" href="./personal-weave.html">PERSONAL WEAVE</a><a class="icon-button" href="./" aria-label="Return to Origin">×</a></div>
       </header>
-
       <main class="mobile-demo-shell">
-        <section class="hero-card instrument-panel accent-gold">
-          <p class="eyebrow">ALL DEVICES / LOCAL-FIRST</p>
-          <h1>Carry a verifiable object weave on every device.</h1>
-          <p class="hero-copy">Create an object from a photo or file, retain the source locally, preview or share it, interrupt transfer, resume from durable state, and watch two simulated peers converge without publishing your source file.</p>
-          <div class="hero-actions"><button id="capture-button" class="icon-command" type="button">CAPTURE OR CHOOSE FILE</button><button id="sample-button" class="icon-command secondary" type="button">RUN SAMPLE</button></div>
-          <input id="file-input" type="file" accept="image/*,video/*,audio/*,text/*,application/pdf,application/json,.tessaryn" hidden>
-        </section>
-
-        <section class="status-grid" aria-live="polite">
-          <article><small>DEVICE ID</small><b id="device-id">INITIALIZING</b></article>
-          <article><small>OBJECTS</small><b id="object-count">0</b></article>
-          <article><small>OBJECT BYTES</small><b id="local-bytes">0 B</b></article>
-          <article class="quota-card"><small>BROWSER STORAGE</small><b id="storage-quota">CALCULATING</b></article>
-        </section>
-
-        <section class="pipeline-card instrument-panel accent-cyan">
-          <header><span><small>LIVE PIPELINE</small><b id="pipeline-title">READY FOR A LOCAL OBJECT</b></span><output id="pipeline-percent">0%</output></header>
-          <div class="pipeline-track"><i id="pipeline-bar"></i></div>
-          <ol id="pipeline-steps" class="pipeline-steps">
-            <li data-step="read"><i></i><span><b>READ</b><small>Bounded slices</small></span></li><li data-step="hash"><i></i><span><b>HASH</b><small>SHA-256 identity</small></span></li><li data-step="chunk"><i></i><span><b>CHUNK</b><small>256 KiB records</small></span></li><li data-step="persist"><i></i><span><b>PERSIST</b><small>Blob + journal</small></span></li><li data-step="sync"><i></i><span><b>SYNC</b><small>Resume + convergence</small></span></li>
-          </ol>
-        </section>
-
-        <section class="object-card instrument-panel accent-moss">
-          <header><span><small>LATEST PERSONAL OBJECT</small><b id="object-name">NONE</b></span><button id="clear-button" class="icon-command secondary" type="button">CLEAR ALL</button></header>
-          <dl><div><dt>DIGEST</dt><dd id="object-digest">—</dd></div><div><dt>SIZE</dt><dd id="object-size">—</dd></div><div><dt>CHUNKS</dt><dd id="object-chunks">—</dd></div><div><dt>JOURNAL</dt><dd id="object-journal">EMPTY</dd></div></dl>
-          <div class="object-actions"><button id="view-button" class="icon-command" type="button" disabled>VIEW OBJECT</button><button id="share-button" class="icon-command secondary" type="button" disabled>SHARE OBJECT</button><button id="delete-button" class="icon-command danger-action" type="button" disabled>DELETE OBJECT</button></div>
-        </section>
-
-        <section class="sync-card instrument-panel accent-rust">
-          <header><span><small>DEMO PEER</small><b>SIMULATED REMOTE NODE</b></span><span id="peer-state" class="state-pill idle">IDLE</span></header>
-          <p>This demo exercises local source retention, durable chunk journals, interruption, resume, and anti-entropy planning. Browser storage is not represented as the native C++ runtime or a live production peer.</p>
-          <div class="sync-actions"><button id="interrupt-button" class="icon-command secondary" type="button" disabled>INTERRUPT AT 40%</button><button id="sync-button" class="icon-command" type="button" disabled>SYNC OBJECT</button></div>
-          <pre id="event-log" aria-label="Replication event log">READY / Waiting for a local object.</pre>
-        </section>
-
+        <section class="hero-card instrument-panel accent-gold"><p class="eyebrow">ALL DEVICES / LOCAL-FIRST</p><h1>Carry a verifiable object weave on every device.</h1><p class="hero-copy">Create a local object here, or enter the World Cell Theater for live camera reconstruction, temporal Moments, WebGPU execution, and real peer-to-peer transfer.</p><div class="hero-actions"><a class="icon-command" href="./world-cell-theater.html">OPEN WORLD CELL THEATER</a><button id="capture-button" class="icon-command secondary" type="button">CAPTURE OR CHOOSE FILE</button><button id="sample-button" class="icon-command secondary" type="button">RUN SAMPLE</button></div><input id="file-input" type="file" accept="image/*,video/*,audio/*,text/*,application/pdf,application/json,.tessaryn" hidden></section>
+        <section class="status-grid" aria-live="polite"><article><small>DEVICE ID</small><b id="device-id">INITIALIZING</b></article><article><small>OBJECTS</small><b id="object-count">0</b></article><article><small>OBJECT BYTES</small><b id="local-bytes">0 B</b></article><article class="quota-card"><small>BROWSER STORAGE</small><b id="storage-quota">CALCULATING</b></article></section>
+        <section class="pipeline-card instrument-panel accent-cyan"><header><span><small>LIVE PIPELINE</small><b id="pipeline-title">READY FOR A LOCAL OBJECT</b></span><output id="pipeline-percent">0%</output></header><div class="pipeline-track"><i id="pipeline-bar"></i></div><ol id="pipeline-steps" class="pipeline-steps"><li data-step="read"><i></i><span><b>READ</b><small>Bounded slices</small></span></li><li data-step="hash"><i></i><span><b>HASH</b><small>SHA-256 identity</small></span></li><li data-step="chunk"><i></i><span><b>CHUNK</b><small>256 KiB records</small></span></li><li data-step="persist"><i></i><span><b>PERSIST</b><small>Blob + journal</small></span></li><li data-step="sync"><i></i><span><b>SYNC</b><small>Resume + convergence</small></span></li></ol></section>
+        <section class="object-card instrument-panel accent-moss"><header><span><small>LATEST PERSONAL OBJECT</small><b id="object-name">NONE</b></span><button id="clear-button" class="icon-command secondary" type="button">CLEAR ALL</button></header><dl><div><dt>DIGEST</dt><dd id="object-digest">—</dd></div><div><dt>SIZE</dt><dd id="object-size">—</dd></div><div><dt>CHUNKS</dt><dd id="object-chunks">—</dd></div><div><dt>JOURNAL</dt><dd id="object-journal">EMPTY</dd></div></dl><div class="object-actions"><button id="view-button" class="icon-command" type="button" disabled>VIEW OBJECT</button><button id="share-button" class="icon-command secondary" type="button" disabled>SHARE OBJECT</button><button id="delete-button" class="icon-command danger-action" type="button" disabled>DELETE OBJECT</button></div></section>
+        <section class="sync-card instrument-panel accent-rust"><header><span><small>LEGACY DEMO PEER</small><b>SIMULATED REMOTE NODE</b></span><span id="peer-state" class="state-pill idle">IDLE</span></header><p>This legacy object-journal demonstration remains for storage testing. Real WebRTC World Cell transfer is now available in the World Cell Theater.</p><div class="sync-actions"><button id="interrupt-button" class="icon-command secondary" type="button" disabled>INTERRUPT AT 40%</button><button id="sync-button" class="icon-command" type="button" disabled>SYNC OBJECT</button></div><pre id="event-log" aria-label="Replication event log">READY / Waiting for a local object.</pre></section>
         <p class="privacy-boundary">Source bytes, metadata, and journals remain in this browser's private storage until you explicitly delete them.</p>
       </main>
-
-      <footer class="world-controls device-controls" aria-label="Device Lab controls">
-        <div class="control-group"><a href="./personal-weave.html">PERSONAL WEAVE</a><a href="./">ORIGIN</a></div>
-        <div class="control-group control-end"><span>KEYXYM / LOCAL DEVICE</span></div>
-      </footer>
+      <footer class="world-controls device-controls" aria-label="Device Lab controls"><div class="control-group"><a href="./world-cell-theater.html">WORLD CELL THEATER</a><a href="./personal-weave.html">PERSONAL WEAVE</a><a href="./">ORIGIN</a></div><div class="control-group control-end"><span>KEYXYM / LOCAL DEVICE</span></div></footer>
     </div>
-
     <dialog id="preview-dialog" class="preview-dialog"><header><span><small>LOCAL OBJECT PREVIEW</small><b id="preview-title">OBJECT</b></span><button id="preview-close" class="icon-button" type="button">×</button></header><div id="preview-body" class="preview-body"></div></dialog>
     <script type="module" src="/src/keyxym-mobile.ts"></script>
   </body>
