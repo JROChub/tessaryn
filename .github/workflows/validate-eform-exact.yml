@@ -1,0 +1,58 @@
+name: Validate exact eform World Cell branch
+
+on:
+  pull_request:
+    paths:
+      - "validation/eform/**"
+      - ".github/workflows/validate-eform-exact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-eform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          components: rustfmt, clippy
+      - name: Require byte-identical private branch sources
+        run: |
+          set -euo pipefail
+          test "$(git hash-object validation/eform/src/lib.rs)" = c29a75feee0c7feacdb98fbe32ec7b2d425235be
+          test "$(git hash-object validation/eform/src/main.rs)" = 6aaf37e5634971eb3b40b9241d4a8df382eaee88
+          test "$(git hash-object validation/eform/src/world_cell.rs)" = 33f90e2ee5aff6867caa0a270f53b4c1b4118d47
+          test "$(git hash-object validation/eform/tests/world_cell.rs)" = f9fb840a5a8fda9ae068b27817f18866c65025ac
+          test "$(git hash-object validation/eform/tests/world_cell_cli.rs)" = 76062d7695c0015b9ec3ed88ac364a63cfacdd24
+          test "$(git hash-object validation/eform/tests/world_cell_vector.rs)" = f9c9b50fac67d02fa3d56c804a0361d94e71e89f
+      - name: Resolve pinned Power House dependency
+        working-directory: validation/eform
+        run: cargo generate-lockfile
+      - name: Format
+        working-directory: validation/eform
+        run: cargo fmt --check
+      - name: Clippy
+        working-directory: validation/eform
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Documentation
+        working-directory: validation/eform
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --locked
+      - name: Tests
+        working-directory: validation/eform
+        run: cargo test --all-targets --locked
+      - name: Startup self-test
+        working-directory: validation/eform
+        run: cargo run --locked -- self-test
+      - name: Require fail-closed production activation
+        working-directory: validation/eform
+        run: cargo run --locked -- activation-report | grep 'approved=false'
+      - name: Release build and release self-test
+        working-directory: validation/eform
+        run: |
+          cargo build --release --locked
+          cargo run --release --locked -- self-test
