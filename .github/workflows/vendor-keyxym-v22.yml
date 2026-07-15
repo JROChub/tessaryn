@@ -1,0 +1,68 @@
+name: Vendor verified Keyxym v0.22 runtime
+
+on:
+  push:
+    branches: [agent/v022-authoritative-runtime]
+    paths: [.github/workflows/vendor-keyxym-v22.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v022-authoritative-runtime
+      - name: Download proven Keyxym artifact
+        env:
+          ARTIFACT_URL: "https://sdmntprwestcentralus.oaiusercontent.com/files/00000000-0a58-71fb-b159-7551024434bf/raw?se=2026-07-15T00:25:28Z&sp=r&sv=2026-02-06&sr=b&scid=018f21ff-704c-5b4f-b288-22c243f3c143&skoid=18c14e53-ea0c-429b-8d09-d22d66ca7169&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-07-14T01:00:44Z&ske=2026-07-16T01:00:44Z&sks=b&skv=2026-02-06&sig=oig82E8ydHe7scxxbsSC4GXwUDfbStzPGy2nXJZN6QM%3D"
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors "$ARTIFACT_URL" --output /tmp/keyxym.zip
+          rm -rf /tmp/keyxym && mkdir -p /tmp/keyxym
+          unzip -q /tmp/keyxym.zip -d /tmp/keyxym
+          echo "6e4bf53118937aeb32a34a42dff917034d330de04e0ecac4c24037ae1c7d828c  /tmp/keyxym/keyxym-v22.mjs" | sha256sum -c -
+          echo "99524aa4e9b38adcf3a1cbe7cc5e1096964b15c60df36572092eb3e6bd0a2bd7  /tmp/keyxym/keyxym-v22.wasm" | sha256sum -c -
+      - name: Install immutable runtime bundle
+        run: |
+          set -euo pipefail
+          mkdir -p apps/viewer-web/public/keyxym
+          rm -f apps/viewer-web/public/keyxym/mjs.00
+          install -m 0644 /tmp/keyxym/keyxym-v22.mjs apps/viewer-web/public/keyxym/keyxym-v22.mjs
+          install -m 0644 /tmp/keyxym/keyxym-v22.wasm apps/viewer-web/public/keyxym/keyxym-v22.wasm
+          cat > apps/viewer-web/public/keyxym/manifest.json <<'JSON'
+          {
+            "schema": "tessaryn.keyxym-wasm-provenance/v1",
+            "version": "0.22.0",
+            "abi": "keyxym-v22-packed-1",
+            "source_repository": "JROChub/keyxym_map",
+            "source_commit": "3076c306126058c6e9b24d851681ae79a26b9b55",
+            "maximum_surfels": 48000,
+            "wasm_bigint": false,
+            "timestamp_abi": "legalized-i64-low-high",
+            "workflow_run": 29371949689,
+            "artifact_id": 8326403411,
+            "artifacts": {
+              "keyxym-v22.mjs": {
+                "bytes": 13521,
+                "sha256": "6e4bf53118937aeb32a34a42dff917034d330de04e0ecac4c24037ae1c7d828c"
+              },
+              "keyxym-v22.wasm": {
+                "bytes": 27785,
+                "sha256": "99524aa4e9b38adcf3a1cbe7cc5e1096964b15c60df36572092eb3e6bd0a2bd7"
+              }
+            }
+          }
+          JSON
+          rm -f .github/workflows/vendor-keyxym-v22.yml
+      - name: Commit verified runtime
+        run: |
+          set -euo pipefail
+          git config user.name "tessaryn-runtime-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A apps/viewer-web/public/keyxym .github/workflows/vendor-keyxym-v22.yml
+          git commit -m "Activate verified Keyxym v0.22 runtime"
+          git push origin HEAD:agent/v022-authoritative-runtime
