@@ -20,10 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
-        with:
-          targets: wasm32-unknown-unknown
-          components: rustfmt, clippy
+      - name: Configure Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
+          rustup default stable
+          rustc --version
+          cargo --version
       - name: Format
         run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml --check
       - name: Clippy
