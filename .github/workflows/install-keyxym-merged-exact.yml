@@ -1,0 +1,97 @@
+name: Install merged exact Keyxym authority
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/install-keyxym-merged-exact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  install:
+    if: github.head_ref == 'release/keyxym-merged-exact-runtime' || github.ref == 'refs/heads/release/keyxym-merged-exact-runtime'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: release/keyxym-merged-exact-runtime
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/viewer-web/package-lock.json
+      - name: Download retained merged-source artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 5 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            'https://api.github.com/repos/JROChub/tessaryn/actions/artifacts/8341816734/zip' \
+            -o /tmp/keyxym-merged-exact.zip
+          mkdir -p /tmp/keyxym-merged-exact
+          unzip -q /tmp/keyxym-merged-exact.zip -d /tmp/keyxym-merged-exact
+      - name: Verify and install exact authority bytes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib, shutil
+          artifact = pathlib.Path('/tmp/keyxym-merged-exact')
+          module = artifact / 'keyxym-merged-wasm/keyxym-v22.mjs'
+          wasm = artifact / 'keyxym-merged-wasm/keyxym-v22.wasm'
+          manifest_path = artifact / 'keyxym-merged-manifest.json'
+          manifest = json.loads(manifest_path.read_text())
+          assert manifest['schema'] == 'keyxym.browser-runtime-provenance/v4'
+          assert manifest['abi'] == 'keyxym-v22-browser-dual-field-4'
+          assert manifest['perception_abi'] == 'keyxym-v22-unified-cpp-frontend-v1'
+          assert manifest['source_commit'] == '5187ff10dfb63d4abbfee51ab894451efe428490'
+          assert manifest['source_exact'] is True
+          assert manifest['derivation'] == 'source-exact-external-validation-build'
+          assert manifest['validation'] == {
+              'exact_blob_matrix_run': 29412516894,
+              'gcc': True,
+              'asan_ubsan': True,
+              'msvc': True,
+              'mobile_sdk': True,
+              'wasm_runtime': True,
+          }
+          for name, path in [('keyxym-v22.mjs', module), ('keyxym-v22.wasm', wasm)]:
+              data = path.read_bytes()
+              record = manifest['artifacts'][name]
+              assert len(data) == record['bytes']
+              assert hashlib.sha256(data).hexdigest() == record['sha256']
+          target = pathlib.Path('apps/viewer-web/public/keyxym')
+          shutil.copyfile(module, target / 'keyxym-v22.mjs')
+          shutil.copyfile(wasm, target / 'keyxym-v22.wasm')
+          shutil.copyfile(manifest_path, target / 'manifest.json')
+          closure = target / 'build-closure.json'
+          if closure.exists(): closure.unlink()
+          PY
+          rm .github/workflows/install-keyxym-merged-exact.yml
+          git diff --check
+      - name: Validate installed viewer contract
+        working-directory: apps/viewer-web
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Commit only final product assets and contract
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            apps/viewer-web/public/keyxym/manifest.json \
+            apps/viewer-web/public/keyxym/keyxym-v22.mjs \
+            apps/viewer-web/public/keyxym/keyxym-v22.wasm \
+            apps/viewer-web/public/keyxym/build-closure.json \
+            .github/workflows/install-keyxym-merged-exact.yml
+          git commit -m 'Install merged source-exact Keyxym authority'
+          git push origin HEAD:release/keyxym-merged-exact-runtime
