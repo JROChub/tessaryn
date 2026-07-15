@@ -27,10 +27,10 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git hash-object validation/eform/src/lib.rs)" = c29a75feee0c7feacdb98fbe32ec7b2d425235be
-          test "$(git hash-object validation/eform/src/main.rs)" = 6aaf37e5634971eb3b40b9241d4a8df382eaee88
-          test "$(git hash-object validation/eform/src/world_cell.rs)" = 33f90e2ee5aff6867caa0a270f53b4c1b4118d47
-          test "$(git hash-object validation/eform/tests/world_cell.rs)" = f9fb840a5a8fda9ae068b27817f18866c65025ac
-          test "$(git hash-object validation/eform/tests/world_cell_cli.rs)" = 76062d7695c0015b9ec3ed88ac364a63cfacdd24
+          test "$(git hash-object validation/eform/src/main.rs)" = 900b8dd56c22f11067fee0ec1bbcdf7b005e8555
+          test "$(git hash-object validation/eform/src/world_cell.rs)" = e212061472ea70d9669ecffabf1309e4a9e313cd
+          test "$(git hash-object validation/eform/tests/world_cell.rs)" = 3cb8a0fbdd12a0a48c5add9dc719909eb72f0445
+          test "$(git hash-object validation/eform/tests/world_cell_cli.rs)" = 1b425d2d3aa5b074661aeac8d180882013f67185
           test "$(git hash-object validation/eform/tests/world_cell_vector.rs)" = f9c9b50fac67d02fa3d56c804a0361d94e71e89f
       - name: Resolve pinned Power House dependency
         working-directory: validation/eform
