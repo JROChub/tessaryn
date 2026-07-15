@@ -26,6 +26,27 @@ function rejectAuthority(error: unknown): void {
   console.error("Keyxym v0.26 authority rejected", error);
 }
 
+async function refreshServiceWorker(): Promise<void> {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+  const script = new URL("./sw.js", document.baseURI);
+  try {
+    const registration = await navigator.serviceWorker.register(script, { updateViaCache: "none" });
+    await registration.update();
+    if (registration.installing || registration.waiting) {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), { once: true });
+        }),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 3_000)),
+      ]);
+    }
+    document.documentElement.dataset.serviceWorker = "current";
+  } catch (error) {
+    document.documentElement.dataset.serviceWorker = "unavailable";
+    console.warn("TESSARYN service worker refresh unavailable", error);
+  }
+}
+
 async function installAssurance(): Promise<void> {
   try {
     const manifest = await installBrowserAssuranceBridge();
@@ -34,10 +55,12 @@ async function installAssurance(): Promise<void> {
   } catch (error) {
     document.documentElement.dataset.worldCellAssurance = "rejected";
     console.error("Browser eform/Power House assurance rejected", error);
+    throw error;
   }
 }
 
 try {
+  await refreshServiceWorker();
   const manifest = await verifyKeyxymV26Bundle();
   await installAssurance();
   const { installWorldCellTheater } = await import("./world-cell-theater-v26");
