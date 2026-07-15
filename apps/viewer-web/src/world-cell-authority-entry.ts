@@ -1,3 +1,4 @@
+import { installBrowserAssuranceBridge } from "./browser-assurance-runtime";
 import { verifyKeyxymV22Bundle } from "./keyxym-v22-provenance";
 
 function rejectAuthority(error: unknown): void {
@@ -24,8 +25,20 @@ function rejectAuthority(error: unknown): void {
   console.error("Keyxym v0.22 authority rejected", error);
 }
 
+async function installAssurance(): Promise<void> {
+  try {
+    const manifest = await installBrowserAssuranceBridge();
+    document.documentElement.dataset.worldCellAssurance = "verified";
+    document.documentElement.dataset.worldCellAssuranceSource = manifest.source_commit;
+  } catch (error) {
+    document.documentElement.dataset.worldCellAssurance = "rejected";
+    console.error("Browser eform/Power House assurance rejected", error);
+  }
+}
+
 try {
   const manifest = await verifyKeyxymV22Bundle();
+  await installAssurance();
   const { installWorldCellTheater } = await import("./world-cell-theater");
   await installWorldCellTheater(manifest);
   document.documentElement.dataset.keyxymAuthority = "verified";
