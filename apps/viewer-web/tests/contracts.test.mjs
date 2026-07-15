@@ -181,7 +181,7 @@ test("World Cell vision layer renders a visual cockpit without bypassing authori
   assert.match(vision, /START GUIDED CAPTURE/);
   assert.match(visionCss, /vision-canvas/);
   assert.match(visionCss, /vision-console/);
-  assert.match(visionCss, /mix-blend-mode:screen/);
+  assert.match(visionCss, /mix-blend-mode:\s*screen/);
   assert.doesNotMatch(vision, /capture-button[\s\S]{0,180}disabled\s*=\s*false/);
   assert.doesNotMatch(vision, /seal-button[\s\S]{0,180}disabled\s*=\s*false/);
   assert.doesNotMatch(vision, /momentAllowed\s*=(?!=)|sealAllowed\s*=(?!=)/);
