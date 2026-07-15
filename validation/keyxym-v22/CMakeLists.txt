@@ -4,6 +4,7 @@ project(keyxym_v22_exact_validation VERSION 0.22.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+option(KEYXYM_V22_VALIDATION_TESTS "Build exact browser authority validation tests" ON)
 
 find_package(Threads REQUIRED)
 
@@ -44,7 +45,7 @@ if(EMSCRIPTEN)
     -sEXPORTED_RUNTIME_METHODS=['HEAPU8','HEAPF32']
     -sEXPORTED_FUNCTIONS=['_malloc','_free','_keyxym_v22_browser_session_create','_keyxym_v22_browser_session_destroy','_keyxym_v22_browser_ingest_rgba_packed','_keyxym_v22_browser_copy_receipts','_keyxym_v22_browser_copy_preview_packed','_keyxym_v22_browser_geometry_revision','_keyxym_v22_browser_copy_geometry_snapshot_packed','_keyxym_v22_session_quality_packed'])
   set_target_properties(keyxym-v22 PROPERTIES SUFFIX ".mjs")
-else()
+elseif(KEYXYM_V22_VALIDATION_TESTS)
   enable_testing()
   add_executable(keyxym_v22_frontend_test tests/test_v022_browser_frontend.cpp)
   target_link_libraries(keyxym_v22_frontend_test PRIVATE keyxym_v22_exact)
