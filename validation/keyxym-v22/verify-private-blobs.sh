@@ -38,7 +38,7 @@ check tests/test_v022_browser_runtime.cpp 3550a35b3fe631c85a0d79f2944ae703b142c4
 check include/keyxym/v26.hpp c43c97e8efd86cad9dc915fe6d9ac9a1baab46e8
 check include/keyxym/v26_browser_runtime.h 4a97f93b2b4129b19dbf6786aed9719adefa5883
 check src/v26_internal.hpp 168f3be8c95de7e386620b161b8edf5cba90e3e1
-check src/v26_pose.cpp 19dab0ceac0feb51794ad480ce3c02445e155b24
+check src/v26_pose.cpp ca497ad56581db9e7dfaa918ea22dc9279f02789
 check src/v26_geometry.cpp 1f5ef8bb7c6aafe590afc0ce9e71f77001782670
 check src/v26_session.cpp f69334624317ab2c80a62011d1cdd716cc5a4de1
 check src/v26_browser_runtime.cpp bc480746168e29015cc9fb44a41eb16e5ea4adf8
