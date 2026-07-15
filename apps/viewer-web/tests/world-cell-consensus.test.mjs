@@ -5,18 +5,16 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
-test("World Cell Theater boots the restored v0.21 controller with styles before camera enablement", async () => {
+test("World Cell Theater has one v0.26 provenance-gated controller", async () => {
   const [html, entry] = await Promise.all([
     read("world-cell-theater.html"),
     read("src/world-cell-authority-entry.ts"),
   ]);
   assert.match(html, /src="\/src\/world-cell-authority-entry\.ts"/);
   assert.match(html, /id="start-button"[^>]*disabled/);
-  assert.match(entry, /import "\.\/world-cell-theater\.css"/);
-  assert.match(entry, /import\("\.\/world-cell-theater-v21"\)/);
-  assert.match(entry, /dataset\.keyxymVersion = "0\.21"/);
-  assert.match(entry, /start\.disabled = false/);
-  assert.doesNotMatch(entry, /verifyKeyxymV26Bundle|world-cell-theater-v26/);
+  assert.match(entry, /verifyKeyxymV26Bundle/);
+  assert.match(entry, /world-cell-theater-v26/);
+  assert.doesNotMatch(entry, /verifyKeyxymV22Bundle|world-cell-theater"/);
 });
 
 test("v0.26 runtime executes RGBA authority inside a bounded worker", async () => {
