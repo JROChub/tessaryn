@@ -16,23 +16,24 @@ test("synthetic camera frames reach the v0.26 worker and form authoritative geom
     if (!context) throw new Error("synthetic camera canvas unavailable");
     let frame = 0;
     const render = () => {
-      const shift = (frame * 3) % 48;
+      const phase = Math.min(40, Math.floor(frame / 3));
       context.fillStyle = "#05080d";
       context.fillRect(0, 0, canvas.width, canvas.height);
-      for (let y = -32; y < canvas.height + 32; y += 24) {
-        for (let x = -64; x < canvas.width + 64; x += 24) {
-          const sx = x + shift;
-          const checker = ((Math.floor(x / 24) ^ Math.floor(y / 24)) & 1) === 0;
+      for (let y = -32; y < canvas.height + 32; y += 20) {
+        for (let x = -80; x < canvas.width + 80; x += 20) {
+          const sx = x + phase;
+          const checker = ((Math.floor(x / 20) ^ Math.floor(y / 20)) & 1) === 0;
+          const detail = ((x * x + y * y + x * y) % 53 + 53) % 53;
           context.fillStyle = checker
-            ? `rgb(${180 + ((x + y + frame) % 70 + 70) % 70},110,220)`
-            : `rgb(20,${60 + ((x * y + frame) % 90 + 90) % 90},100)`;
-          context.fillRect(sx, y, 18, 18);
+            ? `rgb(${185 + detail},${90 + detail / 2},220)`
+            : `rgb(20,${55 + detail},${105 + detail / 2})`;
+          context.fillRect(sx, y, 15, 15);
         }
       }
       context.strokeStyle = "white";
       context.lineWidth = 3;
-      context.strokeRect(80 + shift, 70, 160, 120);
-      context.strokeRect(340 + shift / 2, 240, 190, 140);
+      context.strokeRect(80 + phase, 70, 160, 120);
+      context.strokeRect(340 + phase, 240, 190, 140);
       frame += 1;
       requestAnimationFrame(render);
     };
@@ -63,7 +64,7 @@ test("synthetic camera frames reach the v0.26 worker and form authoritative geom
 
   await expect(page.locator("html")).toHaveAttribute(
     "data-authority-stage",
-    /forming|tracking|moment-ready|seal-ready/,
+    /tracking|moment-ready|seal-ready/,
   );
   await expect(page.locator("#dispatch-time")).toContainText("worker");
   await expect(page.locator("#stop-button")).toBeEnabled();
