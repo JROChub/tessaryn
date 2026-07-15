@@ -46,7 +46,19 @@ jobs:
       - name: Build sanitized targets
         run: cmake --build /tmp/keyxym-sanitized --parallel 2
       - name: Run sanitized authority tests
-        run: ctest --test-dir /tmp/keyxym-sanitized --output-on-failure
+        shell: bash
+        run: |
+          set +e
+          ctest --test-dir /tmp/keyxym-sanitized --output-on-failure 2>&1 | tee /tmp/keyxym-sanitizer.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Upload sanitizer diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: keyxym-v26-sanitizer-diagnostics
+          path: /tmp/keyxym-sanitizer.log
+          if-no-files-found: ignore
 
   windows:
     runs-on: windows-latest
