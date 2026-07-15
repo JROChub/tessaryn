@@ -1,0 +1,20 @@
+[package]
+name = "eform"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Power House anchored cryptographic assurance and execution fabric"
+repository = "https://github.com/JROChub/eform"
+
+[dependencies]
+power_house = { git = "https://github.com/JROChub/power_house", rev = "7f3aa496104cccab0ab813ec7dc6f45d5d55e2f8", features = ["net"] }
+
+[lib]
+name = "eform"
+path = "src/lib.rs"
+
+[[bin]]
+name = "eform"
+path = "src/main.rs"
+
+[workspace]
