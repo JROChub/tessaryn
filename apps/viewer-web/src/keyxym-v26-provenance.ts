@@ -41,18 +41,48 @@ export interface KeyxymV26Manifest {
   };
 }
 
-const ROOT = "/keyxym-v26";
+export interface KeyxymV26AssetUrls {
+  manifest: string;
+  module: string;
+  wasm: string;
+}
+
 const SOURCE = "c94d4db57d1db89e96cb7fd860da2d4c1617f516";
+const MODULE_SHA256 = "0d9f9921b01546051eacf7d0cf79f9b70e8b206dc455b833437fd992a737c7e5";
+const WASM_SHA256 = "89c66a4c8465ef8db10b6c40d4fdd3dc7d9c662d728cbd80d824a2ef27ea7d0e";
 const EMSCRIPTEN_RELEASE = "9074aa513b501925adb1361e208932ad32a29a5f";
 const EMSCRIPTEN_PACKAGE = "3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3";
 const HASH = /^[0-9a-f]{64}$/;
 
+function publicAssetUrl(path: string, parameters: Record<string, string>): string {
+  const url = new URL(path, document.baseURI);
+  for (const [name, value] of Object.entries(parameters)) url.searchParams.set(name, value);
+  return url.href;
+}
+
+export function keyxymV26AssetUrls(): KeyxymV26AssetUrls {
+  return {
+    manifest: publicAssetUrl("keyxym-v26/manifest.json", {
+      source: SOURCE,
+      contract: `${MODULE_SHA256}:${WASM_SHA256}`,
+    }),
+    module: publicAssetUrl("keyxym-v26/keyxym-v26.mjs", {
+      source: SOURCE,
+      sha256: MODULE_SHA256,
+    }),
+    wasm: publicAssetUrl("keyxym-v26/keyxym-v26.wasm", {
+      source: SOURCE,
+      sha256: WASM_SHA256,
+    }),
+  };
+}
+
 const hex = (bytes: ArrayBuffer) => Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, "0")).join("");
 const digest = async (bytes: ArrayBuffer) => hex(await crypto.subtle.digest("SHA-256", bytes));
 
-async function fetchBytes(path: string): Promise<ArrayBuffer> {
-  const response = await fetch(`${ROOT}/${path}`, { cache: "no-store", credentials: "same-origin", redirect: "error" });
-  if (!response.ok) throw new Error(`Keyxym v0.26 artifact unavailable: ${path} (${response.status})`);
+async function fetchBytes(url: string): Promise<ArrayBuffer> {
+  const response = await fetch(url, { cache: "no-store", credentials: "same-origin", redirect: "error" });
+  if (!response.ok) throw new Error(`Keyxym v0.26 artifact unavailable: ${new URL(url).pathname} (${response.status})`);
   return response.arrayBuffer();
 }
 
@@ -65,7 +95,8 @@ function artifact(manifest: KeyxymV26Manifest, name: keyof KeyxymV26Manifest["ar
 export async function verifyKeyxymV26Bundle(): Promise<KeyxymV26Manifest> {
   if (!globalThis.isSecureContext) throw new Error("Keyxym v0.26 requires a secure browser context");
   if (typeof WebAssembly !== "object" || typeof BigInt !== "function" || !crypto.subtle) throw new Error("Keyxym v0.26 requires WebAssembly BigInt and Web Crypto");
-  const response = await fetch(`${ROOT}/manifest.json`, { cache: "no-store", credentials: "same-origin", redirect: "error" });
+  const urls = keyxymV26AssetUrls();
+  const response = await fetch(urls.manifest, { cache: "no-store", credentials: "same-origin", redirect: "error" });
   if (!response.ok) throw new Error(`Keyxym v0.26 manifest unavailable (${response.status})`);
   const manifest = await response.json() as KeyxymV26Manifest;
   if (manifest.schema !== "keyxym.browser-runtime-provenance/v6" || manifest.version !== "0.26.0" ||
@@ -84,7 +115,10 @@ export async function verifyKeyxymV26Bundle(): Promise<KeyxymV26Manifest> {
   }
   const moduleRecord = artifact(manifest, "keyxym-v26.mjs");
   const wasmRecord = artifact(manifest, "keyxym-v26.wasm");
-  const [moduleBytes, wasmBytes] = await Promise.all([fetchBytes("keyxym-v26.mjs"), fetchBytes("keyxym-v26.wasm")]);
+  if (moduleRecord.sha256 !== MODULE_SHA256 || wasmRecord.sha256 !== WASM_SHA256) {
+    throw new Error("Keyxym v0.26 manifest does not name the approved immutable artifacts");
+  }
+  const [moduleBytes, wasmBytes] = await Promise.all([fetchBytes(urls.module), fetchBytes(urls.wasm)]);
   if (moduleBytes.byteLength !== moduleRecord.bytes || wasmBytes.byteLength !== wasmRecord.bytes) throw new Error("Keyxym v0.26 artifact length mismatch");
   const [moduleHash, wasmHash] = await Promise.all([digest(moduleBytes), digest(wasmBytes)]);
   if (moduleHash !== moduleRecord.sha256 || wasmHash !== wasmRecord.sha256) throw new Error("Keyxym v0.26 artifact digest mismatch");
