@@ -61,7 +61,21 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
       - name: Build browser assurance WebAssembly
-        run: cargo build --manifest-path tools/browser-assurance/Cargo.toml --release --target wasm32-unknown-unknown
+        shell: bash
+        run: |
+          set +e
+          cargo build --manifest-path tools/browser-assurance/Cargo.toml --release --target wasm32-unknown-unknown > browser-assurance-wasm.log 2>&1
+          status=$?
+          cat browser-assurance-wasm.log
+          exit $status
+      - name: Upload WebAssembly compiler diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-wasm-${{ github.run_id }}-${{ github.run_attempt }}
+          path: browser-assurance-wasm.log
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Assemble and validate artifact
         run: |
           mkdir -p build-browser-assurance
