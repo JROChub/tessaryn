@@ -15,8 +15,7 @@ fn seed_file() -> PathBuf {
         std::process::id()
     ));
     let seed =
-        decode_hex("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
-            .unwrap();
+        decode_hex("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60").unwrap();
     fs::write(&path, seed).unwrap();
     path
 }
