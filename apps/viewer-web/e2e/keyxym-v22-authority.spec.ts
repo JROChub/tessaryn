@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const KEYXYM_SOURCE = "700cb523ef9c1fb37733ffd1b1cbe0227be420c3";
+const KEYXYM_SOURCE = "5187ff10dfb63d4abbfee51ab894451efe428490";
 const ASSURANCE_SOURCE = "ecfa0f6584f8890afd4a3a44b4aa972b2768a62e";
 
 test("verified v0.22 authority and assurance instantiate before capture", async ({ page }) => {

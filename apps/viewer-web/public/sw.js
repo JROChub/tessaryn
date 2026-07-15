@@ -1,5 +1,5 @@
 // World Cell Theater route extends the stable TESSARYN offline contract.
-const CACHE = "tessaryn-origin-v0-5-0-world-cell-v22";
+const CACHE = "tessaryn-origin-v0-5-0-world-cell-v22-exact";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
@@ -13,7 +13,6 @@ const CORE = [
   "./manifest.webmanifest",
   "./tessaryn-mark.svg",
   "./keyxym/manifest.json",
-  "./keyxym/build-closure.json",
   "./keyxym/keyxym-v22.mjs",
   "./keyxym/keyxym-v22.wasm",
   "./assurance/manifest.json",

@@ -66,21 +66,27 @@ test("assurance evidence binds native Keyxym receipt pair and runtime provenance
   assert.match(source, /replayFingerprint/);
 });
 
-test("provenance contract pins the complete audited dual-field artifact set", async () => {
+test("provenance contract pins the merged source-exact authority", async () => {
   const source = await read("src/keyxym-v22-provenance.ts");
   assert.match(source, /keyxym\.browser-runtime-provenance\/v4/);
   assert.match(source, /keyxym-v22-browser-dual-field-4/);
-  assert.match(source, /keyxym-v22-browser-frontend-cpp-v1/);
-  assert.match(source, /independent-audited-semantic-closure/);
-  assert.match(source, /source_exact: false/);
-  assert.match(source, /keyxym\.browser-build-closure\/v1/);
-  assert.match(source, /build-closure\.json/);
-  assert.match(source, /APPROVED_CLOSURE_DIGEST/);
+  assert.match(source, /keyxym-v22-unified-cpp-frontend-v1/);
+  assert.match(source, /source_exact: true/);
+  assert.match(source, /source-exact-external-validation-build/);
+  assert.match(source, /5187ff10dfb63d4abbfee51ab894451efe428490/);
+  assert.match(source, /APPROVED_TOOLCHAIN_RELEASE/);
   assert.match(source, /APPROVED_TOOLCHAIN_PACKAGE/);
+  assert.match(source, /APPROVED_VALIDATION_RUN = 29412516894/);
+  assert.match(source, /manifest\.validation\.gcc !== true/);
+  assert.match(source, /manifest\.validation\.asan_ubsan !== true/);
+  assert.match(source, /manifest\.validation\.msvc !== true/);
+  assert.match(source, /manifest\.validation\.mobile_sdk !== true/);
+  assert.match(source, /manifest\.validation\.wasm_runtime !== true/);
   assert.match(source, /receipt_bytes: 64/);
-  assert.match(source, /native and WebAssembly pose\/quality receipts matched byte-for-byte/);
-  assert.match(source, /native and WebAssembly geometry counts matched at 227 surfels/);
   assert.match(source, /await WebAssembly\.compile\(wasmBytes\)/);
+  assert.doesNotMatch(source, /build-closure\.json/);
+  assert.doesNotMatch(source, /independent-audited-semantic-closure/);
+  assert.doesNotMatch(source, /source_exact: false/);
   assert.doesNotMatch(source, /keyxym-standalone-frontend-v1/);
   assert.doesNotMatch(source, /keyxym-frontend-v1\.wasm/);
 });

@@ -1,22 +1,16 @@
 {
   "abi": "keyxym-v22-browser-dual-field-4",
   "artifacts": {
-    "build-closure.json": {
-      "bytes": 6610,
-      "sha256": "fb73f660feb2d03c4aa102a90380f5ea688d85a1ea7532a1c84f9d0be1324a23"
-    },
     "keyxym-v22.mjs": {
-      "bytes": 9546,
-      "sha256": "e9867b1979eeb9dc5109c3882b5c10d2bb81d23faa38fcfd6b6bd18c707035d4"
+      "bytes": 9026,
+      "sha256": "ba0b596d150239c14c18530ed369fcff0ef222c74774e54ac6f6f160aab98e1c"
     },
     "keyxym-v22.wasm": {
-      "bytes": 48184,
-      "sha256": "3e2464e6be15a335d90c57c34d3066d5c265460eb9fe4166c5ed3f879f1c5f11"
+      "bytes": 47030,
+      "sha256": "e265f9c5d843f2fb0a1e9399cc5162cb08cca06a6b92d5d469419f5a3a4add75"
     }
   },
-  "build_closure_digest": "c910d501234def82e3551ddcc59d2482bfd694c6d9849bd62dce2a6380b614b8",
-  "build_closure_schema": "keyxym.browser-build-closure/v1",
-  "build_provenance": "independent-audited-semantic-closure",
+  "derivation": "source-exact-external-validation-build",
   "feature_record_floats": 6,
   "geometry_record_floats": 13,
   "maximum_analysis_height": 240,
@@ -24,13 +18,27 @@
   "maximum_preview_samples": 8192,
   "maximum_surfels": 48000,
   "maximum_tracks": 384,
-  "perception_abi": "keyxym-v22-browser-frontend-cpp-v1",
+  "perception_abi": "keyxym-v22-unified-cpp-frontend-v1",
   "preview_record_floats": 10,
   "receipt_bytes": 64,
   "schema": "keyxym.browser-runtime-provenance/v4",
-  "source_commit": "700cb523ef9c1fb37733ffd1b1cbe0227be420c3",
-  "source_exact": false,
+  "source_commit": "5187ff10dfb63d4abbfee51ab894451efe428490",
+  "source_exact": true,
   "source_repository": "JROChub/keyxym_map",
   "timestamp_abi": "wasm-bigint-i64",
+  "toolchain": {
+    "name": "Emscripten",
+    "official_package_sha256": "3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3",
+    "release_commit": "9074aa513b501925adb1361e208932ad32a29a5f",
+    "version": "6.0.3"
+  },
+  "validation": {
+    "asan_ubsan": true,
+    "exact_blob_matrix_run": 29412516894,
+    "gcc": true,
+    "mobile_sdk": true,
+    "msvc": true,
+    "wasm_runtime": true
+  },
   "version": "0.22.0"
 }
