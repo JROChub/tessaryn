@@ -106,8 +106,11 @@ pub(crate) fn envelope_digest(evidence: &Evidence) -> Result<[u8; 32], String> {
     )?;
     let runtime = parse_digest("runtime commitment", &evidence.runtime_commitment, false)?;
     let parent = parse_digest("parent commitment", &evidence.parent_commitment, true)?;
+    if evidence.sequence > 1 && parent.iter().all(|byte| *byte == 0) {
+        return Err("non-genesis evidence requires a parent commitment".to_string());
+    }
 
-    let mut transcript = Vec::with_capacity(24);
+    let mut transcript = Vec::with_capacity(25);
     append_profile_words(&mut transcript);
     transcript.push(1);
     transcript.push(artifact_code(&evidence.artifact_kind)?);
