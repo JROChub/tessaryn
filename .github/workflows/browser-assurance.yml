@@ -26,8 +26,17 @@ jobs:
           rustup default stable
           rustc --version
           cargo --version
-      - name: Format
-        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml --check
+      - name: Format isolated assurance source
+        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml
+      - name: Upload rustfmt output
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-rustfmt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tools/browser-assurance/src/lib.rs
+          if-no-files-found: error
+          retention-days: 7
+      - name: Require committed formatting
+        run: git diff --exit-code -- tools/browser-assurance
       - name: Clippy
         run: cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings
       - name: Native assurance tests
