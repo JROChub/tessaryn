@@ -20,12 +20,19 @@ export interface WorldCellEvidenceRequest {
 }
 
 export interface NativeWorldCellSeal {
-  schema: "tessaryn/native-world-cell-seal/v1";
+  schema:
+    | "tessaryn/native-world-cell-seal/v1"
+    | "tessaryn/browser-world-cell-seal/v1";
   assuranceRecord: string;
   rootprint: string;
   phaFingerprint: string;
   memoryCapsuleDigest: string;
   replayFingerprint: string;
+  publicKeyBase64?: string;
+  signatureBase64?: string;
+  provider?: string;
+  powerHouseVersion?: string;
+  proofBundle?: unknown;
   verified: true;
 }
 
@@ -49,6 +56,7 @@ declare global {
 
 const encoder = new TextEncoder();
 const HEX = /^[0-9a-f]{64}$/;
+const POWER_HOUSE_DIGEST = /^(?:sha256:)?[0-9a-f]{64}$/;
 const ZERO_DIGEST = "0".repeat(64);
 
 export function bytesHex(bytes: Uint8Array): string {
@@ -159,9 +167,15 @@ export function nativeAssuranceBridge(): NativeAssuranceBridge | null {
   return bridge;
 }
 
+function validPowerHouseDigest(value: string): boolean {
+  if (!POWER_HOUSE_DIGEST.test(value)) return false;
+  return value.replace(/^sha256:/, "") !== ZERO_DIGEST;
+}
+
 export function validateNativeSeal(seal: NativeWorldCellSeal): void {
-  if (seal.schema !== "tessaryn/native-world-cell-seal/v1" || seal.verified !== true) {
-    throw new Error("Native eform/Power House seal was not verified");
+  if ((seal.schema !== "tessaryn/native-world-cell-seal/v1" &&
+       seal.schema !== "tessaryn/browser-world-cell-seal/v1") || seal.verified !== true) {
+    throw new Error("eform/Power House seal was not verified");
   }
   for (const [name, digest] of [
     ["Rootprint", seal.rootprint],
@@ -169,9 +183,18 @@ export function validateNativeSeal(seal: NativeWorldCellSeal): void {
     ["Memory Capsule digest", seal.memoryCapsuleDigest],
     ["replay fingerprint", seal.replayFingerprint],
   ] as const) {
-    if (!HEX.test(digest) || digest === ZERO_DIGEST) throw new Error(`Invalid ${name}`);
+    if (!validPowerHouseDigest(digest)) throw new Error(`Invalid ${name}`);
   }
   if (!seal.assuranceRecord.includes("profile=eform/world-cell-assurance/v1")) {
-    throw new Error("Native seal omits the eform World Cell assurance profile");
+    throw new Error("Seal omits the eform World Cell assurance profile");
+  }
+  if (seal.schema === "tessaryn/browser-world-cell-seal/v1") {
+    if (seal.provider !== "tessaryn-browser-assurance::ed25519-dalek/2.2.0" ||
+        seal.powerHouseVersion !== "0.3.24" ||
+        typeof seal.publicKeyBase64 !== "string" || !seal.publicKeyBase64 ||
+        typeof seal.signatureBase64 !== "string" || !seal.signatureBase64 ||
+        !seal.proofBundle || typeof seal.proofBundle !== "object") {
+      throw new Error("Browser assurance seal omits its verified provider or proof bundle");
+    }
   }
 }
