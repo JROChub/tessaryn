@@ -2,6 +2,9 @@ export const KEYXYM_V22_FEATURE_FLOATS = 6;
 export const KEYXYM_V22_POSE_FLOATS = 22;
 export const KEYXYM_V22_SURFEL_FLOATS = 13;
 export const KEYXYM_V22_QUALITY_FLOATS = 8;
+export const KEYXYM_V22_MAXIMUM_SURFELS = 48_000;
+
+export type KeyxymTimestampAbi = "wasm-bigint" | "legalized-i64-low-high";
 
 export interface KeyxymFeature {
   id: number;
@@ -78,6 +81,22 @@ type EmscriptenFactory = (options?: {
 const OK = 0;
 const BUFFER_TOO_SMALL = 2;
 const encoder = new TextEncoder();
+const finite = (value: number) => Number.isFinite(value);
+
+function requireTimestampAbi(): KeyxymTimestampAbi {
+  const value = document.documentElement.dataset.keyxymTimestampAbi;
+  if (value === "wasm-bigint" || value === "legalized-i64-low-high") return value;
+  throw new Error("Verified Keyxym timestamp ABI is missing");
+}
+
+function timestampArguments(timestamp: bigint, abi: KeyxymTimestampAbi): Array<number | bigint> {
+  const bounded = BigInt.asUintN(64, timestamp);
+  if (abi === "wasm-bigint") return [bounded];
+  return [
+    Number(bounded & 0xffff_ffffn),
+    Number((bounded >> 32n) & 0xffff_ffffn),
+  ];
+}
 
 export class KeyxymV22Runtime {
   private destroyed = false;
@@ -85,12 +104,14 @@ export class KeyxymV22Runtime {
   private constructor(
     private readonly module: EmscriptenModule,
     private readonly session: number,
+    private readonly timestampAbi: KeyxymTimestampAbi,
   ) {}
 
   static async load(
     moduleUrl = "/keyxym/keyxym-v22.mjs",
     wasmUrl = "/keyxym/keyxym-v22.wasm",
   ): Promise<KeyxymV22Runtime> {
+    const timestampAbi = requireTimestampAbi();
     const imported = await import(/* @vite-ignore */ moduleUrl) as { default?: EmscriptenFactory };
     if (typeof imported.default !== "function") {
       throw new Error("Keyxym v0.22 module factory is missing");
@@ -109,14 +130,19 @@ export class KeyxymV22Runtime {
       if (!(name in module)) throw new Error(`Keyxym v0.22 ABI missing ${name}`);
     }
 
-    const branch = KeyxymV22Runtime.writeBytes(module, encoder.encode("agent/v022-metric-world-cell\0"));
+    const branch = KeyxymV22Runtime.writeBytes(
+      module,
+      encoder.encode("agent/v022-metric-world-cell\0"),
+    );
     const output = module._malloc(4);
     try {
-      const status = module._keyxym_v22_session_create(branch, 0.018, 48_000, output);
+      const status = module._keyxym_v22_session_create(
+        branch, 0.018, KEYXYM_V22_MAXIMUM_SURFELS, output,
+      );
       if (status !== OK) throw new Error(`Keyxym session create failed (${status})`);
       const session = new DataView(module.HEAPU8.buffer).getUint32(output, true);
       if (!session) throw new Error("Keyxym returned a null session");
-      return new KeyxymV22Runtime(module, session);
+      return new KeyxymV22Runtime(module, session, timestampAbi);
     } finally {
       module._free(branch);
       module._free(output);
@@ -125,13 +151,31 @@ export class KeyxymV22Runtime {
 
   ingest(frame: KeyxymFrame): KeyxymPoseEstimate {
     this.assertAlive();
+    if (!Number.isSafeInteger(frame.width) || !Number.isSafeInteger(frame.height) ||
+        frame.width <= 0 || frame.height <= 0) {
+      throw new Error("Keyxym frame dimensions are invalid");
+    }
     if (frame.rgb.length !== frame.width * frame.height * 3) {
       throw new Error("Keyxym RGB payload does not match frame dimensions");
     }
+    if (frame.sourceCommitment.length !== 32) {
+      throw new Error("Keyxym source commitment must contain 32 bytes");
+    }
+    if (![frame.fx, frame.fy, frame.cx, frame.cy, frame.scaleMetersPerUnit].every(finite) ||
+        frame.fx <= 0 || frame.fy <= 0 || frame.scaleMetersPerUnit <= 0) {
+      throw new Error("Keyxym camera model is invalid");
+    }
+
     const featureData = new Float32Array(frame.features.length * KEYXYM_V22_FEATURE_FLOATS);
-    frame.features.forEach((feature, index) => featureData.set([
-      feature.id, feature.x, feature.y, feature.score, feature.disparity, feature.matchError,
-    ], index * KEYXYM_V22_FEATURE_FLOATS));
+    frame.features.forEach((feature, index) => {
+      const values = [
+        feature.id, feature.x, feature.y, feature.score,
+        feature.disparity, feature.matchError,
+      ];
+      if (!values.every(finite)) throw new Error("Keyxym feature record is non-finite");
+      featureData.set(values, index * KEYXYM_V22_FEATURE_FLOATS);
+    });
+
     const rgb = KeyxymV22Runtime.writeFloats(this.module, frame.rgb);
     const features = KeyxymV22Runtime.writeFloats(this.module, featureData);
     const commitment = KeyxymV22Runtime.writeBytes(this.module, frame.sourceCommitment);
@@ -139,7 +183,7 @@ export class KeyxymV22Runtime {
     try {
       const status = this.module._keyxym_v22_session_ingest_packed(
         this.session,
-        frame.timestampNs,
+        ...timestampArguments(frame.timestampNs, this.timestampAbi),
         frame.width,
         frame.height,
         frame.fx,
@@ -160,6 +204,7 @@ export class KeyxymV22Runtime {
       if (status !== OK) throw new Error(`Keyxym ingest failed (${status})`);
       const offset = pose >>> 2;
       const values = this.module.HEAPF32.slice(offset, offset + KEYXYM_V22_POSE_FLOATS);
+      if (!values.every(finite)) throw new Error("Keyxym returned a non-finite pose record");
       return {
         worldFromCamera: values.slice(0, 16),
         matches: values[16]!,
@@ -181,14 +226,17 @@ export class KeyxymV22Runtime {
     this.assertAlive();
     const required = this.module._malloc(4);
     try {
-      let status = this.module._keyxym_v22_session_copy_geometry_packed(this.session, 0, 0, required);
+      let status = this.module._keyxym_v22_session_copy_geometry_packed(
+        this.session, 0, 0, required,
+      );
       if (status !== BUFFER_TOO_SMALL && status !== OK) {
         throw new Error(`Keyxym geometry size failed (${status})`);
       }
       const floatCount = new DataView(this.module.HEAPU8.buffer).getUint32(required, true);
       if (!floatCount) return [];
-      if (floatCount % KEYXYM_V22_SURFEL_FLOATS !== 0) {
-        throw new Error("Keyxym returned malformed packed geometry");
+      if (floatCount % KEYXYM_V22_SURFEL_FLOATS !== 0 ||
+          floatCount / KEYXYM_V22_SURFEL_FLOATS > KEYXYM_V22_MAXIMUM_SURFELS) {
+        throw new Error("Keyxym returned malformed or unbounded packed geometry");
       }
       const output = this.module._malloc(floatCount * 4);
       try {
@@ -198,6 +246,7 @@ export class KeyxymV22Runtime {
         if (status !== OK) throw new Error(`Keyxym geometry copy failed (${status})`);
         const offset = output >>> 2;
         const values = this.module.HEAPF32.slice(offset, offset + floatCount);
+        if (!values.every(finite)) throw new Error("Keyxym geometry contains non-finite values");
         const surfels: KeyxymSurfel[] = [];
         for (let i = 0; i < values.length; i += KEYXYM_V22_SURFEL_FLOATS) {
           surfels.push({
@@ -227,6 +276,7 @@ export class KeyxymV22Runtime {
       if (status !== OK) throw new Error(`Keyxym quality failed (${status})`);
       const offset = output >>> 2;
       const value = this.module.HEAPF32.slice(offset, offset + KEYXYM_V22_QUALITY_FLOATS);
+      if (!value.every(finite)) throw new Error("Keyxym quality record is non-finite");
       return {
         tracking: value[0]!, parallaxDegrees: value[1]!,
         reprojectionErrorPixels: value[2]!, coverage: value[3]!,
