@@ -4,13 +4,16 @@ on:
   push:
     paths:
       - ".github/workflows/apply-world-cell-ready-state.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/apply-world-cell-ready-state.yml"
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.ref == 'refs/heads/fix/world-cell-authority-ready-state'
+    if: github.ref == 'refs/heads/fix/world-cell-authority-ready-state' || github.head_ref == 'fix/world-cell-authority-ready-state'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
