@@ -230,7 +230,7 @@ export async function verifyWorldCellAssurance(
   expected?: WorldCellEvidenceRecord,
 ): Promise<VerifiedWorldCellAssurance> {
   const fields = parseRecord(record);
-  if (fields.size !== 23) throw new Error("Unexpected eform assurance fields");
+  if (fields.size !== 20) throw new Error("Unexpected eform assurance fields");
   if (required(fields, "profile") !== WORLD_CELL_ASSURANCE_PROFILE ||
       required(fields, "domain") !== EFORM_SIGNING_DOMAIN ||
       required(fields, "provider") !== EFORM_PROVIDER ||
