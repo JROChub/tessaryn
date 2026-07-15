@@ -34,12 +34,18 @@ test("verified v0.22 authority and assurance instantiate before capture", async 
   await expect(page.locator("#adapter-name")).toHaveText(KEYXYM_SOURCE.slice(0, 12).toUpperCase());
   await expect(page.locator("#gpu-badge")).toHaveText("WASM READY");
   await expect(page.locator("#compute-state")).toHaveText("KEYXYM");
+  await expect(page.locator("#pose-state")).toHaveText("KEYXYM READY");
   await expect(page.locator("#cell-state")).toHaveText("WORLD CELL / READY / RELATIVE");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toHaveText("SEAL CELL");
   await expect(page.locator("#send-button")).toBeDisabled();
+
+  await page.locator("#reset-button").click();
+  await expect(page.locator("#pose-state")).toHaveText("KEYXYM READY");
+  await expect(page.locator("#cell-state")).toHaveText("WORLD CELL / READY / RELATIVE");
+  await expect(page.locator("#start-button")).toBeEnabled();
 
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
