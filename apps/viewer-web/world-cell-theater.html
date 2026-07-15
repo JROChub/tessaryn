@@ -36,7 +36,7 @@
       <section class="instrument-panel accent-cyan">
         <header><span><small>CAPTURE PIPELINE</small><b>KEYXYM MAPS INPUT</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
         <div class="command-grid">
-          <button id="start-button" class="icon-command">START CAMERA</button>
+          <button id="start-button" class="icon-command" disabled>START CAMERA</button>
           <button id="capture-button" class="icon-command" disabled>COMMIT MOMENT</button>
           <button id="stop-button" class="icon-command secondary" disabled>STOP</button>
           <button id="sensor-button" class="icon-command secondary">SENSOR ADAPTER</button>
@@ -90,7 +90,7 @@
 
 <dialog id="calibration-dialog" class="theater-dialog">
   <header><span><small>SCALE REQUEST</small><b>KNOWN REFERENCE LENGTH</b></span><button class="icon-button" data-close="calibration-dialog">×</button></header>
-  <div class="dialog-body"><p>Record a known reference length for relative-to-metric alignment.</p><label class="metric-input-label">REFERENCE LENGTH / METERS<input id="scale-input" type="number" min="0.01" max="20" step="0.01" value="0.12"></label><button id="apply-calibration" class="icon-command">RECORD REFERENCE REQUEST</button></div>
+  <div class="dialog-body"><p>Recording a known length does not itself establish metric scale. It only records a reference request until a verified sensor or spatial-correspondence adapter binds that scale to the capture.</p><label class="metric-input-label">REFERENCE LENGTH / METERS<input id="scale-input" type="number" min="0.01" max="20" step="0.01" value="0.12"></label><button id="apply-calibration" class="icon-command">RECORD REFERENCE REQUEST</button></div>
 </dialog>
 <dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><b>DEPTH + EVENT CAMERA</b></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Optional sensor transports can supplement the v0.21 visual reconstruction.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
 <dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION LOG</small><b>WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
