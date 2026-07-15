@@ -1,0 +1,87 @@
+name: Browser World Cell assurance
+
+on:
+  pull_request:
+    paths:
+      - "tools/browser-assurance/**"
+      - ".github/workflows/browser-assurance.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/browser-assurance/**"
+      - ".github/workflows/browser-assurance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assurance-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - name: Format
+        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml --check
+      - name: Clippy
+        run: cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings
+      - name: Native assurance tests
+        run: cargo test --manifest-path tools/browser-assurance/Cargo.toml
+      - name: Build browser assurance WebAssembly
+        run: cargo build --manifest-path tools/browser-assurance/Cargo.toml --release --target wasm32-unknown-unknown
+      - name: Assemble and validate artifact
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p build-browser-assurance
+          cp tools/browser-assurance/target/wasm32-unknown-unknown/release/tessaryn_browser_assurance.wasm build-browser-assurance/tessaryn-browser-assurance-v1.wasm
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const bytes = await readFile('build-browser-assurance/tessaryn-browser-assurance-v1.wasm');
+          const module = await WebAssembly.compile(bytes);
+          const exports = WebAssembly.Module.exports(module).map(({ name }) => name);
+          for (const name of [
+            'memory',
+            'tessaryn_assurance_alloc',
+            'tessaryn_assurance_dealloc',
+            'tessaryn_assurance_seal',
+            'tessaryn_assurance_verify',
+            'tessaryn_assurance_result_pointer',
+            'tessaryn_assurance_result_length',
+            'tessaryn_assurance_error_pointer',
+            'tessaryn_assurance_error_length',
+          ]) {
+            if (!exports.includes(name)) throw new Error(`missing assurance export ${name}`);
+          }
+          NODE
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('build-browser-assurance')
+          path = root / 'tessaryn-browser-assurance-v1.wasm'
+          data = path.read_bytes()
+          manifest = {
+              'schema': 'tessaryn.browser-assurance-provenance/v1',
+              'profile': 'eform/world-cell-assurance/v1',
+              'provider': 'tessaryn-browser-assurance::ed25519-dalek/2.2.0',
+              'power_house_version': '0.3.24',
+              'source_repository': 'JROChub/tessaryn',
+              'source_commit': os.environ['SOURCE_COMMIT'],
+              'artifact': {
+                  'name': path.name,
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              },
+          }
+          (root / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+          PY
+          cat build-browser-assurance/manifest.json
+      - name: Upload browser assurance bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-world-cell-assurance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build-browser-assurance
+          if-no-files-found: error
+          retention-days: 90
