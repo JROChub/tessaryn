@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 base64 = "0.22"
-ed25519-dalek = { version = "2.2.0", default-features = false, features = ["alloc", "fast", "zeroize"] }
+ed25519-dalek = "2.2.0"
 hex = "0.4"
 power_house = { version = "0.3.24", default-features = false, features = ["memory"] }
 serde = { version = "1", features = ["derive"] }
