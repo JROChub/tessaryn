@@ -1,0 +1,140 @@
+name: Verify live World Cell production
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/verify-live-world-cell.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/viewer-web/package-lock.json
+      - name: Install viewer dependencies and Chromium
+        working-directory: apps/viewer-web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify deployed artifact bytes and provenance
+        env:
+          ORIGIN: https://tessaryn.com
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-world-cell
+          for path in \
+            world-cell-theater.html \
+            keyxym/manifest.json \
+            keyxym/build-closure.json \
+            keyxym/keyxym-v22.mjs \
+            keyxym/keyxym-v22.wasm \
+            assurance/manifest.json \
+            assurance/tessaryn-browser-assurance-v1.wasm; do
+            curl --fail --location --silent --show-error \
+              --retry 8 --retry-all-errors --connect-timeout 10 --max-time 90 \
+              -H 'Cache-Control: no-cache' \
+              "${ORIGIN}/${path}?production_probe=${GITHUB_SHA}" \
+              -o "/tmp/live-world-cell/$(basename "$path")"
+          done
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('/tmp/live-world-cell')
+          keyxym = json.loads((root / 'manifest.json').read_text())
+          assert keyxym['schema'] == 'keyxym.browser-runtime-provenance/v4'
+          assert keyxym['abi'] == 'keyxym-v22-browser-dual-field-4'
+          assert keyxym['source_commit'] == '700cb523ef9c1fb37733ffd1b1cbe0227be420c3'
+          assert keyxym['timestamp_abi'] == 'wasm-bigint-i64'
+          for name in ('build-closure.json', 'keyxym-v22.mjs', 'keyxym-v22.wasm'):
+              record = keyxym['artifacts'][name]
+              data = (root / name).read_bytes()
+              assert len(data) == record['bytes'], (name, len(data), record['bytes'])
+              assert hashlib.sha256(data).hexdigest() == record['sha256'], name
+          assurance = json.loads((root / 'manifest.json').read_text()) if False else json.loads((root / 'manifest.json').read_text())
+          # The assurance manifest was downloaded last with the same basename; refetch it distinctly below.
+          PY
+          curl --fail --location --silent --show-error \
+            --retry 8 --retry-all-errors --connect-timeout 10 --max-time 90 \
+            -H 'Cache-Control: no-cache' \
+            "${ORIGIN}/assurance/manifest.json?production_probe=${GITHUB_SHA}" \
+            -o /tmp/live-world-cell/assurance-manifest.json
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('/tmp/live-world-cell')
+          assurance = json.loads((root / 'assurance-manifest.json').read_text())
+          assert assurance['schema'] == 'tessaryn.browser-assurance-provenance/v1'
+          assert assurance['profile'] == 'eform/world-cell-assurance/v1'
+          assert assurance['power_house_version'] == '0.3.24'
+          assert assurance['entropy_import'] == 'tessaryn.random_fill'
+          record = assurance['artifact']
+          data = (root / record['name']).read_bytes()
+          assert len(data) == record['bytes']
+          assert hashlib.sha256(data).hexdigest() == record['sha256']
+          PY
+      - name: Exercise deployed Theater in Chromium
+        working-directory: apps/viewer-web
+        env:
+          ORIGIN: https://tessaryn.com
+        run: |
+          cat > /tmp/live-world-cell-probe.mjs <<'JS'
+          import { chromium } from '@playwright/test';
+          import assert from 'node:assert/strict';
+          const browser = await chromium.launch({ headless: true });
+          const context = await browser.newContext({ serviceWorkers: 'block' });
+          const page = await context.newPage();
+          const pageErrors = [];
+          const consoleErrors = [];
+          page.on('pageerror', error => pageErrors.push(error.message));
+          page.on('console', message => {
+            if (message.type() === 'error') consoleErrors.push(message.text());
+          });
+          const response = await page.goto(`${process.env.ORIGIN}/world-cell-theater.html?production_probe=${Date.now()}`, {
+            waitUntil: 'networkidle',
+            timeout: 120_000,
+          });
+          assert(response?.ok(), `page status ${response?.status()}`);
+          await page.waitForFunction(() => document.documentElement.dataset.keyxymAuthority === 'verified', null, { timeout: 120_000 });
+          await page.waitForFunction(() => document.documentElement.dataset.worldCellAssurance === 'verified', null, { timeout: 120_000 });
+          const state = await page.evaluate(() => ({
+            authority: document.documentElement.dataset.keyxymAuthority,
+            source: document.documentElement.dataset.keyxymSource,
+            abi: document.documentElement.dataset.keyxymAbi,
+            assurance: document.documentElement.dataset.worldCellAssurance,
+            controller: document.documentElement.dataset.worldCellController,
+            startDisabled: document.querySelector('#start-button')?.disabled,
+            backend: document.querySelector('#backend-name')?.textContent,
+            pose: document.querySelector('#pose-state')?.textContent,
+          }));
+          assert.equal(state.authority, 'verified');
+          assert.equal(state.source, '700cb523ef9c1fb37733ffd1b1cbe0227be420c3');
+          assert.equal(state.abi, 'keyxym-v22-browser-dual-field-4');
+          assert.equal(state.assurance, 'verified');
+          assert.equal(state.controller, 'keyxym-consensus-v1');
+          assert.equal(state.startDisabled, false);
+          assert.match(state.backend ?? '', /KEYXYM V0\.22/);
+          assert.match(state.pose ?? '', /KEYXYM READY/);
+          assert.deepEqual(pageErrors, []);
+          assert.deepEqual(consoleErrors, []);
+          await page.screenshot({ path: '/tmp/live-world-cell-production.png', fullPage: true });
+          console.log(JSON.stringify(state, null, 2));
+          await browser.close();
+          JS
+          node /tmp/live-world-cell-probe.mjs
+      - name: Upload production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-world-cell-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/live-world-cell
+            /tmp/live-world-cell-production.png
+          if-no-files-found: warn
+          retention-days: 30
