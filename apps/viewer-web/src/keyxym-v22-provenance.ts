@@ -3,6 +3,8 @@ export interface KeyxymArtifactRecord {
   sha256: string;
 }
 
+export type KeyxymTimestampAbi = "wasm-bigint" | "legalized-i64-low-high";
+
 export interface KeyxymProvenanceManifest {
   schema: "tessaryn.keyxym-wasm-provenance/v1";
   version: "0.22.0";
@@ -10,7 +12,10 @@ export interface KeyxymProvenanceManifest {
   source_repository: "JROChub/keyxym_map";
   source_commit: string;
   maximum_surfels: 48000;
-  wasm_bigint: true;
+  wasm_bigint: boolean;
+  timestamp_abi: KeyxymTimestampAbi;
+  workflow_run?: number;
+  artifact_id?: number;
   artifacts: {
     "keyxym-v22.mjs": KeyxymArtifactRecord;
     "keyxym-v22.wasm": KeyxymArtifactRecord;
@@ -21,6 +26,7 @@ const ROOT = "/keyxym";
 const MANIFEST_URL = `${ROOT}/manifest.json`;
 const MODULE_URL = `${ROOT}/keyxym-v22.mjs`;
 const WASM_URL = `${ROOT}/keyxym-v22.wasm`;
+const APPROVED_SOURCE_COMMIT = "3076c306126058c6e9b24d851681ae79a26b9b55";
 
 function hex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes), (value) =>
@@ -57,8 +63,8 @@ export async function verifyKeyxymV22Bundle(): Promise<KeyxymProvenanceManifest>
   if (!globalThis.isSecureContext) {
     throw new Error("Keyxym authority requires a secure browser context");
   }
-  if (typeof WebAssembly !== "object" || typeof BigInt !== "function") {
-    throw new Error("Keyxym authority requires WebAssembly BigInt support");
+  if (typeof WebAssembly !== "object") {
+    throw new Error("Keyxym authority requires WebAssembly support");
   }
 
   const response = await fetch(MANIFEST_URL, {
@@ -69,14 +75,21 @@ export async function verifyKeyxymV22Bundle(): Promise<KeyxymProvenanceManifest>
   if (!response.ok) throw new Error(`Keyxym provenance manifest unavailable (${response.status})`);
   const manifest = await response.json() as KeyxymProvenanceManifest;
 
+  const timestampContractValid =
+    (manifest.wasm_bigint === true && manifest.timestamp_abi === "wasm-bigint") ||
+    (manifest.wasm_bigint === false && manifest.timestamp_abi === "legalized-i64-low-high");
+
   if (manifest.schema !== "tessaryn.keyxym-wasm-provenance/v1" ||
       manifest.version !== "0.22.0" ||
       manifest.abi !== "keyxym-v22-packed-1" ||
       manifest.source_repository !== "JROChub/keyxym_map" ||
+      manifest.source_commit !== APPROVED_SOURCE_COMMIT ||
       manifest.maximum_surfels !== 48_000 ||
-      manifest.wasm_bigint !== true ||
-      !/^[0-9a-f]{40}$/.test(manifest.source_commit)) {
+      !timestampContractValid) {
     throw new Error("Keyxym provenance manifest violates the v0.22 authority contract");
+  }
+  if (manifest.wasm_bigint && typeof BigInt !== "function") {
+    throw new Error("This Keyxym runtime requires WebAssembly BigInt support");
   }
 
   const moduleRecord = requireArtifact(manifest, "keyxym-v22.mjs");
