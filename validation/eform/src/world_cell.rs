@@ -129,9 +129,7 @@ pub fn validate_world_cell_evidence(evidence: &WorldCellEvidence) -> Result<(), 
     Ok(())
 }
 
-pub fn world_cell_envelope_digest(
-    evidence: &WorldCellEvidence,
-) -> Result<Digest32, EformError> {
+pub fn world_cell_envelope_digest(evidence: &WorldCellEvidence) -> Result<Digest32, EformError> {
     validate_world_cell_evidence(evidence)?;
     let mut transcript = Vec::with_capacity(25);
     profile_words(&mut transcript);
