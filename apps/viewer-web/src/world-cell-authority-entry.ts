@@ -1,3 +1,5 @@
+import "./world-cell-theater.css";
+
 async function refreshServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
   try {

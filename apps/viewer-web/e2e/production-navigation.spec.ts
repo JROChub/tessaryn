@@ -21,5 +21,7 @@ test("the Origin exposes live World Cell capture and same-origin release evidenc
 
   await worldCell.click();
   await expect(page).toHaveURL(/\/world-cell-theater\.html$/u);
-  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "v021");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-version", "0.21");
+  await expect(page.locator("#start-button")).toBeEnabled();
 });
