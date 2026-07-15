@@ -1,9 +1,12 @@
-import { KEYXYM_V26_FORMING_FLOATS, KEYXYM_V26_SURFEL_FLOATS } from "./keyxym-v26-runtime";
+import {
+  KEYXYM_V26_FORMING_FLOATS,
+  KEYXYM_V26_SURFEL_FLOATS as SURFEL_FLOATS,
+} from "./keyxym-v26-runtime";
 import type { KeyxymV26Authority, KeyxymV26Pose, KeyxymV26Quality, KeyxymV26Receipts } from "./keyxym-v26-runtime";
 import { KeyxymV26WorkerClient } from "./keyxym-v26-client";
 import type { KeyxymV26Manifest } from "./keyxym-v26-provenance";
 
-export const KEYXYM_V26_SURFEL_FLOATS = KEYXYM_V26_SURFEL_FLOATS;
+export const KEYXYM_V26_SURFEL_FLOATS = SURFEL_FLOATS;
 
 export interface KeyxymFormingSample {
   normalizedX: number; normalizedY: number; flowX: number; flowY: number;
@@ -47,9 +50,9 @@ function forming(values: Float32Array): KeyxymFormingSample[] {
 }
 
 function surfels(values: Float32Array): KeyxymSurfel[] {
-  if (values.length % KEYXYM_V26_SURFEL_FLOATS !== 0) throw new Error("Malformed Keyxym v0.26 geometry");
+  if (values.length % SURFEL_FLOATS !== 0) throw new Error("Malformed Keyxym v0.26 geometry");
   const output: KeyxymSurfel[] = [];
-  for (let index = 0; index < values.length; index += KEYXYM_V26_SURFEL_FLOATS) {
+  for (let index = 0; index < values.length; index += SURFEL_FLOATS) {
     output.push({
       x: values[index]!, y: values[index + 1]!, z: values[index + 2]!,
       nx: values[index + 3]!, ny: values[index + 4]!, nz: values[index + 5]!,
