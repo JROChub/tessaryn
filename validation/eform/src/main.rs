@@ -32,17 +32,9 @@ fn run(args: Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
             let digest = eform::decode_hex(digest_hex)?;
             Ok(engine.sign_hash256(&digest)?.canonical_record())
         }
-        [
-            command,
-            key_spec,
-            artifact_kind,
-            canonical_digest,
-            reconstruction_receipt,
-            runtime_commitment,
-            parent_commitment,
-            sequence,
-            scale,
-        ] if command == "sign-world-cell" => {
+        [command, key_spec, artifact_kind, canonical_digest, reconstruction_receipt, runtime_commitment, parent_commitment, sequence, scale]
+            if command == "sign-world-cell" =>
+        {
             let evidence = WorldCellEvidence {
                 artifact_kind: parse_artifact_kind(artifact_kind)?,
                 canonical_digest: parse_digest32(canonical_digest)?,
@@ -53,7 +45,9 @@ fn run(args: Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
                 metric_scale: parse_scale(scale)?,
             };
             let engine = EformEngine::load(parse_key_source(key_spec))?;
-            Ok(engine.sign_world_cell_evidence(evidence)?.canonical_record())
+            Ok(engine
+                .sign_world_cell_evidence(evidence)?
+                .canonical_record())
         }
         [command, digest_hex, public_key, signature] if command == "verify" => {
             let record = EformSignature {
