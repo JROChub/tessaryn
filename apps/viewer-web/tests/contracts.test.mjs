@@ -11,6 +11,9 @@ const htmlUrl = new URL("../index.html", import.meta.url);
 const packageUrl = new URL("../package-lock.json", import.meta.url);
 const packageManifestUrl = new URL("../package.json", import.meta.url);
 const workerUrl = new URL("../public/sw.js", import.meta.url);
+const releaseUrl = new URL("../public/release.json", import.meta.url);
+const viteConfigUrl = new URL("../vite.config.ts", import.meta.url);
+const pagesWorkflowUrl = new URL("../../../.github/workflows/pages.yml", import.meta.url);
 const mainUrl = new URL("../src/main.ts", import.meta.url);
 const localIdentityUrl = new URL("../src/local-file-identity.ts", import.meta.url);
 const localWorkerUrl = new URL("../src/local-ingest-worker.ts", import.meta.url);
@@ -80,14 +83,43 @@ test("the viewer has no remote script or map substrate dependency", async () => 
   assert.match(html, /\.GLB \.GLTF \.OBJ \.PLY \.STL/u);
 });
 
-test("the offline cache installs one release and never serves authority bytes cache-first", async () => {
+test("production navigation makes World Cell capture and release evidence discoverable", async () => {
+  const config = await readFile(viteConfigUrl, "utf8");
+  assert.match(config, /id="world-cell-command"/);
+  assert.match(config, /href="\.\/world-cell-theater\.html"/);
+  assert.match(config, /id="release-attestation-command"/);
+  assert.match(config, /href="\.\/release\.json"/);
+  assert.match(config, /transformIndexHtml: injectProductionNavigation/);
+
+  const release = JSON.parse(await readFile(releaseUrl, "utf8"));
+  assert.equal(release.schema, "tessaryn/deployment-attestation/v1");
+  assert.equal(release.mode, "development");
+  assert.equal(release.authority.keyxym.version, "0.26.0");
+  assert.equal(release.authority.keyxym.source_exact, true);
+});
+
+test("Pages publishes only the current successfully qualified main commit", async () => {
+  const workflow = await readFile(pagesWorkflowUrl, "utf8");
+  assert.doesNotMatch(workflow, /workflow_dispatch/);
+  assert.match(workflow, /cancel-in-progress: true/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
+  assert.match(workflow, /Refusing stale Pages build/);
+  assert.match(workflow, /Refusing stale Pages publication/);
+  assert.match(workflow, /write-release-attestation\.mjs/);
+  assert.match(workflow, /TESSARYN_CONFORMANCE_RUN_ID/);
+});
+
+test("the offline cache installs one release and never serves authority or release evidence cache-first", async () => {
   const worker = await readFile(workerUrl, "utf8");
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r2";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r3";`),
   );
   for (const asset of [
+    "./release.json",
     "./world/archviz-tiny-house-locus.json",
     "./world/vesper-court.json",
     "./objects/catalog.json",
@@ -102,7 +134,8 @@ test("the offline cache installs one release and never serves authority bytes ca
   }
   assert.doesNotMatch(worker, /keyxym\/keyxym-v22|build-closure\.json/);
   assert.match(worker, /AUTHORITY_PREFIXES/);
-  assert.match(worker, /isAuthorityRequest\(url\)/);
+  assert.match(worker, /RELEASE_ATTESTATION_PATH/);
+  assert.match(worker, /isAuthorityRequest\(url\) \|\| url\.pathname === RELEASE_ATTESTATION_PATH/);
   assert.match(worker, /cache: "no-store"/);
   assert.match(worker, /populateReleaseCache/);
   assert.match(worker, /await caches\.delete\(CACHE\)/);
