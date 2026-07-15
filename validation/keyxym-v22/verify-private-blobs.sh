@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -u -o pipefail
 root="$(cd "$(dirname "$0")" && pwd)"
+report="${KEYXYM_BLOB_REPORT:-/tmp/keyxym-private-blob-report.txt}"
+: > "$report"
+status=0
 check() {
   local path="$1"
   local expected="$2"
   local actual
   actual="$(git hash-object "$root/$path")"
   if [[ "$actual" != "$expected" ]]; then
-    printf 'blob mismatch %s expected=%s actual=%s\n' "$path" "$expected" "$actual" >&2
-    return 1
+    printf 'blob mismatch %s expected=%s actual=%s\n' "$path" "$expected" "$actual" | tee -a "$report" >&2
+    status=1
+  else
+    printf 'blob exact %s %s\n' "$path" "$actual" >> "$report"
   fi
 }
 check include/keyxym/types.hpp 3aca10a2cfd7bccf8e729ca8b8acb59141bc1baa
@@ -30,4 +35,7 @@ check src/v22_browser_frontend.cpp 5b1dafd35fc73d480a7e4840899f5975355a21c2
 check src/v22_browser_runtime.cpp 7dbfa78a120e8c6d4c90108e7e298bae95d3dee2
 check tests/test_v022_browser_frontend.cpp 5ac11a04c68bd0924ff5e27064d7bd33d3f3e9e0
 check tests/test_v022_browser_runtime.cpp 3550a35b3fe631c85a0d79f2944ae703b142c49d
-printf 'keyxym_private_blobs=exact\n'
+if [[ "$status" == 0 ]]; then
+  printf 'keyxym_private_blobs=exact\n' | tee -a "$report"
+fi
+exit "$status"
