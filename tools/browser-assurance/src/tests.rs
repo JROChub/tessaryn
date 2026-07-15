@@ -51,6 +51,38 @@ fn envelope_binds_scale_lineage_and_receipt() {
 }
 
 #[test]
+fn envelope_matches_eform_v1_vector() {
+    let evidence = Evidence {
+        profile: PROFILE.to_string(),
+        artifact_kind: "world-cell".to_string(),
+        canonical_digest: "01".repeat(32),
+        reconstruction_receipt: "02".repeat(32),
+        runtime_commitment: "03".repeat(32),
+        parent_commitment: "06".repeat(32),
+        sequence: 9,
+        metric_scale: true,
+    };
+    assert_eq!(
+        hex::encode(envelope_digest(&evidence).expect("shared eform envelope")),
+        "14989520d9db85aba031d8120d062ecc3d9a724e18b96472184ef68e1868c60d"
+    );
+}
+
+#[test]
+fn enforces_genesis_and_non_genesis_lineage() {
+    let mut non_genesis = evidence(b"world-cell");
+    non_genesis.parent_commitment = "00".repeat(32);
+    assert_eq!(
+        envelope_digest(&non_genesis).unwrap_err(),
+        "non-genesis evidence requires a parent commitment"
+    );
+
+    let mut genesis = non_genesis;
+    genesis.sequence = 1;
+    envelope_digest(&genesis).expect("genesis may use the zero parent commitment");
+}
+
+#[test]
 fn rejects_invalid_seed_and_non_world_cell_artifact() {
     let cell = b"world-cell";
     let mut evidence = evidence(cell);
