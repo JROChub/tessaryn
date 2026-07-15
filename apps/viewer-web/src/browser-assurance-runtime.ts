@@ -52,13 +52,30 @@ interface Allocation {
   length: number;
 }
 
-const ROOT = "/assurance";
-const MANIFEST_URL = `${ROOT}/manifest.json`;
-const WASM_URL = `${ROOT}/tessaryn-browser-assurance-v1.wasm`;
 const APPROVED_SOURCE_COMMIT = "ecfa0f6584f8890afd4a3a44b4aa972b2768a62e";
+const APPROVED_WASM_SHA256 = "74308022cd03f93ba5e73077f8a725c844cb1945290e5c8cd4a4f7ee99a8516b";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const HEX = /^[0-9a-f]{64}$/;
+
+function publicAssetUrl(path: string, parameters: Record<string, string>): string {
+  const url = new URL(path, document.baseURI);
+  for (const [name, value] of Object.entries(parameters)) url.searchParams.set(name, value);
+  return url.href;
+}
+
+function assuranceAssetUrls(): { manifest: string; wasm: string } {
+  return {
+    manifest: publicAssetUrl("assurance/manifest.json", {
+      source: APPROVED_SOURCE_COMMIT,
+      contract: APPROVED_WASM_SHA256,
+    }),
+    wasm: publicAssetUrl("assurance/tessaryn-browser-assurance-v1.wasm", {
+      source: APPROVED_SOURCE_COMMIT,
+      sha256: APPROVED_WASM_SHA256,
+    }),
+  };
+}
 
 function hex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes), (value) =>
@@ -75,7 +92,7 @@ async function fetchBytes(url: string): Promise<ArrayBuffer> {
     credentials: "same-origin",
     redirect: "error",
   });
-  if (!response.ok) throw new Error(`Assurance artifact unavailable: ${url} (${response.status})`);
+  if (!response.ok) throw new Error(`Assurance artifact unavailable: ${new URL(url).pathname} (${response.status})`);
   return response.arrayBuffer();
 }
 
@@ -93,7 +110,7 @@ function requireManifest(value: unknown): BrowserAssuranceManifest {
   const artifact = manifest.artifact;
   if (!artifact || artifact.name !== "tessaryn-browser-assurance-v1.wasm" ||
       !Number.isSafeInteger(artifact.bytes) || artifact.bytes <= 0 ||
-      !HEX.test(artifact.sha256)) {
+      !HEX.test(artifact.sha256) || artifact.sha256 !== APPROVED_WASM_SHA256) {
     throw new Error("Browser assurance artifact record is invalid");
   }
   return manifest as BrowserAssuranceManifest;
@@ -134,14 +151,15 @@ class BrowserAssuranceRuntime implements NativeAssuranceBridge {
         !crypto?.subtle || typeof crypto.getRandomValues !== "function") {
       throw new Error("Browser assurance requires a secure WebAssembly and Web Crypto context");
     }
-    const response = await fetch(MANIFEST_URL, {
+    const urls = assuranceAssetUrls();
+    const response = await fetch(urls.manifest, {
       cache: "no-store",
       credentials: "same-origin",
       redirect: "error",
     });
     if (!response.ok) throw new Error(`Browser assurance manifest unavailable (${response.status})`);
     const manifest = requireManifest(await response.json());
-    const bytes = await fetchBytes(WASM_URL);
+    const bytes = await fetchBytes(urls.wasm);
     if (bytes.byteLength !== manifest.artifact.bytes ||
         await sha256(bytes) !== manifest.artifact.sha256) {
       throw new Error("Browser assurance artifact does not match its provenance manifest");

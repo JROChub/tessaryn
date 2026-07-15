@@ -132,17 +132,27 @@ test("synthetic multi-depth camera frames reach the v0.26 worker and form author
     };
 
     const views = [reference(), moved()] as const;
+    const writerClosed = (error: unknown): boolean =>
+      track.readyState === "ended" ||
+      (error instanceof Error && /stream closed|invalid state/iu.test(error.message));
     const sendSequence = async () => {
       const writer = track.writable.getWriter();
       try {
         for (let index = 0; index < 20; index += 1) {
+          if (track.readyState === "ended") break;
           context.putImageData(views[index % views.length]!, 0, 0);
           const frame = new VideoFrame(canvas, {
             timestamp: (index + 1) * 180_000,
             duration: 180_000,
           });
-          await writer.write(frame);
-          frame.close();
+          try {
+            await writer.write(frame);
+          } catch (error) {
+            if (writerClosed(error)) break;
+            throw error;
+          } finally {
+            frame.close();
+          }
           await new Promise((resolve) => window.setTimeout(resolve, 180));
         }
       } finally {

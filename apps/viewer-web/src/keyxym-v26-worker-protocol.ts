@@ -1,6 +1,8 @@
 import type { KeyxymV26Authority, KeyxymV26Pose, KeyxymV26Quality } from "./keyxym-v26-runtime";
 
 export interface KeyxymV26WorkerOptions {
+  moduleUrl: string;
+  wasmUrl: string;
   maximumAnalysisWidth: number;
   maximumAnalysisHeight: number;
   maximumTracks: number;

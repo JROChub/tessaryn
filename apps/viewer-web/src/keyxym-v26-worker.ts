@@ -25,6 +25,8 @@ async function initialize(request: Extract<KeyxymV26WorkerRequest, { type: "init
   maximumWidth = request.options.maximumAnalysisWidth;
   maximumHeight = request.options.maximumAnalysisHeight;
   runtime = await KeyxymV26Runtime.load({
+    moduleUrl: request.options.moduleUrl,
+    wasmUrl: request.options.wasmUrl,
     branch: "main/world-cell-theater-v026",
     maximumAnalysisWidth: maximumWidth,
     maximumAnalysisHeight: maximumHeight,
