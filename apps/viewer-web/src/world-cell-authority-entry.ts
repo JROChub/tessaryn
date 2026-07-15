@@ -14,6 +14,7 @@ try {
   const manifest = await verifyKeyxymV22Bundle();
   document.documentElement.dataset.keyxymAuthority = "verified";
   document.documentElement.dataset.keyxymCommit = manifest.source_commit;
+  document.documentElement.dataset.keyxymTimestampAbi = manifest.timestamp_abi;
   text("backend-name", "KEYXYM V0.22 / VERIFIED");
   text("adapter-name", manifest.source_commit.slice(0, 12).toUpperCase());
   await import("./authoritative-world-cell");
