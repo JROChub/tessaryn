@@ -3,6 +3,7 @@
 mod ffi;
 mod model;
 mod proof;
+mod random;
 
 #[cfg(test)]
 mod tests;
