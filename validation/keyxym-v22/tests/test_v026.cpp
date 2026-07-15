@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 
 namespace {
 keyxym::MetricFeatureObservation project(std::uint32_t id,
@@ -57,6 +58,21 @@ std::pair<keyxym::MetricFrame, keyxym::MetricFrame> make_scene(float angle_degre
     }
     return {std::move(reference), std::move(current)};
 }
+
+void report(const char* label, const keyxym::RealityPoseEstimate& pose) {
+    std::fprintf(stderr,
+                 "%s recovered=%d degenerate=%d matches=%zu inliers=%zu rotation=%.6f parallax=%.6f residual=%.6f observability=%.6f confidence=%.6f\n",
+                 label,
+                 pose.recovered ? 1 : 0,
+                 pose.degenerate ? 1 : 0,
+                 pose.matches,
+                 pose.inliers,
+                 pose.rotation_degrees,
+                 pose.parallax_degrees,
+                 pose.reprojection_error_pixels,
+                 pose.translation_observability,
+                 pose.tracking_confidence);
+}
 } // namespace
 
 int main() {
@@ -67,6 +83,7 @@ int main() {
         current.features[outlier].match_error = 3.5F;
     }
     const auto pose = keyxym::recover_reality_pose(reference, current);
+    report("mixed", pose);
     assert(pose.recovered);
     assert(!pose.degenerate);
     assert(pose.matches >= 90U);
@@ -85,6 +102,7 @@ int main() {
     auto [translation_reference, translation_current] = make_scene(0.0F, 0.12F, 0.01F, 0.0F);
     const auto translation_pose = keyxym::recover_reality_pose(
         translation_reference, translation_current);
+    report("translation", translation_pose);
     assert(translation_pose.recovered);
     assert(!translation_pose.degenerate);
     assert(translation_pose.inliers >= 80U);
@@ -98,10 +116,12 @@ int main() {
 
     auto [rotation_reference, rotation_current] = make_scene(5.0F, 0.0F, 0.0F, 0.0F);
     const auto rotation_only = keyxym::recover_reality_pose(rotation_reference, rotation_current);
+    report("rotation-only", rotation_only);
     assert(!rotation_only.recovered);
 
     auto [low_reference, low_current] = make_scene(0.0F, 0.0001F, 0.0F, 0.0F);
     const auto low_parallax = keyxym::recover_reality_pose(low_reference, low_current);
+    report("low-parallax", low_parallax);
     assert(!low_parallax.recovered);
 
     auto [outlier_reference, outlier_current] = make_scene(0.0F, 0.12F, 0.0F, 0.0F);
@@ -113,6 +133,7 @@ int main() {
         }
     }
     const auto outlier_pose = keyxym::recover_reality_pose(outlier_reference, outlier_current);
+    report("outlier-heavy", outlier_pose);
     assert(!outlier_pose.recovered);
 
     keyxym::MetricReconstructionQuality quality;
