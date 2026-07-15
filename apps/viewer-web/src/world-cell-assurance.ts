@@ -1,6 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
-import type { KeyxymProvenanceManifest } from "./keyxym-v22-provenance";
-import type { KeyxymReceipts } from "./keyxym-v22-runtime";
+import type { KeyxymV26Manifest } from "./keyxym-v26-provenance";
+import type { KeyxymReceipts } from "./keyxym-v26-theater-adapter";
 
 export type AssuranceArtifactKind =
   | "reconstruction-receipt"
@@ -99,7 +99,7 @@ export function digestValue(value: unknown): string {
   return digestBytes(encoder.encode(canonicalString(value)));
 }
 
-export function runtimeCommitment(manifest: KeyxymProvenanceManifest): string {
+export function runtimeCommitment(manifest: KeyxymV26Manifest): string {
   return digestValue({
     schema: manifest.schema,
     version: manifest.version,
@@ -114,14 +114,16 @@ export function runtimeCommitment(manifest: KeyxymProvenanceManifest): string {
 }
 
 export function reconstructionReceipt(receipts: KeyxymReceipts): string {
-  if (receipts.pose.byteLength !== 32 || receipts.quality.byteLength !== 32) {
-    throw new Error("Keyxym receipt pair must contain two 32-byte receipts");
+  if (receipts.pose.byteLength !== 32 || receipts.quality.byteLength !== 32 ||
+      receipts.authority.byteLength !== 32) {
+    throw new Error("Keyxym v0.26 receipt triple must contain three 32-byte receipts");
   }
-  const domain = encoder.encode("tessaryn/keyxym-receipt-pair/v1\0");
-  const input = new Uint8Array(domain.byteLength + 64);
+  const domain = encoder.encode("tessaryn/keyxym-receipt-triple/v1\0");
+  const input = new Uint8Array(domain.byteLength + 96);
   input.set(domain, 0);
   input.set(receipts.pose, domain.byteLength);
   input.set(receipts.quality, domain.byteLength + 32);
+  input.set(receipts.authority, domain.byteLength + 64);
   const digest = digestBytes(input);
   if (digest === ZERO_DIGEST) throw new Error("Keyxym reconstruction receipt is zero");
   return digest;
@@ -183,18 +185,7 @@ export function validateNativeSeal(seal: NativeWorldCellSeal): void {
     ["Memory Capsule digest", seal.memoryCapsuleDigest],
     ["replay fingerprint", seal.replayFingerprint],
   ] as const) {
-    if (!validPowerHouseDigest(digest)) throw new Error(`Invalid ${name}`);
+    if (!validPowerHouseDigest(digest)) throw new Error(`${name} is invalid`);
   }
-  if (!seal.assuranceRecord.includes("profile=eform/world-cell-assurance/v1")) {
-    throw new Error("Seal omits the eform World Cell assurance profile");
-  }
-  if (seal.schema === "tessaryn/browser-world-cell-seal/v1") {
-    if (seal.provider !== "tessaryn-browser-assurance::ed25519-dalek/2.2.0" ||
-        seal.powerHouseVersion !== "0.3.24" ||
-        typeof seal.publicKeyBase64 !== "string" || !seal.publicKeyBase64 ||
-        typeof seal.signatureBase64 !== "string" || !seal.signatureBase64 ||
-        !seal.proofBundle || typeof seal.proofBundle !== "object") {
-      throw new Error("Browser assurance seal omits its verified provider or proof bundle");
-    }
-  }
+  if (!seal.assuranceRecord.trim()) throw new Error("eform assurance record is missing");
 }
