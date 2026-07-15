@@ -34,11 +34,11 @@ const generatedLongLineFiles = new Set([
   "apps/viewer-web/package-lock.json",
   "apps/viewer-web/keyxym-mobile.html",
   "apps/viewer-web/public/keyxym/keyxym-v22.mjs",
+  "apps/viewer-web/public/keyxym-v26/keyxym-v26.mjs",
   "apps/viewer-web/public/world/archviz-tiny-house-locus.json",
   "apps/viewer-web/public/world/vesper-court.json",
   "apps/viewer-web/world-cell-theater.html",
   "apps/viewer-web/src/world-cell-theater.css",
-  "apps/viewer-web/src/world-cell-theater.ts",
   "conformance/reconstruction-v0/minimal-artifact.json",
 ]);
 const bidiControls = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
