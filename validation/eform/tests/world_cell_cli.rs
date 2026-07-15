@@ -38,7 +38,11 @@ fn signs_relative_world_cell_record_from_cli() {
         .unwrap();
 
     let _ = fs::remove_file(seed_path);
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("profile=eform/world-cell-assurance/v1"));
     assert!(stdout.contains("artifact_kind=world-cell"));
