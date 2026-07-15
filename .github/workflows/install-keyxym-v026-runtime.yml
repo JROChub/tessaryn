@@ -1,0 +1,93 @@
+name: Install source-exact Keyxym v0.26 runtime
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/install-keyxym-v026-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  install:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+      - name: Download retained v0.26 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 5 --retry-all-errors \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/JROChub/tessaryn/actions/artifacts/8352805026/zip \
+            -o /tmp/keyxym-v26.zip
+          mkdir -p /tmp/keyxym-v26
+          unzip -q /tmp/keyxym-v26.zip -d /tmp/keyxym-v26
+      - name: Verify and install runtime
+        run: |
+          set -euo pipefail
+          module=/tmp/keyxym-v26/keyxym-v26-merged-wasm/keyxym-v26.mjs
+          wasm=/tmp/keyxym-v26/keyxym-v26-merged-wasm/keyxym-v26.wasm
+          manifest=/tmp/keyxym-v26/keyxym-v26-merged-manifest.json
+          test -s "$module"
+          test -s "$wasm"
+          test -s "$manifest"
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('/tmp/keyxym-v26')
+          manifest = json.loads((root / 'keyxym-v26-merged-manifest.json').read_text())
+          assert manifest['schema'] == 'keyxym.browser-runtime-provenance/v6'
+          assert manifest['version'] == '0.26.0'
+          assert manifest['abi'] == 'keyxym-v26-reality-authority-1'
+          assert manifest['source_commit'] == 'c94d4db57d1db89e96cb7fd860da2d4c1617f516'
+          assert manifest['source_exact'] is True
+          assert manifest['receipt_bytes'] == 96
+          for lane in ('gcc', 'asan_ubsan', 'msvc', 'mobile_sdk', 'wasm_runtime'):
+              assert manifest['validation'][lane] is True
+          artifact_root = root / 'keyxym-v26-merged-wasm'
+          for name in ('keyxym-v26.mjs', 'keyxym-v26.wasm'):
+              data = (artifact_root / name).read_bytes()
+              record = manifest['artifacts'][name]
+              assert len(data) == record['bytes']
+              assert hashlib.sha256(data).hexdigest() == record['sha256']
+          PY
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const bytes = await readFile('/tmp/keyxym-v26/keyxym-v26-merged-wasm/keyxym-v26.wasm');
+          if (!WebAssembly.validate(bytes)) throw new Error('invalid v0.26 WebAssembly');
+          const moduleText = await readFile('/tmp/keyxym-v26/keyxym-v26-merged-wasm/keyxym-v26.mjs', 'utf8');
+          for (const symbol of [
+            'keyxym_v26_session_create',
+            'keyxym_v26_session_destroy',
+            'keyxym_v26_ingest_rgba_packed',
+            'keyxym_v26_copy_receipts',
+            'keyxym_v26_copy_preview_packed',
+            'keyxym_v26_geometry_revision',
+            'keyxym_v26_copy_geometry_snapshot_packed',
+            'keyxym_v26_quality_packed',
+            'keyxym_v26_authority_packed',
+          ]) if (!moduleText.includes(symbol)) throw new Error(`missing ${symbol}`);
+          NODE
+          mkdir -p apps/viewer-web/public/keyxym-v26
+          cp "$module" apps/viewer-web/public/keyxym-v26/keyxym-v26.mjs
+          cp "$wasm" apps/viewer-web/public/keyxym-v26/keyxym-v26.wasm
+          cp "$manifest" apps/viewer-web/public/keyxym-v26/manifest.json
+          rm .github/workflows/install-keyxym-v026-runtime.yml
+      - name: Commit installed product assets
+        run: |
+          set -euo pipefail
+          git config user.name 'tessaryn-runtime-installer[bot]'
+          git config user.email 'tessaryn-runtime-installer[bot]@users.noreply.github.com'
+          git add apps/viewer-web/public/keyxym-v26 .github/workflows/install-keyxym-v026-runtime.yml
+          git diff --cached --quiet && { echo 'no installation changes'; exit 1; }
+          git commit -m 'Install source-exact Keyxym v0.26 runtime'
+          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
