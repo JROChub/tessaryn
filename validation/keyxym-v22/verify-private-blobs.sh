@@ -42,7 +42,7 @@ check src/v26_pose.cpp ca497ad56581db9e7dfaa918ea22dc9279f02789
 check src/v26_geometry.cpp 1f5ef8bb7c6aafe590afc0ce9e71f77001782670
 check src/v26_session.cpp f69334624317ab2c80a62011d1cdd716cc5a4de1
 check src/v26_browser_runtime.cpp bc480746168e29015cc9fb44a41eb16e5ea4adf8
-check tests/test_v026.cpp d820622f66f114e46acd8387ac94308dead54f91
+check tests/test_v026.cpp 7cbbc675528c0dd603c2f2f08ad54584fd865858
 check tests/test_v026_browser_runtime.cpp a07be0feffc45f11b5a5ade98f43d26a5178435b
 if [[ "$status" == 0 ]]; then
   printf 'keyxym_private_blobs=proposed-v026-fix\n' | tee -a "$report"
