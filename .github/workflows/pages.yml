@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows: [conformance]
     types: [completed]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,16 +12,28 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+      - name: Require the qualified commit to be current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin refs/heads/main:refs/remotes/origin/main
+          tested="$(git rev-parse HEAD)"
+          current="$(git rev-parse refs/remotes/origin/main)"
+          if [[ "$tested" != "$current" ]]; then
+            echo "::error::Refusing stale Pages build: qualified $tested, current main $current"
+            exit 1
+          fi
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 24
@@ -35,6 +46,27 @@ jobs:
         working-directory: apps/viewer-web
       - run: npm run build
         working-directory: apps/viewer-web
+      - name: Bind the release attestation to the successful conformance run
+        working-directory: apps/viewer-web
+        env:
+          TESSARYN_SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+          TESSARYN_REPOSITORY: ${{ github.repository }}
+          TESSARYN_CONFORMANCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          TESSARYN_CONFORMANCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          TESSARYN_DEPLOYMENT_RUN_ID: ${{ github.run_id }}
+          TESSARYN_DEPLOYMENT_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: node scripts/write-release-attestation.mjs
+      - name: Refuse publication if main advanced during the build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin refs/heads/main:refs/remotes/origin/main
+          tested="$(git rev-parse HEAD)"
+          current="$(git rev-parse refs/remotes/origin/main)"
+          if [[ "$tested" != "$current" ]]; then
+            echo "::error::Refusing stale Pages publication: qualified $tested, current main $current"
+            exit 1
+          fi
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: apps/viewer-web/dist
