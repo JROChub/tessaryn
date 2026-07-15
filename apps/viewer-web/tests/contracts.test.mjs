@@ -109,14 +109,17 @@ test("Pages publishes only the current successfully qualified main commit", asyn
   assert.match(workflow, /Refusing stale Pages publication/);
   assert.match(workflow, /write-release-attestation\.mjs/);
   assert.match(workflow, /TESSARYN_CONFORMANCE_RUN_ID/);
+  assert.match(workflow, /verify-live-release\.mjs/);
+  assert.match(workflow, /TESSARYN_LIVE_ORIGIN/);
+  assert.match(workflow, /TESSARYN_EXPECTED_COMMIT/);
 });
 
-test("the offline cache installs one release and never serves authority or release evidence cache-first", async () => {
+test("the offline cache separates mutable release state from immutable authority bytes", async () => {
   const worker = await readFile(workerUrl, "utf8");
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r3";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r4";`),
   );
   for (const asset of [
     "./release.json",
@@ -135,7 +138,13 @@ test("the offline cache installs one release and never serves authority or relea
   assert.doesNotMatch(worker, /keyxym\/keyxym-v22|build-closure\.json/);
   assert.match(worker, /AUTHORITY_PREFIXES/);
   assert.match(worker, /RELEASE_ATTESTATION_PATH/);
+  assert.match(worker, /isImmutableAuthorityRequest/);
+  assert.match(worker, /url\.searchParams\.has\("source"\)/);
+  assert.match(worker, /url\.searchParams\.has\("sha256"\)/);
+  assert.match(worker, /url\.searchParams\.has\("contract"\)/);
+  assert.match(worker, /event\.respondWith\(immutableAuthority\(event\.request\)\)/);
   assert.match(worker, /isAuthorityRequest\(url\) \|\| url\.pathname === RELEASE_ATTESTATION_PATH/);
+  assert.match(worker, /event\.respondWith\(networkFirst\(event\.request\)\)/);
   assert.match(worker, /cache: "no-store"/);
   assert.match(worker, /populateReleaseCache/);
   assert.match(worker, /await caches\.delete\(CACHE\)/);
