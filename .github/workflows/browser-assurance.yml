@@ -13,13 +13,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   assurance-wasm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
       - name: Configure Rust toolchain
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
@@ -98,8 +100,13 @@ jobs:
           ]) {
             if (!exports.includes(name)) throw new Error(`missing assurance export ${name}`);
           }
+          const imports = WebAssembly.Module.imports(module);
+          if (imports.length !== 1 || imports[0]?.module !== 'tessaryn' ||
+              imports[0]?.name !== 'random_fill' || imports[0]?.kind !== 'function') {
+            throw new Error(`unexpected assurance imports: ${JSON.stringify(imports)}`);
+          }
           NODE
-          SOURCE_COMMIT="$(git rev-parse HEAD)" python3 - <<'PY'
+          SOURCE_COMMIT="$(git log -1 --format=%H -- tools/browser-assurance)" python3 - <<'PY'
           import hashlib, json, os, pathlib
           root = pathlib.Path('build-browser-assurance')
           path = root / 'tessaryn-browser-assurance-v1.wasm'
@@ -109,6 +116,7 @@ jobs:
               'profile': 'eform/world-cell-assurance/v1',
               'provider': 'tessaryn-browser-assurance::ed25519-dalek/2.2.0',
               'power_house_version': '0.3.24',
+              'entropy_import': 'tessaryn.random_fill',
               'source_repository': 'JROChub/tessaryn',
               'source_commit': os.environ['SOURCE_COMMIT'],
               'artifact': {
@@ -120,6 +128,22 @@ jobs:
           (root / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
           PY
           cat build-browser-assurance/manifest.json
+      - name: Install verified viewer runtime
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          mkdir -p apps/viewer-web/public/assurance
+          cp build-browser-assurance/tessaryn-browser-assurance-v1.wasm apps/viewer-web/public/assurance/
+          cp build-browser-assurance/manifest.json apps/viewer-web/public/assurance/
+          if git diff --quiet -- apps/viewer-web/public/assurance; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/viewer-web/public/assurance
+          git commit -m "install verified browser assurance runtime"
+          git push origin "HEAD:${HEAD_BRANCH}"
       - name: Upload browser assurance bundle
         uses: actions/upload-artifact@v4
         with:
