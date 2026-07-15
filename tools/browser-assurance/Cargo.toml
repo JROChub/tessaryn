@@ -23,3 +23,5 @@ codegen-units = 1
 opt-level = "s"
 panic = "abort"
 strip = "symbols"
+
+[workspace]
