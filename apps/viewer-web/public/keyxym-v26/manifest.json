@@ -1,0 +1,46 @@
+{
+  "abi": "keyxym-v26-reality-authority-1",
+  "artifacts": {
+    "keyxym-v26.mjs": {
+      "bytes": 9253,
+      "sha256": "0d9f9921b01546051eacf7d0cf79f9b70e8b206dc455b833437fd992a737c7e5"
+    },
+    "keyxym-v26.wasm": {
+      "bytes": 65095,
+      "sha256": "89c66a4c8465ef8db10b6c40d4fdd3dc7d9c662d728cbd80d824a2ef27ea7d0e"
+    }
+  },
+  "authority_floats": 8,
+  "derivation": "source-exact-external-validation-build",
+  "geometry_record_floats": 13,
+  "maximum_analysis_height": 240,
+  "maximum_analysis_width": 320,
+  "maximum_preview_samples": 8192,
+  "maximum_surfels": 48000,
+  "maximum_tracks": 384,
+  "perception_abi": "keyxym-v26-calibrated-cpp-frontend-v1",
+  "pose_floats": 27,
+  "preview_record_floats": 10,
+  "quality_floats": 8,
+  "receipt_bytes": 96,
+  "schema": "keyxym.browser-runtime-provenance/v6",
+  "source_commit": "c94d4db57d1db89e96cb7fd860da2d4c1617f516",
+  "source_exact": true,
+  "source_repository": "JROChub/keyxym_map",
+  "timestamp_abi": "wasm-bigint-i64",
+  "toolchain": {
+    "name": "Emscripten",
+    "official_package_sha256": "3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3",
+    "release_commit": "9074aa513b501925adb1361e208932ad32a29a5f",
+    "version": "6.0.3"
+  },
+  "validation": {
+    "asan_ubsan": true,
+    "exact_blob_matrix_run": 29439226477,
+    "gcc": true,
+    "mobile_sdk": true,
+    "msvc": true,
+    "wasm_runtime": true
+  },
+  "version": "0.26.0"
+}

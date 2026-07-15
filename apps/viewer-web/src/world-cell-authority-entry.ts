@@ -1,5 +1,6 @@
 import { installBrowserAssuranceBridge } from "./browser-assurance-runtime";
-import { verifyKeyxymV22Bundle } from "./keyxym-v22-provenance";
+import { verifyKeyxymV26Bundle } from "./keyxym-v26-provenance";
+import { installWorldCellGuidance } from "./world-cell-guidance";
 
 function rejectAuthority(error: unknown): void {
   const reason = error instanceof Error ? error.message : String(error);
@@ -13,7 +14,7 @@ function rejectAuthority(error: unknown): void {
   if (stage) {
     const heading = stage.querySelector("b");
     const detail = stage.querySelector("span");
-    if (heading) heading.textContent = "KEYXYM AUTHORITY REJECTED";
+    if (heading) heading.textContent = "KEYXYM V0.26 AUTHORITY REJECTED";
     if (detail) detail.textContent = `${reason}. No camera frame, Moment, seal, or transfer will execute.`;
     stage.style.display = "";
   }
@@ -22,7 +23,7 @@ function rejectAuthority(error: unknown): void {
   if (send) send.disabled = true;
   if (start) start.disabled = true;
   document.documentElement.dataset.keyxymAuthority = "rejected";
-  console.error("Keyxym v0.22 authority rejected", error);
+  console.error("Keyxym v0.26 authority rejected", error);
 }
 
 async function installAssurance(): Promise<void> {
@@ -36,37 +37,16 @@ async function installAssurance(): Promise<void> {
   }
 }
 
-function installAuthorityReadyInvariant(): void {
-  const pose = document.getElementById("pose-state");
-  const cell = document.getElementById("cell-state");
-  if (!pose || !cell) throw new Error("World Cell authority state elements are missing");
-
-  const reconcile = (): void => {
-    if (document.documentElement.dataset.keyxymAuthority !== "verified") return;
-    const poseState = pose.textContent?.trim();
-    const cellState = cell.textContent?.trim() ?? "";
-    if ((poseState === "AUTHORITY OFFLINE" || poseState === "ORIGIN") &&
-        cellState.includes("READY")) {
-      pose.textContent = "KEYXYM READY";
-    }
-  };
-
-  const observer = new MutationObserver(reconcile);
-  observer.observe(pose, { childList: true, characterData: true, subtree: true });
-  observer.observe(cell, { childList: true, characterData: true, subtree: true });
-  window.addEventListener("beforeunload", () => observer.disconnect(), { once: true });
-  reconcile();
-}
-
 try {
-  const manifest = await verifyKeyxymV22Bundle();
+  const manifest = await verifyKeyxymV26Bundle();
   await installAssurance();
-  const { installWorldCellTheater } = await import("./world-cell-theater");
+  const { installWorldCellTheater } = await import("./world-cell-theater-v26");
   await installWorldCellTheater(manifest);
+  installWorldCellGuidance();
   document.documentElement.dataset.keyxymAuthority = "verified";
   document.documentElement.dataset.keyxymSource = manifest.source_commit;
   document.documentElement.dataset.keyxymAbi = manifest.abi;
-  installAuthorityReadyInvariant();
+  document.documentElement.dataset.keyxymVersion = manifest.version;
   const start = document.getElementById("start-button");
   if (start instanceof HTMLButtonElement) start.disabled = false;
 } catch (error) {

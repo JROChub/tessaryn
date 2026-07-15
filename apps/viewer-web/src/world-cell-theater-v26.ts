@@ -1,17 +1,17 @@
 import "./world-cell-theater.css";
 import * as THREE from "three";
-import { sha256 } from "@noble/hashes/sha2.js";
-import type { KeyxymProvenanceManifest } from "./keyxym-v22-provenance";
+import type { KeyxymV26Manifest } from "./keyxym-v26-provenance";
 import {
-  KEYXYM_V22_SURFEL_FLOATS,
-  KeyxymV22Runtime,
+  KEYXYM_V26_SURFEL_FLOATS,
+  KeyxymV26TheaterRuntime,
+  type KeyxymAuthorityDecision,
   type KeyxymFormingSample,
   type KeyxymGeometrySnapshot,
   type KeyxymPoseEstimate,
   type KeyxymQuality,
   type KeyxymReceipts,
   type KeyxymSurfel,
-} from "./keyxym-v22-runtime";
+} from "./keyxym-v26-theater-adapter";
 import {
   bytesHex,
   canonicalString,
@@ -28,10 +28,11 @@ import {
 
 interface RuntimeEvidence {
   time: number;
-  kind: string;
+  kind: "keyxym-v026-frame";
   sourceCommitment: string;
   poseReceipt: string;
   qualityReceipt: string;
+  authorityReceipt: string;
   reconstructionReceipt: string;
   runtimeCommitment: string;
   geometryRevision: string;
@@ -39,7 +40,7 @@ interface RuntimeEvidence {
 }
 
 interface MomentRecord {
-  schema: "tessaryn/world-cell-moment/v22";
+  schema: "tessaryn/world-cell-moment/v26";
   id: string;
   sequence: number;
   createdAtUnixMs: number;
@@ -48,9 +49,11 @@ interface MomentRecord {
   geometry: number[];
   pose: number[];
   quality: KeyxymQuality;
+  authority: KeyxymAuthorityDecision;
   sourceCommitment: string;
   poseReceipt: string;
   qualityReceipt: string;
+  authorityReceipt: string;
   reconstructionReceipt: string;
   runtimeCommitment: string;
   parentCommitment: string;
@@ -59,9 +62,9 @@ interface MomentRecord {
 }
 
 interface WorldCellDraft {
-  schema: "tessaryn/world-cell/v22";
-  version: 22;
-  branch: string;
+  schema: "tessaryn/world-cell/v26";
+  version: 26;
+  branch: "main/world-cell-theater-v026";
   createdAtUnixMs: number;
   runtimeCommitment: string;
   scaleState: "relative" | "metric";
@@ -97,7 +100,6 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 
 const ZERO_DIGEST = "0".repeat(64);
 const MAX_MOMENTS = 24;
-const FRAME_INTERVAL_MS = 88;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -107,20 +109,18 @@ function element<T extends HTMLElement>(id: string): T {
   return found as T;
 }
 
-function setText(id: string, value: string): void {
-  element(id).textContent = value;
-}
-
+function setText(id: string, value: string): void { element(id).textContent = value; }
 function setWidth(id: string, value: number): void {
   element(id).style.width = `${Math.max(0, Math.min(100, value))}%`;
 }
-
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
-
 function nonzeroDigest(value: string): boolean {
   return /^[0-9a-f]{64}$/.test(value) && value !== ZERO_DIGEST;
+}
+function nonzeroBytes(value: Uint8Array): boolean {
+  return value.byteLength === 32 && value.some((item) => item !== 0);
 }
 
 function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
@@ -140,7 +140,7 @@ function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
         vAlpha = aAlpha;
         vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * viewPosition;
-        gl_PointSize = clamp(aSize * (260.0 / max(0.35, -viewPosition.z)), 1.5, 24.0);
+        gl_PointSize = clamp(aSize * (280.0 / max(0.35, -viewPosition.z)), 1.25, 26.0);
       }
     `,
     fragmentShader: `
@@ -149,9 +149,9 @@ function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
       void main() {
         float radius = length(gl_PointCoord - vec2(0.5));
         if (radius > 0.5) discard;
-        float core = smoothstep(0.5, 0.08, radius);
-        float glow = smoothstep(0.5, 0.0, radius) * 0.42;
-        gl_FragColor = vec4(vColor * (0.72 + glow), vAlpha * core);
+        float core = smoothstep(0.5, 0.06, radius);
+        float glow = smoothstep(0.5, 0.0, radius) * 0.48;
+        gl_FragColor = vec4(vColor * (0.70 + glow), vAlpha * core);
       }
     `,
   });
@@ -172,40 +172,28 @@ function setPointGeometry(
 }
 
 function packedSurfels(surfels: KeyxymSurfel[]): number[] {
-  const output = new Array<number>(surfels.length * KEYXYM_V22_SURFEL_FLOATS);
+  const output = new Array<number>(surfels.length * KEYXYM_V26_SURFEL_FLOATS);
   let offset = 0;
   for (const surfel of surfels) {
-    output[offset++] = surfel.x;
-    output[offset++] = surfel.y;
-    output[offset++] = surfel.z;
-    output[offset++] = surfel.nx;
-    output[offset++] = surfel.ny;
-    output[offset++] = surfel.nz;
-    output[offset++] = surfel.r;
-    output[offset++] = surfel.g;
-    output[offset++] = surfel.b;
-    output[offset++] = surfel.confidence;
-    output[offset++] = surfel.uncertainty;
-    output[offset++] = surfel.observations;
-    output[offset++] = surfel.sourceKeyframe;
+    output[offset++] = surfel.x; output[offset++] = surfel.y; output[offset++] = surfel.z;
+    output[offset++] = surfel.nx; output[offset++] = surfel.ny; output[offset++] = surfel.nz;
+    output[offset++] = surfel.r; output[offset++] = surfel.g; output[offset++] = surfel.b;
+    output[offset++] = surfel.confidence; output[offset++] = surfel.uncertainty;
+    output[offset++] = surfel.observations; output[offset++] = surfel.sourceKeyframe;
   }
   return output;
 }
 
 function unpackSurfels(values: number[]): KeyxymSurfel[] {
-  if (values.length % KEYXYM_V22_SURFEL_FLOATS !== 0) {
-    throw new Error("Moment geometry record is malformed");
-  }
+  if (values.length % KEYXYM_V26_SURFEL_FLOATS !== 0) throw new Error("Moment geometry is malformed");
   const output: KeyxymSurfel[] = [];
-  for (let index = 0; index < values.length; index += KEYXYM_V22_SURFEL_FLOATS) {
-    const record = values.slice(index, index + KEYXYM_V22_SURFEL_FLOATS);
-    if (!record.every(Number.isFinite)) throw new Error("Moment geometry is non-finite");
+  for (let index = 0; index < values.length; index += KEYXYM_V26_SURFEL_FLOATS) {
+    const item = values.slice(index, index + KEYXYM_V26_SURFEL_FLOATS);
+    if (!item.every(Number.isFinite)) throw new Error("Moment geometry is non-finite");
     output.push({
-      x: record[0]!, y: record[1]!, z: record[2]!,
-      nx: record[3]!, ny: record[4]!, nz: record[5]!,
-      r: record[6]!, g: record[7]!, b: record[8]!,
-      confidence: record[9]!, uncertainty: record[10]!,
-      observations: record[11]!, sourceKeyframe: record[12]!,
+      x: item[0]!, y: item[1]!, z: item[2]!, nx: item[3]!, ny: item[4]!, nz: item[5]!,
+      r: item[6]!, g: item[7]!, b: item[8]!, confidence: item[9]!, uncertainty: item[10]!,
+      observations: item[11]!, sourceKeyframe: item[12]!,
     });
   }
   return output;
@@ -222,15 +210,18 @@ function momentBody(moment: MomentRecord): Omit<MomentRecord, "canonicalDigest">
 }
 
 function validateMoment(moment: MomentRecord, expectedParent: string): void {
-  if (moment.schema !== "tessaryn/world-cell-moment/v22" ||
-      moment.geometryRecordFloats !== KEYXYM_V22_SURFEL_FLOATS ||
-      moment.parentCommitment !== expectedParent ||
-      !nonzeroDigest(moment.runtimeCommitment) ||
+  if (moment.schema !== "tessaryn/world-cell-moment/v26" ||
+      moment.geometryRecordFloats !== KEYXYM_V26_SURFEL_FLOATS ||
+      moment.parentCommitment !== expectedParent || !moment.authority.momentAllowed ||
+      !nonzeroDigest(moment.runtimeCommitment) || !nonzeroDigest(moment.authorityReceipt) ||
       !nonzeroDigest(moment.reconstructionReceipt) ||
       digestValue(momentBody(moment)) !== moment.canonicalDigest) {
-    throw new Error(`Moment ${moment.id} failed canonical lineage verification`);
+    throw new Error(`Moment ${moment.id} failed v0.26 authority and lineage verification`);
   }
-  unpackSurfels(moment.geometry);
+  const geometry = unpackSurfels(moment.geometry);
+  if (geometry.length !== Math.round(moment.authority.confirmedSurfels)) {
+    throw new Error(`Moment ${moment.id} geometry does not match its native authority decision`);
+  }
 }
 
 class TheaterController {
@@ -248,11 +239,9 @@ class TheaterController {
   private readonly authorityGeometry = new THREE.BufferGeometry();
   private readonly formingCloud = new THREE.Points(this.formingGeometry, createPointMaterial(true));
   private readonly authorityCloud = new THREE.Points(this.authorityGeometry, createPointMaterial(false));
-  private readonly captureCanvas = document.createElement("canvas");
-  private readonly captureContext: CanvasRenderingContext2D;
   private readonly runtimeCommitmentValue: string;
 
-  private runtime: KeyxymV22Runtime | null = null;
+  private runtime: KeyxymV26TheaterRuntime | null = null;
   private mediaStream: MediaStream | null = null;
   private running = false;
   private processing = false;
@@ -260,18 +249,19 @@ class TheaterController {
   private fallbackTimer = 0;
   private lastProcessedAt = 0;
   private lastTimestampNs = 0n;
+  private analysisIntervalMs = 50;
   private frameNumber = 0;
-  private geometryRevision = -1n;
-  private formingSamples: KeyxymFormingSample[] = [];
   private geometrySnapshot: KeyxymGeometrySnapshot = { revision: 0n, surfels: [] };
   private pose: KeyxymPoseEstimate | null = null;
   private quality: KeyxymQuality | null = null;
+  private authority: KeyxymAuthorityDecision | null = null;
   private receipts: KeyxymReceipts | null = null;
   private sourceCommitment = ZERO_DIGEST;
+  private formingSamples: KeyxymFormingSample[] = [];
   private moments: MomentRecord[] = [];
+  private evidence: RuntimeEvidence[] = [];
   private currentMoment = 0;
   private playTimer = 0;
-  private evidence: RuntimeEvidence[] = [];
   private sealedCell: SealedWorldCell | null = null;
   private metricCalibration: MetricSensorCalibration | null = null;
   private requestedReferenceMeters: number | null = null;
@@ -280,13 +270,10 @@ class TheaterController {
   private pendingChunks: Uint8Array[] = [];
   private expectedDigest = "";
   private expectedBytes = 0;
+  private hadRecoveredPose = false;
 
-  constructor(private readonly manifest: KeyxymProvenanceManifest) {
-    const context = this.captureCanvas.getContext("2d", { willReadFrequently: true });
-    if (!context) throw new Error("World Cell capture canvas is unavailable");
-    this.captureContext = context;
+  constructor(private readonly manifest: KeyxymV26Manifest) {
     this.runtimeCommitmentValue = runtimeCommitment(manifest);
-
     this.camera.position.set(0, 0, 2.65);
     this.scene.add(this.formingCloud, this.authorityCloud);
     const grid = new THREE.GridHelper(3.6, 36, 0x123d52, 0x091925);
@@ -296,30 +283,24 @@ class TheaterController {
     (grid.material as THREE.Material).opacity = 0.24;
     this.scene.add(grid);
     this.scene.add(new THREE.AmbientLight(0xffffff, 1));
-
     new ResizeObserver(() => this.resize()).observe(this.canvas);
     this.resize();
     this.render();
   }
 
   async initialize(): Promise<void> {
-    this.runtime = await KeyxymV22Runtime.load({
-      branch: "main/world-cell-theater",
-      maximumAnalysisWidth: this.manifest.maximum_analysis_width,
-      maximumAnalysisHeight: this.manifest.maximum_analysis_height,
-      maximumTracks: this.manifest.maximum_tracks,
-      maximumFormingSamples: this.manifest.maximum_preview_samples,
-    });
+    this.runtime = await KeyxymV26TheaterRuntime.load(this.manifest);
     this.bindControls();
-    document.documentElement.dataset.worldCellController = "keyxym-consensus-v1";
-    setText("backend-name", "KEYXYM V0.22 / DUAL FIELD");
+    document.documentElement.dataset.worldCellController = "keyxym-v026-worker-v1";
+    setText("backend-name", "KEYXYM V0.26 / REALITY");
     setText("adapter-name", this.manifest.source_commit.slice(0, 12).toUpperCase());
-    setText("gpu-badge", "WASM READY");
-    setText("compute-state", "KEYXYM");
+    setText("gpu-badge", "WORKER WASM READY");
+    setText("compute-state", "KEYXYM V0.26");
+    setText("pose-state", "KEYXYM READY");
     setText("cell-state", "WORLD CELL / READY / RELATIVE");
     this.setStageMessage(
       "REALITY FORMATION READY",
-      "The forming field appears immediately. Confirmed geometry emerges only from Keyxym multi-view evidence.",
+      "The worker forms immediate visual evidence while calibrated Keyxym geometry becomes authoritative.",
     );
     this.updateControls();
     navigator.serviceWorker?.register("./sw.js").catch(() => undefined);
@@ -341,58 +322,45 @@ class TheaterController {
   };
 
   private bindControls(): void {
-    element<HTMLButtonElement>("start-button").onclick = () => {
-      void this.startCamera().catch((error: unknown) => this.fail(error));
-    };
+    element<HTMLButtonElement>("start-button").onclick = () => void this.startCamera().catch((error) => this.fail(error));
     element<HTMLButtonElement>("stop-button").onclick = () => this.stopCamera();
-    element<HTMLButtonElement>("capture-button").onclick = () => {
-      void this.commitMoment().catch((error: unknown) => this.fail(error));
-    };
-    element<HTMLButtonElement>("seal-button").onclick = () => {
-      void this.seal().catch((error: unknown) => this.fail(error));
-    };
-    element<HTMLInputElement>("replay-slider").oninput = (event) => {
-      this.showMoment(Number((event.target as HTMLInputElement).value));
-    };
+    element<HTMLButtonElement>("capture-button").onclick = () => void this.commitMoment().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("seal-button").onclick = () => void this.seal().catch((error) => this.fail(error));
+    element<HTMLInputElement>("replay-slider").oninput = (event) => this.showMoment(Number((event.target as HTMLInputElement).value));
     element<HTMLButtonElement>("prev-button").onclick = () => this.showMoment(this.currentMoment - 1);
     element<HTMLButtonElement>("next-button").onclick = () => this.showMoment(this.currentMoment + 1);
     element<HTMLButtonElement>("play-button").onclick = () => this.togglePlayback();
-    element<HTMLButtonElement>("host-button").onclick = () => void this.createOffer().catch((error: unknown) => this.fail(error));
-    element<HTMLButtonElement>("join-button").onclick = () => void this.joinOffer().catch((error: unknown) => this.fail(error));
-    element<HTMLButtonElement>("answer-button").onclick = () => void this.applyAnswer().catch((error: unknown) => this.fail(error));
-    element<HTMLButtonElement>("send-button").onclick = () => void this.sendCell().catch((error: unknown) => this.fail(error));
-    element<HTMLButtonElement>("reset-button").onclick = () => void this.reset().catch((error: unknown) => this.fail(error));
+    element<HTMLButtonElement>("host-button").onclick = () => void this.createOffer().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("join-button").onclick = () => void this.joinOffer().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("answer-button").onclick = () => void this.applyAnswer().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("send-button").onclick = () => void this.sendCell().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("reset-button").onclick = () => void this.reset().catch((error) => this.fail(error));
     element<HTMLButtonElement>("sensor-button").onclick = () => element<HTMLDialogElement>("sensor-dialog").showModal();
     element<HTMLButtonElement>("evidence-button").onclick = () => element<HTMLDialogElement>("evidence-dialog").showModal();
     element<HTMLButtonElement>("calibrate-button").onclick = () => element<HTMLDialogElement>("calibration-dialog").showModal();
     element<HTMLButtonElement>("apply-calibration").onclick = () => this.recordReferenceRequest();
-    element<HTMLButtonElement>("serial-button").onclick = () => void this.connectSerial().catch((error: unknown) => this.sensorError(error));
-    element<HTMLButtonElement>("usb-button").onclick = () => void this.connectUsb().catch((error: unknown) => this.sensorError(error));
-    element<HTMLButtonElement>("xr-button").onclick = () => void this.probeXr().catch((error: unknown) => this.sensorError(error));
+    element<HTMLButtonElement>("serial-button").onclick = () => void this.connectSerial().catch((error) => this.sensorError(error));
+    element<HTMLButtonElement>("usb-button").onclick = () => void this.connectUsb().catch((error) => this.sensorError(error));
+    element<HTMLButtonElement>("xr-button").onclick = () => void this.probeXr().catch((error) => this.sensorError(error));
     document.querySelectorAll<HTMLElement>("[data-close]").forEach((button) => {
       button.onclick = () => element<HTMLDialogElement>(button.dataset.close ?? "").close();
     });
     window.addEventListener("beforeunload", () => {
       this.stopCamera();
       this.runtime?.destroy();
-    });
+      this.peer?.close();
+    }, { once: true });
   }
 
   private async startCamera(): Promise<void> {
-    if (!this.runtime) throw new Error("Keyxym authority is not initialized");
+    if (!this.runtime) throw new Error("Keyxym v0.26 authority is not initialized");
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        frameRate: { ideal: 30, max: 60 },
-      },
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 } },
       audio: false,
     });
     this.video.srcObject = this.mediaStream;
     await this.video.play();
     this.running = true;
-    this.frameNumber = 0;
     this.lastProcessedAt = 0;
     element<HTMLButtonElement>("start-button").disabled = true;
     element<HTMLButtonElement>("stop-button").disabled = false;
@@ -404,9 +372,7 @@ class TheaterController {
 
   private stopCamera(): void {
     this.running = false;
-    if (this.frameCallback && this.video.cancelVideoFrameCallback) {
-      this.video.cancelVideoFrameCallback(this.frameCallback);
-    }
+    if (this.frameCallback && this.video.cancelVideoFrameCallback) this.video.cancelVideoFrameCallback(this.frameCallback);
     if (this.fallbackTimer) window.clearTimeout(this.fallbackTimer);
     this.frameCallback = 0;
     this.fallbackTimer = 0;
@@ -422,26 +388,21 @@ class TheaterController {
   private scheduleFrame(): void {
     if (!this.running) return;
     if (this.video.requestVideoFrameCallback) {
-      this.frameCallback = this.video.requestVideoFrameCallback((now) => {
-        void this.onVideoFrame(now);
-      });
+      this.frameCallback = this.video.requestVideoFrameCallback((now) => void this.onVideoFrame(now));
     } else {
-      this.fallbackTimer = window.setTimeout(() => {
-        void this.onVideoFrame(performance.now());
-      }, 32);
+      this.fallbackTimer = window.setTimeout(() => void this.onVideoFrame(performance.now()), 32);
     }
   }
 
   private async onVideoFrame(now: number): Promise<void> {
     this.scheduleFrame();
-    if (!this.running || this.processing || now - this.lastProcessedAt < FRAME_INTERVAL_MS ||
+    if (!this.running || this.processing || this.runtime?.busy ||
+        now - this.lastProcessedAt < this.analysisIntervalMs ||
         this.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
     this.processing = true;
     this.lastProcessedAt = now;
-    const started = performance.now();
     try {
       await this.processFrame(now);
-      setText("dispatch-time", `${(performance.now() - started).toFixed(1)} ms`);
     } catch (error) {
       this.freezeOnTrackingFailure(error);
     } finally {
@@ -450,162 +411,135 @@ class TheaterController {
   }
 
   private async processFrame(now: number): Promise<void> {
-    if (!this.runtime) throw new Error("Keyxym authority is unavailable");
+    if (!this.runtime) throw new Error("Keyxym v0.26 authority is unavailable");
     const sourceWidth = this.video.videoWidth;
     const sourceHeight = this.video.videoHeight;
     if (!sourceWidth || !sourceHeight) return;
-    const scale = Math.min(1, this.manifest.maximum_analysis_width / sourceWidth,
-      this.manifest.maximum_analysis_height / sourceHeight);
-    const width = Math.max(16, Math.floor(sourceWidth * scale));
-    const height = Math.max(16, Math.floor(sourceHeight * scale));
-    this.captureCanvas.width = width;
-    this.captureCanvas.height = height;
-    this.captureContext.drawImage(this.video, 0, 0, width, height);
-    const image = this.captureContext.getImageData(0, 0, width, height);
-    const rgba = new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.byteLength);
-    const commitmentBytes = sha256(rgba);
-    const sourceCommitment = bytesHex(commitmentBytes);
-    const calculatedTimestamp = BigInt(Math.max(1, Math.round((performance.timeOrigin + now) * 1_000_000)));
-    const timestampNs = calculatedTimestamp > this.lastTimestampNs
-      ? calculatedTimestamp : this.lastTimestampNs + 1n;
+    const calculated = BigInt(Math.max(1, Math.round((performance.timeOrigin + now) * 1_000_000)));
+    const timestampNs = calculated > this.lastTimestampNs ? calculated : this.lastTimestampNs + 1n;
     this.lastTimestampNs = timestampNs;
-    const focal = width / (2 * Math.tan(Math.PI / 6));
     const calibration = this.metricCalibration?.verified === true ? this.metricCalibration : null;
-
-    const pose = this.runtime.ingest({
+    const bitmap = await createImageBitmap(this.video);
+    const result = await this.runtime.ingest({
+      bitmap,
       timestampNs,
-      width,
-      height,
-      fx: focal,
-      fy: focal,
-      cx: width / 2,
-      cy: height / 2,
+      sourceWidth,
+      sourceHeight,
       scaleMetersPerUnit: calibration?.scaleMetersPerUnit ?? 1,
       metricScale: calibration !== null,
-      rgba,
-      sourceCommitment: commitmentBytes,
     });
-    const forming = this.runtime.formingField();
-    const quality = this.runtime.quality();
-    const receipts = this.runtime.receipts();
-    const snapshot = this.runtime.geometrySnapshot(this.geometryRevision);
-
-    this.pose = pose;
-    this.quality = quality;
-    this.receipts = receipts;
-    this.formingSamples = forming;
-    this.sourceCommitment = sourceCommitment;
+    const previouslyRecovered = this.hadRecoveredPose;
+    this.pose = result.pose;
+    this.quality = result.quality;
+    this.authority = result.authority;
+    this.receipts = result.receipts;
+    this.sourceCommitment = bytesHex(result.sourceCommitment);
+    this.formingSamples = result.forming;
     this.frameNumber += 1;
-    if (snapshot && pose.recovered) {
-      this.geometrySnapshot = snapshot;
-      this.geometryRevision = snapshot.revision;
-    }
-
-    this.updateFormingCloud(forming, quality.coverage);
+    this.hadRecoveredPose ||= result.pose.recovered;
+    if (result.geometrySnapshot && result.pose.recovered) this.geometrySnapshot = result.geometrySnapshot;
+    this.analysisIntervalMs = Math.max(33, Math.min(100, result.processingMs * 1.25));
+    setText("dispatch-time", `${result.processingMs.toFixed(1)} ms / worker`);
+    this.updateFormingCloud(result.forming, result.quality.coverage);
     this.updateAuthorityCloud(this.geometrySnapshot.surfels);
     this.updateQualityUi();
     this.recordRuntimeEvidence();
     this.updateControls();
-    document.documentElement.dataset.formingSamples = String(forming.length);
+    if (previouslyRecovered && !result.pose.recovered) {
+      this.setStageMessage("TRACKING FROZEN", "Authoritative geometry is frozen. Return to a textured, previously observed view for relocalization.", true);
+    } else if (result.pose.recovered) {
+      this.hideStageMessage();
+    }
+    document.documentElement.dataset.formingSamples = String(result.forming.length);
     document.documentElement.dataset.authoritativeSurfels = String(this.geometrySnapshot.surfels.length);
     document.documentElement.dataset.geometryRevision = this.geometrySnapshot.revision.toString();
+    document.documentElement.dataset.authorityStage = result.authority.stage;
+    document.documentElement.dataset.authorityRejectionMask = String(result.authority.rejectionMask);
+    document.documentElement.dataset.momentAllowed = String(result.authority.momentAllowed);
+    document.documentElement.dataset.sealAllowed = String(result.authority.sealAllowed);
   }
 
   private updateFormingCloud(samples: KeyxymFormingSample[], coverage: number): void {
-    const count = samples.length;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const alpha = new Float32Array(count);
-    const size = new Float32Array(count);
+    const positions = new Float32Array(samples.length * 3);
+    const colors = new Float32Array(samples.length * 3);
+    const alpha = new Float32Array(samples.length);
+    const size = new Float32Array(samples.length);
     const authorityWeight = clamp01(coverage);
-    for (let index = 0; index < count; index += 1) {
+    for (let index = 0; index < samples.length; index += 1) {
       const sample = samples[index]!;
       const flow = Math.hypot(sample.flowX, sample.flowY);
-      positions[index * 3] = sample.normalizedX * 1.15 + sample.flowX * 3.2;
-      positions[index * 3 + 1] = sample.normalizedY * 0.86 + sample.flowY * 3.2;
-      positions[index * 3 + 2] = -0.72 + Math.min(0.16, flow * 2.8) +
-        Math.min(0.05, sample.salience * 0.08);
-      colors[index * 3] = sample.r;
-      colors[index * 3 + 1] = sample.g;
-      colors[index * 3 + 2] = sample.b;
-      alpha[index] = Math.max(0.08, (0.68 - authorityWeight * 0.48) *
-        (0.35 + clamp01(sample.trackSupport) * 0.65));
-      size[index] = 2.4 + Math.min(8, sample.age * 0.18) + Math.min(4, flow * 70);
+      const temporalDepth = Math.min(0.34, sample.age * 0.006 + flow * 2.5);
+      positions[index * 3] = sample.normalizedX * (1.10 + temporalDepth * 0.18) + sample.flowX * 3.4;
+      positions[index * 3 + 1] = sample.normalizedY * (0.84 + temporalDepth * 0.12) + sample.flowY * 3.4;
+      positions[index * 3 + 2] = -0.86 + temporalDepth + Math.min(0.07, sample.salience * 0.10);
+      colors[index * 3] = sample.r; colors[index * 3 + 1] = sample.g; colors[index * 3 + 2] = sample.b;
+      alpha[index] = Math.max(0.07, (0.72 - authorityWeight * 0.50) * (0.30 + clamp01(sample.trackSupport) * 0.70));
+      size[index] = 2.2 + Math.min(9, sample.age * 0.20) + Math.min(5, flow * 82);
     }
     setPointGeometry(this.formingGeometry, positions, colors, alpha, size);
   }
 
   private updateAuthorityCloud(surfels: KeyxymSurfel[]): void {
-    const count = surfels.length;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const alpha = new Float32Array(count);
-    const size = new Float32Array(count);
-    for (let index = 0; index < count; index += 1) {
+    const positions = new Float32Array(surfels.length * 3);
+    const colors = new Float32Array(surfels.length * 3);
+    const alpha = new Float32Array(surfels.length);
+    const size = new Float32Array(surfels.length);
+    for (let index = 0; index < surfels.length; index += 1) {
       const surfel = surfels[index]!;
-      positions[index * 3] = surfel.x;
-      positions[index * 3 + 1] = surfel.y;
-      positions[index * 3 + 2] = surfel.z;
-      colors[index * 3] = clamp01(surfel.r);
-      colors[index * 3 + 1] = clamp01(surfel.g);
-      colors[index * 3 + 2] = clamp01(surfel.b);
-      alpha[index] = Math.max(0.15, clamp01(surfel.confidence) *
-        (1 - Math.min(0.75, Math.max(0, surfel.uncertainty))));
-      size[index] = 3.2 + Math.min(7, surfel.observations * 0.8) +
-        clamp01(surfel.confidence) * 2.5;
+      positions[index * 3] = surfel.x; positions[index * 3 + 1] = surfel.y; positions[index * 3 + 2] = surfel.z;
+      colors[index * 3] = clamp01(surfel.r); colors[index * 3 + 1] = clamp01(surfel.g); colors[index * 3 + 2] = clamp01(surfel.b);
+      alpha[index] = Math.max(0.14, clamp01(surfel.confidence) * (1 - Math.min(0.78, Math.max(0, surfel.uncertainty))));
+      size[index] = 3.0 + Math.min(7, surfel.observations * 0.8) + clamp01(surfel.confidence) * 2.8;
     }
     setPointGeometry(this.authorityGeometry, positions, colors, alpha, size);
     const sphere = this.authorityGeometry.boundingSphere;
     if (sphere && sphere.radius > 0.00001) {
       this.authorityCloud.position.copy(sphere.center).multiplyScalar(-1);
-      const visualScale = Math.min(4, 0.92 / sphere.radius);
-      this.authorityCloud.scale.setScalar(visualScale);
+      this.authorityCloud.scale.setScalar(Math.min(4, 0.92 / sphere.radius));
     } else {
       this.authorityCloud.position.set(0, 0, 0);
       this.authorityCloud.scale.setScalar(1);
     }
-    setText("surfel-count", count.toLocaleString());
+    setText("surfel-count", surfels.length.toLocaleString());
   }
 
   private updateQualityUi(): void {
-    const pose = this.pose;
-    const quality = this.quality;
-    if (!pose || !quality) return;
+    if (!this.pose || !this.quality || !this.authority) return;
+    const labels: Record<KeyxymAuthorityDecision["stage"], string> = {
+      forming: "FORMING",
+      tracking: this.pose.relocalized ? "RELOCALIZED" : "TRACKING",
+      "moment-ready": "MOMENT READY",
+      "seal-ready": "SEAL READY",
+    };
+    const label = labels[this.authority.stage];
     setText("frame-count", String(this.frameNumber));
-    setText("pose-state", pose.recovered
-      ? `SOLVED ${Math.round(pose.tracking * 100)}%`
-      : `FORMING ${Math.round(pose.tracking * 100)}%`);
-    setText("tracking-value", `${Math.round(clamp01(quality.tracking) * 100)}%`);
-    setText("parallax-value", `${quality.parallaxDegrees.toFixed(2)}°`);
-    setText("error-value", Number.isFinite(quality.reprojectionErrorPixels)
-      ? `${quality.reprojectionErrorPixels.toFixed(2)} px` : "—");
-    setText("coverage-value", `${Math.round(clamp01(quality.coverage) * 100)}%`);
-    setText("confirmed-value", Math.round(quality.confirmed).toLocaleString());
-    setText("uncertain-value", Math.round(quality.uncertain).toLocaleString());
-    setText("rejected-value", Math.round(quality.rejected).toLocaleString());
-    setText("scale-value", quality.metricScale ? "METRIC" : "RELATIVE");
-    setText("cell-state", `WORLD CELL / ${quality.metricScale ? "METRIC" : "RELATIVE"} / ${pose.recovered ? "TRACKING" : "FORMING"}`);
-    setWidth("quality-meter", clamp01(quality.tracking * 0.45 + quality.coverage * 0.55) * 100);
-    setWidth("compute-meter", Math.min(100, 18 + this.formingSamples.length / 120 +
-      this.geometrySnapshot.surfels.length / 480));
-    setText("capture-state", pose.recovered ? "TRACKING" : "FORMING");
+    setText("pose-state", `${label} ${Math.round(this.pose.tracking * 100)}%`);
+    setText("tracking-value", `${Math.round(clamp01(this.quality.tracking) * 100)}%`);
+    setText("parallax-value", `${this.quality.parallaxDegrees.toFixed(2)}°`);
+    setText("error-value", Number.isFinite(this.quality.reprojectionErrorPixels) ? `${this.quality.reprojectionErrorPixels.toFixed(2)} px` : "—");
+    setText("coverage-value", `${Math.round(clamp01(this.quality.coverage) * 100)}%`);
+    setText("confirmed-value", Math.round(this.quality.confirmed).toLocaleString());
+    setText("uncertain-value", Math.round(this.quality.uncertain).toLocaleString());
+    setText("rejected-value", Math.round(this.quality.rejected).toLocaleString());
+    setText("scale-value", this.quality.metricScale ? "METRIC" : "RELATIVE");
+    setText("cell-state", `WORLD CELL / ${this.quality.metricScale ? "METRIC" : "RELATIVE"} / ${label}`);
+    setWidth("quality-meter", clamp01(this.authority.score) * 100);
+    setWidth("compute-meter", Math.min(100, 18 + this.formingSamples.length / 120 + this.geometrySnapshot.surfels.length / 480));
+    setText("capture-state", label);
   }
 
   private recordRuntimeEvidence(): void {
-    if (!this.receipts || !this.pose || !this.quality) return;
-    const poseReceipt = bytesHex(this.receipts.pose);
-    const qualityReceipt = bytesHex(this.receipts.quality);
-    const pair = reconstructionReceipt(this.receipts);
+    if (!this.pose || !this.quality || !this.authority || !this.receipts) return;
     const latest = this.evidence.at(-1);
-    if (latest?.sourceCommitment === this.sourceCommitment &&
-        latest.geometryRevision === this.geometrySnapshot.revision.toString()) return;
-    this.evidence.push({
+    if (latest?.sourceCommitment === this.sourceCommitment && latest.geometryRevision === this.geometrySnapshot.revision.toString()) return;
+    const record: RuntimeEvidence = {
       time: Date.now(),
-      kind: "keyxym-frame",
+      kind: "keyxym-v026-frame",
       sourceCommitment: this.sourceCommitment,
-      poseReceipt,
-      qualityReceipt,
-      reconstructionReceipt: pair,
+      poseReceipt: bytesHex(this.receipts.pose),
+      qualityReceipt: bytesHex(this.receipts.quality),
+      authorityReceipt: bytesHex(this.receipts.authority),
+      reconstructionReceipt: reconstructionReceipt(this.receipts),
       runtimeCommitment: this.runtimeCommitmentValue,
       geometryRevision: this.geometrySnapshot.revision.toString(),
       details: {
@@ -614,37 +548,43 @@ class TheaterController {
         tracking: this.pose.tracking,
         parallaxDegrees: this.pose.parallaxDegrees,
         reprojectionErrorPixels: this.pose.reprojectionErrorPixels,
+        rotationDegrees: this.pose.rotationDegrees,
+        translationObservability: this.pose.translationObservability,
+        degenerate: this.pose.degenerate,
+        relocalized: this.pose.relocalized,
+        authorityStage: this.authority.stage,
+        authorityScore: this.authority.score,
+        rejectionMask: this.authority.rejectionMask,
+        momentAllowed: this.authority.momentAllowed,
+        sealAllowed: this.authority.sealAllowed,
         confirmed: this.quality.confirmed,
         uncertain: this.quality.uncertain,
         rejected: this.quality.rejected,
         metricScale: this.quality.metricScale,
       },
-    });
+    };
+    this.evidence.push(record);
     if (this.evidence.length > 96) this.evidence.splice(0, this.evidence.length - 96);
     element("evidence-log").textContent = JSON.stringify(this.evidence, null, 2);
   }
 
   private canCommitMoment(): boolean {
-    if (!this.pose?.recovered || !this.quality || !this.receipts) return false;
-    const confirmed = confirmedGeometry(this.geometrySnapshot.surfels);
-    return this.pose.matches >= 12 && this.pose.inliers >= 10 &&
-      this.quality.tracking >= 0.2 && this.quality.parallaxDegrees >= 0.3 &&
-      this.quality.reprojectionErrorPixels <= 3 && confirmed.length >= 4 &&
-      this.receipts.pose.some((value) => value !== 0) &&
-      this.receipts.quality.some((value) => value !== 0) &&
+    return this.authority?.momentAllowed === true && this.pose?.recovered === true && !this.pose.degenerate &&
+      this.quality !== null && this.receipts !== null &&
+      confirmedGeometry(this.geometrySnapshot.surfels).length === Math.round(this.authority.confirmedSurfels) &&
+      nonzeroBytes(this.receipts.pose) && nonzeroBytes(this.receipts.quality) && nonzeroBytes(this.receipts.authority) &&
       nonzeroDigest(this.sourceCommitment);
   }
 
   private async commitMoment(): Promise<void> {
-    if (!this.canCommitMoment() || !this.pose || !this.quality || !this.receipts) {
-      throw new Error("A Moment requires recovered pose, parallax, bounded error, native receipts, and confirmed geometry");
+    if (!this.canCommitMoment() || !this.pose || !this.quality || !this.authority || !this.receipts) {
+      throw new Error("The native Keyxym v0.26 authority decision does not permit a Moment");
     }
     if (this.moments.length >= MAX_MOMENTS) throw new Error("World Cell Moment limit reached");
     const geometry = confirmedGeometry(this.geometrySnapshot.surfels);
     const parent = this.moments.at(-1)?.canonicalDigest ?? ZERO_DIGEST;
-    const pairReceipt = reconstructionReceipt(this.receipts);
     const body: Omit<MomentRecord, "canonicalDigest"> = {
-      schema: "tessaryn/world-cell-moment/v22",
+      schema: "tessaryn/world-cell-moment/v26",
       id: `moment-${String(this.moments.length).padStart(4, "0")}`,
       sequence: this.moments.length + 1,
       createdAtUnixMs: Date.now(),
@@ -653,10 +593,12 @@ class TheaterController {
       geometry: packedSurfels(geometry),
       pose: Array.from(this.pose.worldFromCamera),
       quality: { ...this.quality },
+      authority: { ...this.authority },
       sourceCommitment: this.sourceCommitment,
       poseReceipt: bytesHex(this.receipts.pose),
       qualityReceipt: bytesHex(this.receipts.quality),
-      reconstructionReceipt: pairReceipt,
+      authorityReceipt: bytesHex(this.receipts.authority),
+      reconstructionReceipt: reconstructionReceipt(this.receipts),
       runtimeCommitment: this.runtimeCommitmentValue,
       parentCommitment: parent,
       metricScale: this.quality.metricScale,
@@ -688,7 +630,7 @@ class TheaterController {
       const small = document.createElement("small");
       small.textContent = `MOMENT ${String(index).padStart(2, "0")}`;
       const strong = document.createElement("b");
-      strong.textContent = `${(moment.geometry.length / KEYXYM_V22_SURFEL_FLOATS).toLocaleString()} CONFIRMED`;
+      strong.textContent = `${(moment.geometry.length / KEYXYM_V26_SURFEL_FLOATS).toLocaleString()} CONFIRMED`;
       button.append(small, strong);
       button.onclick = () => this.showMoment(index);
       timeline.appendChild(button);
@@ -719,34 +661,29 @@ class TheaterController {
     }
     if (!this.moments.length) return;
     setText("play-button", "STOP");
-    this.playTimer = window.setInterval(() => {
-      this.showMoment((this.currentMoment + 1) % this.moments.length);
-    }, 900);
+    this.playTimer = window.setInterval(() => this.showMoment((this.currentMoment + 1) % this.moments.length), 900);
   }
 
   private worldCellDraft(): WorldCellDraft {
     return {
-      schema: "tessaryn/world-cell/v22",
-      version: 22,
-      branch: "main/world-cell-theater",
+      schema: "tessaryn/world-cell/v26",
+      version: 26,
+      branch: "main/world-cell-theater-v026",
       createdAtUnixMs: Date.now(),
       runtimeCommitment: this.runtimeCommitmentValue,
       scaleState: this.moments.every((moment) => moment.metricScale) ? "metric" : "relative",
-      moments: this.moments.map((moment) => ({
-        ...moment,
-        geometry: [...moment.geometry],
-        pose: [...moment.pose],
-        quality: { ...moment.quality },
-      })),
+      moments: this.moments.map((moment) => ({ ...moment, geometry: [...moment.geometry], pose: [...moment.pose], quality: { ...moment.quality }, authority: { ...moment.authority } })),
       evidence: this.evidence.map((item) => ({ ...item, details: { ...item.details } })),
     };
   }
 
   private async seal(): Promise<void> {
     const bridge = nativeAssuranceBridge();
-    if (!bridge) throw new Error("A verified native eform and Power House bridge is required to seal this World Cell");
-    if (!this.moments.length || !this.receipts || !this.quality) {
-      throw new Error("Commit at least one authoritative Moment before sealing");
+    if (!bridge) throw new Error("A verified eform and Power House bridge is required to seal this World Cell");
+    const latest = this.moments.at(-1);
+    if (!latest || !this.authority?.sealAllowed || !latest.authority.sealAllowed ||
+        latest.geometryRevision !== this.geometrySnapshot.revision.toString()) {
+      throw new Error("Commit a SEAL READY Moment at the current Keyxym geometry revision before sealing");
     }
     const draft = this.worldCellDraft();
     const canonicalCell = canonicalString(draft);
@@ -754,25 +691,21 @@ class TheaterController {
     const evidence = evidenceRequest({
       artifactKind: "world-cell",
       canonicalDigest,
-      reconstructionReceipt: reconstructionReceipt(this.receipts),
+      reconstructionReceipt: latest.reconstructionReceipt,
       runtimeCommitment: this.runtimeCommitmentValue,
-      parentCommitment: this.moments.at(-1)?.canonicalDigest,
+      parentCommitment: latest.canonicalDigest,
       sequence: this.moments.length,
       metricScale: draft.scaleState === "metric",
     });
     const seal = await bridge.sealWorldCell({ canonicalCell, evidence });
     validateNativeSeal(seal);
     if (!await bridge.verifyWorldCell({ canonicalCell, evidence, seal })) {
-      throw new Error("Native eform and Power House verification rejected the sealed World Cell");
+      throw new Error("eform and Power House rejected the sealed World Cell");
     }
     this.sealedCell = { ...draft, canonicalDigest, assuranceEvidence: evidence, seal };
     setText("rootprint", seal.rootprint.slice(0, 16).toUpperCase());
     setText("cell-state", `WORLD CELL / SEALED / ${draft.scaleState.toUpperCase()} / ${this.moments.length} MOMENTS`);
-    element("evidence-log").textContent = JSON.stringify({
-      runtimeEvidence: this.evidence,
-      assuranceEvidence: evidence,
-      seal,
-    }, null, 2);
+    element("evidence-log").textContent = JSON.stringify({ runtimeEvidence: this.evidence, assuranceEvidence: evidence, seal }, null, 2);
     this.updateControls();
   }
 
@@ -788,73 +721,76 @@ class TheaterController {
   private attachChannel(channel: RTCDataChannel): void {
     this.channel = channel;
     channel.binaryType = "arraybuffer";
-    channel.onopen = () => {
-      setText("channel-state", "OPEN");
-      this.updateControls();
+    channel.onopen = () => { setText("channel-state", "OPEN"); this.updateControls(); };
+    channel.onclose = () => { setText("channel-state", "CLOSED"); this.updateControls(); };
+    channel.onerror = () => setText("channel-state", "ERROR");
+    channel.onmessage = (event) => {
+      try { this.onPeerMessage(event); } catch (error) { this.fail(error); }
     };
-    channel.onclose = () => {
-      setText("channel-state", "CLOSED");
-      this.updateControls();
-    };
-    channel.onmessage = (event) => this.onPeerMessage(event);
   }
 
-  private waitForIce(peer: RTCPeerConnection): Promise<void> {
-    return new Promise((resolve) => {
-      if (peer.iceGatheringState === "complete") return resolve();
-      peer.onicegatheringstatechange = () => {
-        if (peer.iceGatheringState === "complete") resolve();
+  private async waitForIce(peer: RTCPeerConnection): Promise<void> {
+    if (peer.iceGatheringState === "complete") return;
+    await new Promise<void>((resolve) => {
+      const timeout = window.setTimeout(resolve, 4_000);
+      const listener = () => {
+        if (peer.iceGatheringState === "complete") {
+          window.clearTimeout(timeout);
+          peer.removeEventListener("icegatheringstatechange", listener);
+          resolve();
+        }
       };
+      peer.addEventListener("icegatheringstatechange", listener);
     });
+  }
+
+  private parsePairingText(): RTCSessionDescriptionInit {
+    const value = JSON.parse(element<HTMLTextAreaElement>("pairing-text").value) as RTCSessionDescriptionInit;
+    if ((value.type !== "offer" && value.type !== "answer") || typeof value.sdp !== "string" || !value.sdp) {
+      throw new Error("Pairing text is not a valid WebRTC description");
+    }
+    return value;
   }
 
   private async createOffer(): Promise<void> {
     const peer = this.setupPeer();
-    this.attachChannel(peer.createDataChannel("tessaryn-world-cell-v22", { ordered: true }));
+    this.attachChannel(peer.createDataChannel("tessaryn-world-cell", { ordered: true }));
     await peer.setLocalDescription(await peer.createOffer());
     await this.waitForIce(peer);
     element<HTMLTextAreaElement>("pairing-text").value = JSON.stringify(peer.localDescription);
-    setText("transfer-state", "Offer created. Copy it to the receiving device.");
+    setText("transfer-state", "Offer ready. Copy it to the receiving device.");
   }
 
   private async joinOffer(): Promise<void> {
-    const raw = element<HTMLTextAreaElement>("pairing-text").value.trim();
-    if (!raw) throw new Error("Paste a World Cell offer first");
+    const offer = this.parsePairingText();
+    if (offer.type !== "offer") throw new Error("Paste an offer before joining");
     const peer = this.setupPeer();
-    await peer.setRemoteDescription(JSON.parse(raw) as RTCSessionDescriptionInit);
+    await peer.setRemoteDescription(offer);
     await peer.setLocalDescription(await peer.createAnswer());
     await this.waitForIce(peer);
     element<HTMLTextAreaElement>("pairing-text").value = JSON.stringify(peer.localDescription);
-    setText("transfer-state", "Answer created. Copy it back to the sending device.");
+    setText("transfer-state", "Answer ready. Copy it back to the hosting device.");
   }
 
   private async applyAnswer(): Promise<void> {
-    if (!this.peer) throw new Error("Create an offer first");
-    const raw = element<HTMLTextAreaElement>("pairing-text").value.trim();
-    if (!raw) throw new Error("Paste the answer first");
-    await this.peer.setRemoteDescription(JSON.parse(raw) as RTCSessionDescriptionInit);
-    setText("transfer-state", "Answer applied. Waiting for the encrypted channel.");
+    const answer = this.parsePairingText();
+    if (answer.type !== "answer" || !this.peer) throw new Error("Create an offer, then paste the answer");
+    await this.peer.setRemoteDescription(answer);
+    setText("transfer-state", "Answer applied. Waiting for the verified channel.");
   }
 
   private async sendCell(): Promise<void> {
-    if (!this.sealedCell) throw new Error("Only an eform and Power House sealed World Cell can be sent");
-    if (!this.channel || this.channel.readyState !== "open") throw new Error("World Cell channel is not open");
+    if (!this.sealedCell) throw new Error("Only a sealed World Cell can be sent");
+    if (!this.channel || this.channel.readyState !== "open") throw new Error("Verified World Cell channel is not open");
     const bytes = encoder.encode(canonicalString(this.sealedCell));
-    const fullDigest = digestBytes(bytes);
-    const chunkBytes = 32 * 1024;
+    const digest = digestBytes(bytes);
+    const chunkBytes = 64 * 1024;
     const total = Math.ceil(bytes.byteLength / chunkBytes);
-    this.channel.send(JSON.stringify({
-      type: "manifest",
-      schema: "tessaryn/world-cell-transfer/v22",
-      digest: fullDigest,
-      bytes: bytes.byteLength,
-      chunks: total,
-    }));
+    this.channel.send(JSON.stringify({ type: "manifest", schema: "tessaryn/world-cell-transfer/v26", digest, bytes: bytes.byteLength, chunks: total }));
     for (let index = 0; index < total; index += 1) {
-      const part = bytes.slice(index * chunkBytes, (index + 1) * chunkBytes);
-      this.channel.send(part);
+      while (this.channel.bufferedAmount > 4 * 1024 * 1024) await new Promise((resolve) => window.setTimeout(resolve, 12));
+      this.channel.send(bytes.slice(index * chunkBytes, (index + 1) * chunkBytes));
       setWidth("transfer-meter", ((index + 1) / total) * 100);
-      await new Promise((resolve) => window.setTimeout(resolve, 4));
     }
     this.channel.send(JSON.stringify({ type: "complete" }));
     setText("transfer-state", `Sent ${bytes.byteLength.toLocaleString()} sealed bytes.`);
@@ -866,22 +802,20 @@ class TheaterController {
       if (message.type === "manifest") {
         const bytes = Number(message.bytes);
         const digest = String(message.digest ?? "");
-        if (!Number.isSafeInteger(bytes) || bytes <= 0 || bytes > 128 * 1024 * 1024 ||
-            !/^[0-9a-f]{64}$/.test(digest)) {
-          throw new Error("Incoming World Cell manifest is invalid");
+        if (message.schema !== "tessaryn/world-cell-transfer/v26" || !Number.isSafeInteger(bytes) ||
+            bytes <= 0 || bytes > 128 * 1024 * 1024 || !/^[0-9a-f]{64}$/.test(digest)) {
+          throw new Error("Incoming v0.26 World Cell manifest is invalid");
         }
         this.pendingChunks = [];
         this.expectedBytes = bytes;
         this.expectedDigest = digest;
         setText("transfer-state", `Receiving ${bytes.toLocaleString()} sealed bytes…`);
       } else if (message.type === "complete") {
-        void this.finalizeReceive().catch((error: unknown) => this.fail(error));
+        void this.finalizeReceive().catch((error) => this.fail(error));
       }
       return;
     }
-    const bytes = event.data instanceof ArrayBuffer
-      ? new Uint8Array(event.data)
-      : new Uint8Array(event.data as ArrayBufferLike);
+    const bytes = event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : new Uint8Array(event.data as ArrayBufferLike);
     this.pendingChunks.push(bytes);
     const received = this.pendingChunks.reduce((total, chunk) => total + chunk.byteLength, 0);
     setWidth("transfer-meter", this.expectedBytes ? received / this.expectedBytes * 100 : 0);
@@ -892,13 +826,8 @@ class TheaterController {
     if (received !== this.expectedBytes) throw new Error("Incoming World Cell byte count is incomplete");
     const bytes = new Uint8Array(received);
     let offset = 0;
-    for (const chunk of this.pendingChunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    if (digestBytes(bytes) !== this.expectedDigest) {
-      throw new Error("Incoming World Cell canonical digest mismatch");
-    }
+    for (const chunk of this.pendingChunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    if (digestBytes(bytes) !== this.expectedDigest) throw new Error("Incoming World Cell transport digest mismatch");
     const cell = JSON.parse(decoder.decode(bytes)) as SealedWorldCell;
     await this.verifyReceivedCell(cell);
     this.sealedCell = cell;
@@ -913,60 +842,53 @@ class TheaterController {
   }
 
   private async verifyReceivedCell(cell: SealedWorldCell): Promise<void> {
-    if (cell.schema !== "tessaryn/world-cell/v22" || cell.version !== 22 ||
-        !Array.isArray(cell.moments) || !cell.moments.length ||
-        !nonzeroDigest(cell.runtimeCommitment)) {
-      throw new Error("Incoming World Cell schema is invalid");
+    if (cell.schema !== "tessaryn/world-cell/v26" || cell.version !== 26 ||
+        cell.branch !== "main/world-cell-theater-v026" || !Array.isArray(cell.moments) ||
+        !cell.moments.length || !nonzeroDigest(cell.runtimeCommitment)) {
+      throw new Error("Incoming v0.26 World Cell schema is invalid");
     }
     let parent = ZERO_DIGEST;
-    for (const moment of cell.moments) {
-      validateMoment(moment, parent);
-      parent = moment.canonicalDigest;
-    }
+    for (const moment of cell.moments) { validateMoment(moment, parent); parent = moment.canonicalDigest; }
+    const latest = cell.moments.at(-1)!;
+    if (!latest.authority.sealAllowed) throw new Error("Incoming Cell was not committed from a SEAL READY authority decision");
     const draft: WorldCellDraft = {
-      schema: cell.schema,
-      version: cell.version,
-      branch: cell.branch,
-      createdAtUnixMs: cell.createdAtUnixMs,
-      runtimeCommitment: cell.runtimeCommitment,
-      scaleState: cell.scaleState,
-      moments: cell.moments,
-      evidence: cell.evidence,
+      schema: cell.schema, version: cell.version, branch: cell.branch,
+      createdAtUnixMs: cell.createdAtUnixMs, runtimeCommitment: cell.runtimeCommitment,
+      scaleState: cell.scaleState, moments: cell.moments, evidence: cell.evidence,
     };
     const canonicalCell = canonicalString(draft);
     const digest = digestBytes(encoder.encode(canonicalCell));
     if (digest !== cell.canonicalDigest || cell.assuranceEvidence.canonicalDigest !== digest ||
         cell.assuranceEvidence.parentCommitment !== parent ||
-        cell.assuranceEvidence.runtimeCommitment !== cell.runtimeCommitment) {
-      throw new Error("Incoming World Cell evidence binding failed");
+        cell.assuranceEvidence.runtimeCommitment !== cell.runtimeCommitment ||
+        cell.assuranceEvidence.reconstructionReceipt !== latest.reconstructionReceipt) {
+      throw new Error("Incoming v0.26 World Cell evidence binding failed");
     }
     validateNativeSeal(cell.seal);
     const bridge = nativeAssuranceBridge();
-    if (!bridge || !await bridge.verifyWorldCell({
-      canonicalCell,
-      evidence: cell.assuranceEvidence,
-      seal: cell.seal,
-    })) {
-      throw new Error("Incoming World Cell requires native eform and Power House verification");
+    if (!bridge || !await bridge.verifyWorldCell({ canonicalCell, evidence: cell.assuranceEvidence, seal: cell.seal })) {
+      throw new Error("Incoming World Cell requires eform and Power House verification");
     }
   }
 
   private updateControls(): void {
     element<HTMLButtonElement>("capture-button").disabled = !this.running || !this.canCommitMoment();
     const bridge = nativeAssuranceBridge();
+    const latest = this.moments.at(-1);
+    const sealReady = this.authority?.sealAllowed === true && latest?.authority.sealAllowed === true &&
+      latest.geometryRevision === this.geometrySnapshot.revision.toString();
     const sealButton = element<HTMLButtonElement>("seal-button");
-    sealButton.disabled = !this.moments.length || bridge === null;
-    sealButton.textContent = bridge ? "SEAL CELL" : "EFORM REQUIRED";
-    element<HTMLButtonElement>("send-button").disabled = !this.sealedCell ||
-      !this.channel || this.channel.readyState !== "open";
+    sealButton.disabled = !sealReady || bridge === null;
+    sealButton.textContent = bridge ? (sealReady ? "SEAL CELL" : "SEAL GATE") : "EFORM REQUIRED";
+    element<HTMLButtonElement>("send-button").disabled = !this.sealedCell || !this.channel || this.channel.readyState !== "open";
   }
 
   private freezeOnTrackingFailure(error: unknown): void {
     const reason = error instanceof Error ? error.message : String(error);
-    setText("pose-state", "TRACKING LOST");
+    setText("pose-state", "TRACKING FROZEN");
     setText("capture-state", "FROZEN");
     setText("cell-state", "WORLD CELL / AUTHORITY FROZEN");
-    this.setStageMessage("TRACKING FROZEN", `${reason}. Move back to a textured, previously observed view.`, true);
+    this.setStageMessage("TRACKING FROZEN", `${reason}. Authoritative geometry was not advanced.`, true);
     this.updateControls();
   }
 
@@ -978,28 +900,20 @@ class TheaterController {
     if (body) body.textContent = detail;
     message.style.display = visible ? "" : "none";
   }
-
-  private hideStageMessage(): void {
-    element("stage-message").style.display = "none";
-  }
-
+  private hideStageMessage(): void { element("stage-message").style.display = "none"; }
   private fail(error: unknown): void {
-    const reason = error instanceof Error ? error.message : String(error);
-    this.setStageMessage("WORLD CELL OPERATION REJECTED", reason, true);
-    console.error("World Cell Theater", error);
+    this.setStageMessage("WORLD CELL OPERATION REJECTED", error instanceof Error ? error.message : String(error), true);
+    console.error("World Cell Theater v0.26", error);
   }
-
   private sensorError(error: unknown): void {
     element("sensor-log").textContent = error instanceof Error ? error.message : String(error);
   }
 
   private recordReferenceRequest(): void {
     const value = Number(element<HTMLInputElement>("scale-input").value);
-    if (!Number.isFinite(value) || value < 0.01 || value > 20) {
-      throw new Error("Reference length must be between 0.01 and 20 meters");
-    }
+    if (!Number.isFinite(value) || value < 0.01 || value > 20) throw new Error("Reference length must be between 0.01 and 20 meters");
     this.requestedReferenceMeters = value;
-    setText("sensor-detail", `Reference request recorded: ${value.toFixed(3)} m. Metric scale remains disabled until a verified sensor or measured spatial correspondence supplies scale evidence.`);
+    setText("sensor-detail", `Reference request recorded: ${value.toFixed(3)} m. Metric status remains disabled until a verified sensor adapter binds that scale to this capture.`);
     element<HTMLDialogElement>("calibration-dialog").close();
   }
 
@@ -1016,39 +930,30 @@ class TheaterController {
   }
 
   private async connectSerial(): Promise<void> {
-    const navigatorWithSerial = navigator as Navigator & {
-      serial?: { requestPort(): Promise<{ open(options: { baudRate: number }): Promise<void>; getInfo(): unknown }> };
-    };
-    if (!navigatorWithSerial.serial) throw new Error("WebSerial is unavailable");
-    const port = await navigatorWithSerial.serial.requestPort();
+    const serial = (navigator as Navigator & { serial?: { requestPort(): Promise<{ open(input: { baudRate: number }): Promise<void>; getInfo(): unknown }> } }).serial;
+    if (!serial) throw new Error("WebSerial is unavailable");
+    const port = await serial.requestPort();
     await port.open({ baudRate: 921_600 });
-    element("sensor-log").textContent = `Serial transport connected: ${JSON.stringify(port.getInfo())}. Metric status requires a verified Tessaryn sensor adapter receipt.`;
+    element("sensor-log").textContent = `Serial transport connected: ${JSON.stringify(port.getInfo())}. Metric authority requires a verified scale receipt.`;
     await this.refreshMetricCalibration();
   }
 
   private async connectUsb(): Promise<void> {
-    const navigatorWithUsb = navigator as Navigator & {
-      usb?: { requestDevice(options: { filters: Array<Record<string, number>> }): Promise<{
-        open(): Promise<void>;
-        productName?: string;
-        vendorId: number;
-        productId: number;
-      }> };
-    };
-    if (!navigatorWithUsb.usb) throw new Error("WebUSB is unavailable");
-    const device = await navigatorWithUsb.usb.requestDevice({ filters: [] });
+    const usb = (navigator as Navigator & { usb?: { requestDevice(input: { filters: Array<Record<string, number>> }): Promise<{ open(): Promise<void>; productName?: string; vendorId: number; productId: number }> } }).usb;
+    if (!usb) throw new Error("WebUSB is unavailable");
+    const device = await usb.requestDevice({ filters: [] });
     await device.open();
-    element("sensor-log").textContent = `USB transport connected: ${device.productName ?? "spatial sensor"} (${device.vendorId}:${device.productId}). Metric status requires a verified adapter receipt.`;
+    element("sensor-log").textContent = `USB transport connected: ${device.productName ?? "spatial sensor"} (${device.vendorId}:${device.productId}).`;
     await this.refreshMetricCalibration();
   }
 
   private async probeXr(): Promise<void> {
-    const xr = (navigator as Navigator & { xr?: XRSystem }).xr;
+    const xr = (navigator as Navigator & { xr?: { isSessionSupported(mode: string): Promise<boolean> } }).xr;
     if (!xr || !await xr.isSessionSupported("immersive-ar")) {
-      element("sensor-log").textContent = "WebXR immersive AR/depth is not exposed by this browser.";
+      element("sensor-log").textContent = "WebXR immersive AR/depth is unavailable.";
       return;
     }
-    element("sensor-log").textContent = "WebXR immersive AR is available. Metric status activates only when the installed host exposes a verified depth calibration receipt.";
+    element("sensor-log").textContent = "WebXR immersive AR is available. Metric authority still requires a verified calibration receipt.";
     await this.refreshMetricCalibration();
   }
 
@@ -1057,41 +962,31 @@ class TheaterController {
     if (this.playTimer) window.clearInterval(this.playTimer);
     this.playTimer = 0;
     this.runtime?.destroy();
-    this.runtime = await KeyxymV22Runtime.load({
-      branch: "main/world-cell-theater",
-      maximumAnalysisWidth: this.manifest.maximum_analysis_width,
-      maximumAnalysisHeight: this.manifest.maximum_analysis_height,
-      maximumTracks: this.manifest.maximum_tracks,
-      maximumFormingSamples: this.manifest.maximum_preview_samples,
-    });
+    this.runtime = await KeyxymV26TheaterRuntime.load(this.manifest);
     this.frameNumber = 0;
     this.lastTimestampNs = 0n;
-    this.geometryRevision = -1n;
-    this.formingSamples = [];
+    this.analysisIntervalMs = 50;
     this.geometrySnapshot = { revision: 0n, surfels: [] };
-    this.pose = null;
-    this.quality = null;
-    this.receipts = null;
+    this.pose = null; this.quality = null; this.authority = null; this.receipts = null;
     this.sourceCommitment = ZERO_DIGEST;
+    this.formingSamples = [];
     this.moments = [];
     this.evidence = [];
     this.sealedCell = null;
     this.currentMoment = 0;
+    this.hadRecoveredPose = false;
     setPointGeometry(this.formingGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
     setPointGeometry(this.authorityGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
-    setText("surfel-count", "0");
-    setText("frame-count", "0");
-    setText("pose-state", "ORIGIN");
-    setText("rootprint", "UNSEALED");
-    setText("cell-state", "WORLD CELL / READY / RELATIVE");
+    setText("surfel-count", "0"); setText("frame-count", "0"); setText("pose-state", "KEYXYM READY");
+    setText("rootprint", "UNSEALED"); setText("cell-state", "WORLD CELL / READY / RELATIVE");
     element("evidence-log").textContent = "No evidence recorded.";
     this.updateTimeline();
     this.updateControls();
-    this.setStageMessage("REALITY FORMATION READY", "Start the camera and move slowly to build multi-view evidence.", true);
+    this.setStageMessage("REALITY FORMATION READY", "Start the camera and move slowly to build calibrated multi-view evidence.", true);
   }
 }
 
-export async function installWorldCellTheater(manifest: KeyxymProvenanceManifest): Promise<void> {
+export async function installWorldCellTheater(manifest: KeyxymV26Manifest): Promise<void> {
   const controller = new TheaterController(manifest);
   await controller.initialize();
 }

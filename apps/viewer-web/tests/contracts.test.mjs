@@ -17,6 +17,7 @@ const localWorkerUrl = new URL("../src/local-ingest-worker.ts", import.meta.url)
 const cinematicObjectUrl = new URL("../src/cinematic-object.ts", import.meta.url);
 const sourceGeometryUrl = new URL("../src/source-geometry.ts", import.meta.url);
 const weaveClientUrl = new URL("../src/weave-client.ts", import.meta.url);
+const worldCellGuidanceUrl = new URL("../src/world-cell-guidance.ts", import.meta.url);
 
 test("the bounded Origin declares its local verification profile", async () => {
   const world = JSON.parse(await readFile(fixtureUrl, "utf8"));
@@ -79,29 +80,44 @@ test("the viewer has no remote script or map substrate dependency", async () => 
   assert.match(html, /\.GLB \.GLTF \.OBJ \.PLY \.STL/u);
 });
 
-test("the offline cache includes local worlds and verified authority runtimes", async () => {
+test("the offline cache installs one release and never serves authority bytes cache-first", async () => {
   const worker = await readFile(workerUrl, "utf8");
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v22-exact";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r2";`),
   );
   for (const asset of [
     "./world/archviz-tiny-house-locus.json",
     "./world/vesper-court.json",
     "./objects/catalog.json",
     "./weave.json",
-    "./keyxym/manifest.json",
-    "./keyxym/keyxym-v22.mjs",
-    "./keyxym/keyxym-v22.wasm",
+    "./keyxym-v26/manifest.json",
+    "./keyxym-v26/keyxym-v26.mjs",
+    "./keyxym-v26/keyxym-v26.wasm",
     "./assurance/manifest.json",
     "./assurance/tessaryn-browser-assurance-v1.wasm",
   ]) {
     assert.ok(worker.includes(`"${asset}"`), `offline cache omits ${asset}`);
   }
-  assert.doesNotMatch(worker, /build-closure\.json/);
+  assert.doesNotMatch(worker, /keyxym\/keyxym-v22|build-closure\.json/);
+  assert.match(worker, /AUTHORITY_PREFIXES/);
+  assert.match(worker, /isAuthorityRequest\(url\)/);
+  assert.match(worker, /cache: "no-store"/);
+  assert.match(worker, /populateReleaseCache/);
+  assert.match(worker, /await caches\.delete\(CACHE\)/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
+});
+
+test("World Cell guidance translates native authority rejection flags into scan instructions", async () => {
+  const guidance = await readFile(worldCellGuidanceUrl, "utf8");
+  assert.match(guidance, /data-authority-rejection-mask/);
+  assert.match(guidance, /CREATE 3D PARALLAX/);
+  assert.match(guidance, /textured objects at different depths/);
+  assert.match(guidance, /avoid flat walls, digital screens, blur, and repeating patterns/);
+  assert.match(guidance, /AUTHORITY RECEIPT REJECTED/);
+  assert.doesNotMatch(guidance, /momentAllowed\s*=|sealAllowed\s*=/);
 });
 
 test("publication is product-native, resumable, signed, and device-persistent", async () => {
