@@ -84,7 +84,7 @@ test("the offline cache includes local worlds and verified authority runtimes", 
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v22";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v22-exact";`),
   );
   for (const asset of [
     "./world/archviz-tiny-house-locus.json",
@@ -92,7 +92,6 @@ test("the offline cache includes local worlds and verified authority runtimes", 
     "./objects/catalog.json",
     "./weave.json",
     "./keyxym/manifest.json",
-    "./keyxym/build-closure.json",
     "./keyxym/keyxym-v22.mjs",
     "./keyxym/keyxym-v22.wasm",
     "./assurance/manifest.json",
@@ -100,6 +99,7 @@ test("the offline cache includes local worlds and verified authority runtimes", 
   ]) {
     assert.ok(worker.includes(`"${asset}"`), `offline cache omits ${asset}`);
   }
+  assert.doesNotMatch(worker, /build-closure\.json/);
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
 });
