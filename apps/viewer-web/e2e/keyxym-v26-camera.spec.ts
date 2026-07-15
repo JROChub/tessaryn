@@ -9,12 +9,21 @@ test("synthetic camera frames reach the v0.26 worker and form authoritative geom
   });
 
   await page.addInitScript(() => {
+    type GeneratedTrack = MediaStreamTrack & { writable: WritableStream<VideoFrame> };
+    type GeneratorConstructor = new (options: { kind: "video" }) => GeneratedTrack;
+    const Generator = (globalThis as typeof globalThis & {
+      MediaStreamTrackGenerator?: GeneratorConstructor;
+    }).MediaStreamTrackGenerator;
+    if (!Generator) throw new Error("MediaStreamTrackGenerator is unavailable");
+
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 480;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("synthetic camera canvas unavailable");
     const shifts = [0, 8, 16, 24, 32, 40];
+    const track = new Generator({ kind: "video" });
+    const stream = new MediaStream([track]);
     let sequenceStarted = false;
 
     const draw = (shift: number) => {
@@ -35,23 +44,40 @@ test("synthetic camera frames reach the v0.26 worker and form authoritative geom
       context.putImageData(image, 0, 0);
     };
 
-    draw(shifts[0]!);
-    const stream = canvas.captureStream(30);
+    const sendSequence = async () => {
+      const writer = track.writable.getWriter();
+      try {
+        for (let index = 0; index < shifts.length; index += 1) {
+          draw(shifts[index]!);
+          const frame = new VideoFrame(canvas, {
+            timestamp: (index + 1) * 180_000,
+            duration: 180_000,
+          });
+          await writer.write(frame);
+          frame.close();
+          await new Promise((resolve) => window.setTimeout(resolve, 180));
+        }
+        for (let index = 0; index < 30; index += 1) {
+          const frame = new VideoFrame(canvas, {
+            timestamp: (shifts.length + index + 1) * 180_000,
+            duration: 180_000,
+          });
+          await writer.write(frame);
+          frame.close();
+          await new Promise((resolve) => window.setTimeout(resolve, 180));
+        }
+      } finally {
+        writer.releaseLock();
+      }
+    };
+
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
       value: {
         getUserMedia: async () => {
           if (!sequenceStarted) {
             sequenceStarted = true;
-            let index = 0;
-            const timer = window.setInterval(() => {
-              index += 1;
-              if (index >= shifts.length) {
-                window.clearInterval(timer);
-                return;
-              }
-              draw(shifts[index]!);
-            }, 180);
+            void sendSequence();
           }
           return stream;
         },
