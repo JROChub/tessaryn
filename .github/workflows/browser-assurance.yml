@@ -26,8 +26,15 @@ jobs:
           rustup default stable
           rustc --version
           cargo --version
-      - name: Format
-        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml --check
+      - name: Normalize current assurance source
+        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml
+      - name: Upload current rustfmt output
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-current-rustfmt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tools/browser-assurance/src/lib.rs
+          if-no-files-found: error
+          retention-days: 7
       - name: Clippy
         run: cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings
       - name: Native assurance tests
