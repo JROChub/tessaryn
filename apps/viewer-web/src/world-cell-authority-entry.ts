@@ -39,7 +39,7 @@ async function installAssurance(): Promise<void> {
 try {
   const manifest = await verifyKeyxymV26Bundle();
   await installAssurance();
-  const { installWorldCellTheater } = await import("./world-cell-theater");
+  const { installWorldCellTheater } = await import("./world-cell-theater-v26");
   await installWorldCellTheater(manifest);
   document.documentElement.dataset.keyxymAuthority = "verified";
   document.documentElement.dataset.keyxymSource = manifest.source_commit;
