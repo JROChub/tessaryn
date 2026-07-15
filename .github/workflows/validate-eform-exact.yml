@@ -35,9 +35,16 @@ jobs:
       - name: Resolve pinned Power House dependency
         working-directory: validation/eform
         run: cargo generate-lockfile
-      - name: Format
-        working-directory: validation/eform
-        run: cargo fmt --check
+      - name: Normalize temporary validation copy and record rustfmt patch
+        run: |
+          set -euo pipefail
+          cargo fmt --manifest-path validation/eform/Cargo.toml --all
+          git diff -- validation/eform | tee /tmp/eform-rustfmt.patch
+          if test -s /tmp/eform-rustfmt.patch; then
+            printf 'EFORM_FORMAT_DIRTY=1\n' >> "$GITHUB_ENV"
+          else
+            printf 'EFORM_FORMAT_DIRTY=0\n' >> "$GITHUB_ENV"
+          fi
       - name: Clippy
         working-directory: validation/eform
         run: cargo clippy --all-targets --locked -- -D warnings
@@ -60,3 +67,10 @@ jobs:
         run: |
           cargo build --release --locked
           cargo run --release --locked -- self-test
+      - name: Require clean private source formatting
+        if: always()
+        run: |
+          if test "${EFORM_FORMAT_DIRTY:-1}" != 0; then
+            cat /tmp/eform-rustfmt.patch
+            exit 1
+          fi
