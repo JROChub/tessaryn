@@ -2,6 +2,7 @@ export const KEYXYM_V22_POSE_FLOATS = 22;
 export const KEYXYM_V22_FORMING_FLOATS = 10;
 export const KEYXYM_V22_SURFEL_FLOATS = 13;
 export const KEYXYM_V22_QUALITY_FLOATS = 8;
+export const KEYXYM_V22_RECEIPT_BYTES = 64;
 export const KEYXYM_V22_MAXIMUM_SURFELS = 48_000;
 export const KEYXYM_V22_MAXIMUM_FORMING_SAMPLES = 8_192;
 
@@ -68,6 +69,11 @@ export interface KeyxymQuality {
   metricScale: boolean;
 }
 
+export interface KeyxymReceipts {
+  pose: Uint8Array;
+  quality: Uint8Array;
+}
+
 type EmscriptenModule = {
   HEAPU8: Uint8Array;
   HEAPF32: Float32Array;
@@ -85,6 +91,12 @@ type EmscriptenModule = {
   ): number;
   _keyxym_v22_browser_session_destroy(session: number): void;
   _keyxym_v22_browser_ingest_rgba_packed(...args: Array<number | bigint>): number;
+  _keyxym_v22_browser_copy_receipts(
+    session: number,
+    output: number,
+    capacity: number,
+    required: number,
+  ): number;
   _keyxym_v22_browser_copy_preview_packed(
     session: number,
     output: number,
@@ -191,6 +203,7 @@ export class KeyxymV22Runtime {
       "_keyxym_v22_browser_session_create",
       "_keyxym_v22_browser_session_destroy",
       "_keyxym_v22_browser_ingest_rgba_packed",
+      "_keyxym_v22_browser_copy_receipts",
       "_keyxym_v22_browser_copy_preview_packed",
       "_keyxym_v22_browser_geometry_revision",
       "_keyxym_v22_browser_copy_geometry_snapshot_packed",
@@ -270,6 +283,27 @@ export class KeyxymV22Runtime {
       this.module._free(rgba);
       this.module._free(commitment);
       this.module._free(pose);
+    }
+  }
+
+  receipts(): KeyxymReceipts {
+    this.assertAlive();
+    const output = this.module._malloc(KEYXYM_V22_RECEIPT_BYTES);
+    const required = this.module._malloc(4);
+    try {
+      const status = this.module._keyxym_v22_browser_copy_receipts(
+        this.session, output, KEYXYM_V22_RECEIPT_BYTES, required,
+      );
+      if (status !== OK) throw new Error(`Keyxym receipt copy failed (${status})`);
+      const returned = new DataView(this.module.HEAPU8.buffer).getUint32(required, true);
+      if (returned !== KEYXYM_V22_RECEIPT_BYTES) {
+        throw new Error("Keyxym returned a malformed receipt record");
+      }
+      const bytes = this.module.HEAPU8.slice(output, output + KEYXYM_V22_RECEIPT_BYTES);
+      return { pose: bytes.slice(0, 32), quality: bytes.slice(32, 64) };
+    } finally {
+      this.module._free(output);
+      this.module._free(required);
     }
   }
 
