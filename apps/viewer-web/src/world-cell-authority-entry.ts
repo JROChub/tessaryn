@@ -1,5 +1,6 @@
 import { installBrowserAssuranceBridge } from "./browser-assurance-runtime";
 import { verifyKeyxymV26Bundle } from "./keyxym-v26-provenance";
+import { installWorldCellGuidance } from "./world-cell-guidance";
 
 function rejectAuthority(error: unknown): void {
   const reason = error instanceof Error ? error.message : String(error);
@@ -41,6 +42,7 @@ try {
   await installAssurance();
   const { installWorldCellTheater } = await import("./world-cell-theater-v26");
   await installWorldCellTheater(manifest);
+  installWorldCellGuidance();
   document.documentElement.dataset.keyxymAuthority = "verified";
   document.documentElement.dataset.keyxymSource = manifest.source_commit;
   document.documentElement.dataset.keyxymAbi = manifest.abi;
