@@ -1,5 +1,5 @@
 // World Cell Theater route extends the stable TESSARYN offline contract.
-const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r3";
+const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r4";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
@@ -25,6 +25,11 @@ const RELEASE_ATTESTATION_PATH = new URL("./release.json", self.registration.sco
 
 function isAuthorityRequest(url) {
   return AUTHORITY_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+}
+
+function isImmutableAuthorityRequest(url) {
+  return isAuthorityRequest(url) && url.searchParams.has("source") &&
+    (url.searchParams.has("sha256") || url.searchParams.has("contract"));
 }
 
 async function populateReleaseCache() {
@@ -65,6 +70,24 @@ async function networkFirst(request, fallbackPath = null) {
   }
 }
 
+async function immutableAuthority(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(new Request(request, { cache: "no-store" }));
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    return new Response("TESSARYN immutable authority artifact is unavailable", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     await populateReleaseCache();
@@ -88,10 +111,14 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(Response.redirect(new URL("./", self.location.href), 302));
     return;
   }
+  if (isImmutableAuthorityRequest(url)) {
+    event.respondWith(immutableAuthority(event.request));
+    return;
+  }
   if (isAuthorityRequest(url) || url.pathname === RELEASE_ATTESTATION_PATH) {
-    // Provenance manifests, executable authority bytes, and release evidence must
-    // never be satisfied cache-first: a stale/new mixture is rejected rather
-    // than silently executed or reported as the active deployment.
+    // Mutable manifests, unversioned authority paths, and release evidence are
+    // always refreshed. Executable bytes used by the runtime are requested
+    // separately with source-and-digest cache keys above.
     event.respondWith(networkFirst(event.request));
     return;
   }
