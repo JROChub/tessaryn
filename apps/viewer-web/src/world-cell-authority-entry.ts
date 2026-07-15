@@ -36,6 +36,28 @@ async function installAssurance(): Promise<void> {
   }
 }
 
+function installAuthorityReadyInvariant(): void {
+  const pose = document.getElementById("pose-state");
+  const cell = document.getElementById("cell-state");
+  if (!pose || !cell) throw new Error("World Cell authority state elements are missing");
+
+  const reconcile = (): void => {
+    if (document.documentElement.dataset.keyxymAuthority !== "verified") return;
+    const poseState = pose.textContent?.trim();
+    const cellState = cell.textContent?.trim() ?? "";
+    if ((poseState === "AUTHORITY OFFLINE" || poseState === "ORIGIN") &&
+        cellState.includes("READY")) {
+      pose.textContent = "KEYXYM READY";
+    }
+  };
+
+  const observer = new MutationObserver(reconcile);
+  observer.observe(pose, { childList: true, characterData: true, subtree: true });
+  observer.observe(cell, { childList: true, characterData: true, subtree: true });
+  window.addEventListener("beforeunload", () => observer.disconnect(), { once: true });
+  reconcile();
+}
+
 try {
   const manifest = await verifyKeyxymV22Bundle();
   await installAssurance();
@@ -44,6 +66,7 @@ try {
   document.documentElement.dataset.keyxymAuthority = "verified";
   document.documentElement.dataset.keyxymSource = manifest.source_commit;
   document.documentElement.dataset.keyxymAbi = manifest.abi;
+  installAuthorityReadyInvariant();
   const start = document.getElementById("start-button");
   if (start instanceof HTMLButtonElement) start.disabled = false;
 } catch (error) {
