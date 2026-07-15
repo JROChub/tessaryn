@@ -1,0 +1,119 @@
+name: Live v0.22 Origin probe
+
+on:
+  push:
+    branches:
+      - agent/world-cell-consensus-theater
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-origin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Verify deployed artifact bytes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tessaryn-live
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/world-cell-theater.html \
+            --output /tmp/tessaryn-live/world-cell-theater.html
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/keyxym/manifest.json \
+            --output /tmp/tessaryn-live/keyxym-manifest.json
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/keyxym/build-closure.json \
+            --output /tmp/tessaryn-live/build-closure.json
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/keyxym/keyxym-v22.mjs \
+            --output /tmp/tessaryn-live/keyxym-v22.mjs
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/keyxym/keyxym-v22.wasm \
+            --output /tmp/tessaryn-live/keyxym-v22.wasm
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/assurance/manifest.json \
+            --output /tmp/tessaryn-live/assurance-manifest.json
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://tessaryn.com/assurance/tessaryn-browser-assurance-v1.wasm \
+            --output /tmp/tessaryn-live/tessaryn-browser-assurance-v1.wasm
+          echo 'e9867b1979eeb9dc5109c3882b5c10d2bb81d23faa38fcfd6b6bd18c707035d4  /tmp/tessaryn-live/keyxym-v22.mjs' | sha256sum -c -
+          echo '3e2464e6be15a335d90c57c34d3066d5c265460eb9fe4166c5ed3f879f1c5f11  /tmp/tessaryn-live/keyxym-v22.wasm' | sha256sum -c -
+          echo 'fb73f660feb2d03c4aa102a90380f5ea688d85a1ea7532a1c84f9d0be1324a23  /tmp/tessaryn-live/build-closure.json' | sha256sum -c -
+          echo '74308022cd03f93ba5e73077f8a725c844cb1945290e5c8cd4a4f7ee99a8516b  /tmp/tessaryn-live/tessaryn-browser-assurance-v1.wasm' | sha256sum -c -
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const keyxym = JSON.parse(await readFile('/tmp/tessaryn-live/keyxym-manifest.json', 'utf8'));
+          if (keyxym.schema !== 'keyxym.browser-runtime-provenance/v4' ||
+              keyxym.abi !== 'keyxym-v22-browser-dual-field-4' ||
+              keyxym.source_commit !== '700cb523ef9c1fb37733ffd1b1cbe0227be420c3' ||
+              keyxym.source_exact !== false) {
+            throw new Error(`unexpected live Keyxym manifest ${JSON.stringify(keyxym)}`);
+          }
+          const assurance = JSON.parse(await readFile('/tmp/tessaryn-live/assurance-manifest.json', 'utf8'));
+          if (assurance.schema !== 'tessaryn.browser-assurance-provenance/v1' ||
+              assurance.profile !== 'eform/world-cell-assurance/v1' ||
+              assurance.source_commit !== 'ecfa0f6584f8890afd4a3a44b4aa972b2768a62e') {
+            throw new Error(`unexpected live assurance manifest ${JSON.stringify(assurance)}`);
+          }
+          NODE
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/viewer-web/package-lock.json
+      - run: npm ci
+        working-directory: apps/viewer-web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/viewer-web
+      - name: Exercise deployed Theater in Chromium
+        working-directory: apps/viewer-web
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage();
+          const errors = [];
+          page.on('pageerror', error => errors.push(error.message));
+          page.on('console', message => {
+            if (message.type() === 'error') errors.push(message.text());
+          });
+          await page.goto('https://tessaryn.com/world-cell-theater.html', { waitUntil: 'networkidle' });
+          await page.waitForFunction(() => document.documentElement.dataset.keyxymAuthority === 'verified');
+          const state = await page.evaluate(() => ({
+            keyxymAuthority: document.documentElement.dataset.keyxymAuthority,
+            keyxymSource: document.documentElement.dataset.keyxymSource,
+            keyxymAbi: document.documentElement.dataset.keyxymAbi,
+            assurance: document.documentElement.dataset.worldCellAssurance,
+            assuranceSource: document.documentElement.dataset.worldCellAssuranceSource,
+            controller: document.documentElement.dataset.worldCellController,
+            startDisabled: document.querySelector('#start-button')?.disabled,
+            captureDisabled: document.querySelector('#capture-button')?.disabled,
+            sealDisabled: document.querySelector('#seal-button')?.disabled,
+            sendDisabled: document.querySelector('#send-button')?.disabled,
+            backend: document.querySelector('#backend-name')?.textContent,
+            cell: document.querySelector('#cell-state')?.textContent,
+          }));
+          const expected = {
+            keyxymAuthority: 'verified',
+            keyxymSource: '700cb523ef9c1fb37733ffd1b1cbe0227be420c3',
+            keyxymAbi: 'keyxym-v22-browser-dual-field-4',
+            assurance: 'verified',
+            assuranceSource: 'ecfa0f6584f8890afd4a3a44b4aa972b2768a62e',
+            controller: 'keyxym-consensus-v1',
+            startDisabled: false,
+            captureDisabled: true,
+            sealDisabled: true,
+            sendDisabled: true,
+            backend: 'KEYXYM V0.22 / DUAL FIELD',
+            cell: 'WORLD CELL / READY / RELATIVE',
+          };
+          if (JSON.stringify(state) !== JSON.stringify(expected)) {
+            throw new Error(`live Theater state mismatch\nexpected=${JSON.stringify(expected)}\nactual=${JSON.stringify(state)}`);
+          }
+          if (errors.length) throw new Error(`live browser errors: ${JSON.stringify(errors)}`);
+          console.log(JSON.stringify(state, null, 2));
+          await browser.close();
+          NODE
