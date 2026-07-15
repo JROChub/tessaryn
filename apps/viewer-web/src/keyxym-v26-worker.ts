@@ -45,8 +45,11 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
   const height = Math.max(16, Math.floor(request.sourceHeight * scale));
   canvas.width = width;
   canvas.height = height;
-  context.drawImage(request.bitmap, 0, 0, width, height);
-  request.bitmap.close();
+  try {
+    context.drawImage(request.bitmap, 0, 0, width, height);
+  } finally {
+    request.bitmap.close();
+  }
   const image = context.getImageData(0, 0, width, height);
   const rgba = new Uint8Array(image.data.buffer.slice(0));
   const sourceCommitment = new Uint8Array(await crypto.subtle.digest("SHA-256", rgba));
@@ -99,10 +102,7 @@ scope.onmessage = (event: MessageEvent<KeyxymV26WorkerRequest>) => {
     return;
   }
   if (request.type === "frame") {
-    void processFrame(request).catch((error) => {
-      request.bitmap.close();
-      failure(error, request.id);
-    });
+    void processFrame(request).catch((error) => failure(error, request.id));
     return;
   }
   runtime?.destroy();
