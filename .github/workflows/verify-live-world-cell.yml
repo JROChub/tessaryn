@@ -76,53 +76,65 @@ jobs:
         env:
           ORIGIN: https://tessaryn.com
         run: |
-          cat > /tmp/live-world-cell-probe.mjs <<'JS'
+          cat > .live-world-cell-probe.mjs <<'JS'
           import { chromium } from '@playwright/test';
           import assert from 'node:assert/strict';
+          import { writeFile } from 'node:fs/promises';
+
+          const resultPath = '/tmp/live-world-cell/browser-result.json';
+          const screenshotPath = '/tmp/live-world-cell-production.png';
+          const result = { state: null, pageErrors: [], consoleErrors: [], failure: null };
           const browser = await chromium.launch({ headless: true });
-          const context = await browser.newContext({ serviceWorkers: 'block' });
-          const page = await context.newPage();
-          const pageErrors = [];
-          const consoleErrors = [];
-          page.on('pageerror', error => pageErrors.push(error.message));
-          page.on('console', message => {
-            if (message.type() === 'error') consoleErrors.push(message.text());
-          });
-          const response = await page.goto(`${process.env.ORIGIN}/world-cell-theater.html?production_probe=${Date.now()}`, {
-            waitUntil: 'networkidle',
-            timeout: 120_000,
-          });
-          assert(response?.ok(), `page status ${response?.status()}`);
-          await page.waitForFunction(() => document.documentElement.dataset.keyxymAuthority === 'verified', null, { timeout: 120_000 });
-          await page.waitForFunction(() => document.documentElement.dataset.worldCellAssurance === 'verified', null, { timeout: 120_000 });
-          const state = await page.evaluate(() => ({
-            authority: document.documentElement.dataset.keyxymAuthority,
-            source: document.documentElement.dataset.keyxymSource,
-            abi: document.documentElement.dataset.keyxymAbi,
-            assurance: document.documentElement.dataset.worldCellAssurance,
-            controller: document.documentElement.dataset.worldCellController,
-            startDisabled: document.querySelector('#start-button')?.disabled,
-            backend: document.querySelector('#backend-name')?.textContent,
-            pose: document.querySelector('#pose-state')?.textContent,
-          }));
-          assert.equal(state.authority, 'verified');
-          assert.equal(state.source, '700cb523ef9c1fb37733ffd1b1cbe0227be420c3');
-          assert.equal(state.abi, 'keyxym-v22-browser-dual-field-4');
-          assert.equal(state.assurance, 'verified');
-          assert.equal(state.controller, 'keyxym-consensus-v1');
-          assert.equal(state.startDisabled, false);
-          assert.match(state.backend ?? '', /KEYXYM V0\.22/);
-          assert.match(state.pose ?? '', /KEYXYM READY/);
-          assert.deepEqual(pageErrors, []);
-          assert.deepEqual(consoleErrors, []);
-          await page.screenshot({ path: '/tmp/live-world-cell-production.png', fullPage: true });
-          console.log(JSON.stringify(state, null, 2));
-          await browser.close();
+          try {
+            const context = await browser.newContext({ serviceWorkers: 'block' });
+            const page = await context.newPage();
+            page.on('pageerror', error => result.pageErrors.push(error.message));
+            page.on('console', message => {
+              if (message.type() === 'error') result.consoleErrors.push(message.text());
+            });
+            const response = await page.goto(`${process.env.ORIGIN}/world-cell-theater.html?production_probe=${Date.now()}`, {
+              waitUntil: 'networkidle',
+              timeout: 120_000,
+            });
+            assert(response?.ok(), `page status ${response?.status()}`);
+            await page.waitForFunction(() => document.documentElement.dataset.keyxymAuthority === 'verified', null, { timeout: 120_000 });
+            await page.waitForFunction(() => document.documentElement.dataset.worldCellAssurance === 'verified', null, { timeout: 120_000 });
+            result.state = await page.evaluate(() => ({
+              authority: document.documentElement.dataset.keyxymAuthority,
+              source: document.documentElement.dataset.keyxymSource,
+              abi: document.documentElement.dataset.keyxymAbi,
+              assurance: document.documentElement.dataset.worldCellAssurance,
+              controller: document.documentElement.dataset.worldCellController,
+              startDisabled: document.querySelector('#start-button')?.disabled,
+              backend: document.querySelector('#backend-name')?.textContent,
+              pose: document.querySelector('#pose-state')?.textContent,
+              cell: document.querySelector('#cell-state')?.textContent,
+              stage: document.querySelector('#stage-message')?.textContent,
+            }));
+            await page.screenshot({ path: screenshotPath, fullPage: true });
+            assert.equal(result.state.authority, 'verified');
+            assert.equal(result.state.source, '700cb523ef9c1fb37733ffd1b1cbe0227be420c3');
+            assert.equal(result.state.abi, 'keyxym-v22-browser-dual-field-4');
+            assert.equal(result.state.assurance, 'verified');
+            assert.equal(result.state.controller, 'keyxym-consensus-v1');
+            assert.equal(result.state.startDisabled, false);
+            assert.match(result.state.backend ?? '', /KEYXYM V0\.22/);
+            assert.match(result.state.pose ?? '', /KEYXYM READY/);
+            assert.deepEqual(result.pageErrors, []);
+            assert.deepEqual(result.consoleErrors, []);
+          } catch (error) {
+            result.failure = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : String(error);
+            throw error;
+          } finally {
+            await writeFile(resultPath, JSON.stringify(result, null, 2));
+            await browser.close();
+          }
+          console.log(JSON.stringify(result, null, 2));
           JS
-          node /tmp/live-world-cell-probe.mjs
+          node .live-world-cell-probe.mjs
       - name: Upload production evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: live-world-cell-production-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
