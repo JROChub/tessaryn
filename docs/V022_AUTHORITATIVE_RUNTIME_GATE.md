@@ -22,6 +22,8 @@ The runtime is built from merged Keyxym `main` commit `5187ff10dfb63d4abbfee51ab
 
 The manifest requires `source_exact=true`, the unified C++ perception ABI, and the official Emscripten 6.0.3 release package SHA-256 `3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3`. The browser verifier rejects semantic closures, missing validation lanes, substituted source commits, or extra artifact records.
 
+The retained merged-source bundle was installed by run `29413453432`, which reverified the artifact bytes and manifest, removed the obsolete `build-closure.json` sidecar, ran viewer tests and a production build, and committed only the final product assets.
+
 The installed assurance artifact is:
 
 - `tessaryn-browser-assurance-v1.wasm` — 561,270 bytes, SHA-256 `74308022cd03f93ba5e73077f8a725c844cb1945290e5c8cd4a4f7ee99a8516b`
