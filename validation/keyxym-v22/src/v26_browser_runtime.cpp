@@ -35,19 +35,32 @@ struct keyxym_v26_session {
 
 namespace {
 int map_exception() noexcept {
-    try { throw; }
-    catch (const std::invalid_argument&) { return KEYXYM_V26_INVALID_ARGUMENT; }
-    catch (...) { return KEYXYM_V26_RUNTIME_ERROR; }
+    try {
+        throw;
+    } catch (const std::invalid_argument&) {
+        return KEYXYM_V26_INVALID_ARGUMENT;
+    } catch (...) {
+        return KEYXYM_V26_RUNTIME_ERROR;
+    }
 }
 
-bool valid_frame(std::uint32_t width, std::uint32_t height,
-                 float fx, float fy, float cx, float cy, float scale,
-                 const std::uint8_t* rgba, std::size_t rgba_size,
-                 const std::uint8_t* commitment, std::size_t commitment_size) {
+bool valid_frame(std::uint32_t width,
+                 std::uint32_t height,
+                 float fx,
+                 float fy,
+                 float cx,
+                 float cy,
+                 float scale,
+                 const std::uint8_t* rgba,
+                 std::size_t rgba_size,
+                 const std::uint8_t* commitment,
+                 std::size_t commitment_size) {
     if (width < 16U || height < 16U || rgba == nullptr || commitment == nullptr ||
         commitment_size != 32U || !(fx > 0.0F) || !(fy > 0.0F) ||
         !std::isfinite(fx) || !std::isfinite(fy) || !std::isfinite(cx) ||
-        !std::isfinite(cy) || !std::isfinite(scale) || !(scale > 0.0F)) return false;
+        !std::isfinite(cy) || !std::isfinite(scale) || !(scale > 0.0F)) {
+        return false;
+    }
     const auto pixels = static_cast<std::uint64_t>(width) * height;
     return pixels <= 64ULL * 1024ULL * 1024ULL &&
            rgba_size == static_cast<std::size_t>(pixels) * 4U;
@@ -73,16 +86,20 @@ std::vector<float> pack_preview(const std::vector<keyxym::browser::PreviewSample
     std::vector<float> output;
     output.reserve(preview.size() * KEYXYM_V26_PREVIEW_FLOATS);
     for (const auto& sample : preview) {
-        output.insert(output.end(), {sample.normalized_x, sample.normalized_y,
-            sample.flow_x, sample.flow_y, sample.r, sample.g, sample.b,
-            sample.salience, sample.track_support, sample.age});
+        output.insert(output.end(), {
+            sample.normalized_x, sample.normalized_y,
+            sample.flow_x, sample.flow_y,
+            sample.r, sample.g, sample.b,
+            sample.salience, sample.track_support, sample.age,
+        });
     }
     return output;
 }
 } // namespace
 
 extern "C" {
-int keyxym_v26_session_create(const char* branch, float voxel_size_meters,
+int keyxym_v26_session_create(const char* branch,
+                              float voxel_size_meters,
                               size_t maximum_surfels,
                               uint32_t maximum_analysis_width,
                               uint32_t maximum_analysis_height,
@@ -90,7 +107,9 @@ int keyxym_v26_session_create(const char* branch, float voxel_size_meters,
                               size_t maximum_preview_samples,
                               keyxym_v26_session** out_session) {
     if (branch == nullptr || out_session == nullptr || !(voxel_size_meters > 0.0F) ||
-        maximum_surfels == 0U) return KEYXYM_V26_INVALID_ARGUMENT;
+        maximum_surfels == 0U) {
+        return KEYXYM_V26_INVALID_ARGUMENT;
+    }
     *out_session = nullptr;
     try {
         keyxym::browser::FrontendConfig config;
@@ -102,18 +121,27 @@ int keyxym_v26_session_create(const char* branch, float voxel_size_meters,
             branch, voxel_size_meters, maximum_surfels, config));
         *out_session = session.release();
         return KEYXYM_V26_OK;
-    } catch (...) { return map_exception(); }
+    } catch (...) {
+        return map_exception();
+    }
 }
 
-void keyxym_v26_session_destroy(keyxym_v26_session* session) { delete session; }
+void keyxym_v26_session_destroy(keyxym_v26_session* session) {
+    delete session;
+}
 
 int keyxym_v26_ingest_rgba_packed(keyxym_v26_session* session,
                                   int64_t timestamp_ns,
-                                  uint32_t width, uint32_t height,
-                                  float fx, float fy, float cx, float cy,
+                                  uint32_t width,
+                                  uint32_t height,
+                                  float fx,
+                                  float fy,
+                                  float cx,
+                                  float cy,
                                   float scale_meters_per_unit,
                                   uint8_t metric_scale,
-                                  const uint8_t* rgba, size_t rgba_size,
+                                  const uint8_t* rgba,
+                                  size_t rgba_size,
                                   const uint8_t* source_commitment,
                                   size_t source_commitment_size,
                                   float* pose_output,
@@ -126,8 +154,9 @@ int keyxym_v26_ingest_rgba_packed(keyxym_v26_session* session,
     }
     try {
         std::lock_guard<std::mutex> lock(session->mutex);
-        if (session->has_timestamp && timestamp_ns <= session->last_timestamp_ns)
+        if (session->has_timestamp && timestamp_ns <= session->last_timestamp_ns) {
             return KEYXYM_V26_INVALID_ARGUMENT;
+        }
         auto frontend = session->frontend.ingest({width, height, rgba, rgba_size});
         keyxym::MetricFrame frame;
         frame.timestamp = keyxym::Timestamp(std::chrono::nanoseconds(timestamp_ns));
@@ -166,11 +195,14 @@ int keyxym_v26_ingest_rgba_packed(keyxym_v26_session* session,
         session->last_timestamp_ns = timestamp_ns;
         session->has_timestamp = true;
         return KEYXYM_V26_OK;
-    } catch (...) { return map_exception(); }
+    } catch (...) {
+        return map_exception();
+    }
 }
 
 int keyxym_v26_copy_receipts(const keyxym_v26_session* session,
-                             uint8_t* output, size_t output_capacity,
+                             uint8_t* output,
+                             size_t output_capacity,
                              size_t* required_bytes) {
     if (session == nullptr || required_bytes == nullptr) return KEYXYM_V26_INVALID_ARGUMENT;
     *required_bytes = KEYXYM_V26_RECEIPT_BYTES;
@@ -184,7 +216,8 @@ int keyxym_v26_copy_receipts(const keyxym_v26_session* session,
 }
 
 int keyxym_v26_copy_preview_packed(const keyxym_v26_session* session,
-                                   float* output, size_t output_float_capacity,
+                                   float* output,
+                                   size_t output_float_capacity,
                                    size_t* required_float_count) {
     if (session == nullptr || required_float_count == nullptr) return KEYXYM_V26_INVALID_ARGUMENT;
     std::lock_guard<std::mutex> lock(session->mutex);
@@ -206,8 +239,9 @@ int keyxym_v26_copy_geometry_snapshot_packed(const keyxym_v26_session* session,
                                              size_t output_float_capacity,
                                              size_t* required_float_count,
                                              uint64_t* revision) {
-    if (session == nullptr || required_float_count == nullptr || revision == nullptr)
+    if (session == nullptr || required_float_count == nullptr || revision == nullptr) {
         return KEYXYM_V26_INVALID_ARGUMENT;
+    }
     std::lock_guard<std::mutex> lock(session->mutex);
     const auto& geometry = session->runtime.geometry();
     *required_float_count = geometry.size() * KEYXYM_V26_GEOMETRY_FLOATS;
@@ -217,10 +251,17 @@ int keyxym_v26_copy_geometry_snapshot_packed(const keyxym_v26_session* session,
     for (std::size_t index = 0; index < geometry.size(); ++index) {
         const auto& source = geometry[index];
         float* record = output + index * KEYXYM_V26_GEOMETRY_FLOATS;
-        record[0] = source.surfel.x; record[1] = source.surfel.y; record[2] = source.surfel.z;
-        record[3] = source.surfel.nx; record[4] = source.surfel.ny; record[5] = source.surfel.nz;
-        record[6] = source.surfel.r; record[7] = source.surfel.g; record[8] = source.surfel.b;
-        record[9] = source.surfel.confidence; record[10] = source.uncertainty;
+        record[0] = source.surfel.x;
+        record[1] = source.surfel.y;
+        record[2] = source.surfel.z;
+        record[3] = source.surfel.nx;
+        record[4] = source.surfel.ny;
+        record[5] = source.surfel.nz;
+        record[6] = source.surfel.r;
+        record[7] = source.surfel.g;
+        record[8] = source.surfel.b;
+        record[9] = source.surfel.confidence;
+        record[10] = source.uncertainty;
         record[11] = static_cast<float>(source.observations);
         record[12] = static_cast<float>(source.source_keyframe);
     }
@@ -228,13 +269,17 @@ int keyxym_v26_copy_geometry_snapshot_packed(const keyxym_v26_session* session,
 }
 
 int keyxym_v26_quality_packed(const keyxym_v26_session* session,
-                              float* output, size_t output_float_count) {
-    if (session == nullptr || output == nullptr || output_float_count < KEYXYM_V26_QUALITY_FLOATS)
+                              float* output,
+                              size_t output_float_count) {
+    if (session == nullptr || output == nullptr || output_float_count < KEYXYM_V26_QUALITY_FLOATS) {
         return KEYXYM_V26_INVALID_ARGUMENT;
+    }
     std::lock_guard<std::mutex> lock(session->mutex);
     const auto& quality = session->runtime.quality();
-    output[0] = quality.tracking_confidence; output[1] = quality.parallax_degrees;
-    output[2] = quality.reprojection_error_pixels; output[3] = quality.coverage;
+    output[0] = quality.tracking_confidence;
+    output[1] = quality.parallax_degrees;
+    output[2] = quality.reprojection_error_pixels;
+    output[3] = quality.coverage;
     output[4] = static_cast<float>(quality.confirmed);
     output[5] = static_cast<float>(quality.uncertain);
     output[6] = static_cast<float>(quality.rejected);
@@ -243,9 +288,11 @@ int keyxym_v26_quality_packed(const keyxym_v26_session* session,
 }
 
 int keyxym_v26_authority_packed(const keyxym_v26_session* session,
-                                float* output, size_t output_float_count) {
-    if (session == nullptr || output == nullptr || output_float_count < KEYXYM_V26_AUTHORITY_FLOATS)
+                                float* output,
+                                size_t output_float_count) {
+    if (session == nullptr || output == nullptr || output_float_count < KEYXYM_V26_AUTHORITY_FLOATS) {
         return KEYXYM_V26_INVALID_ARGUMENT;
+    }
     std::lock_guard<std::mutex> lock(session->mutex);
     const auto& authority = session->runtime.authority();
     output[0] = static_cast<float>(static_cast<std::uint32_t>(authority.stage));
