@@ -42,7 +42,7 @@ test("Theater contains no browser pose solver or invented luminance depth", asyn
   assert.doesNotMatch(source, /world-cell-theater\.ts.*world-cell-authority-entry\.ts/s);
 });
 
-test("forming field is excluded from Moments and native assurance is mandatory", async () => {
+test("forming field is excluded from Moments and assurance is mandatory", async () => {
   const source = await read("src/world-cell-theater.ts");
   assert.match(source, /geometry: packedSurfels\(geometry\)/);
   assert.match(source, /const geometry = confirmedGeometry\(this\.geometrySnapshot\.surfels\)/);
@@ -66,14 +66,35 @@ test("assurance evidence binds native Keyxym receipt pair and runtime provenance
   assert.match(source, /replayFingerprint/);
 });
 
-test("provenance contract pins the complete dual-field artifact set", async () => {
+test("provenance contract pins the complete audited dual-field artifact set", async () => {
   const source = await read("src/keyxym-v22-provenance.ts");
   assert.match(source, /keyxym\.browser-runtime-provenance\/v4/);
   assert.match(source, /keyxym-v22-browser-dual-field-4/);
-  assert.match(source, /keyxym-standalone-frontend-v1/);
-  assert.match(source, /"keyxym-frontend-v1\.wasm"/);
+  assert.match(source, /keyxym-v22-browser-frontend-cpp-v1/);
+  assert.match(source, /independent-audited-semantic-closure/);
+  assert.match(source, /source_exact: false/);
+  assert.match(source, /keyxym\.browser-build-closure\/v1/);
+  assert.match(source, /build-closure\.json/);
+  assert.match(source, /APPROVED_CLOSURE_DIGEST/);
+  assert.match(source, /APPROVED_TOOLCHAIN_PACKAGE/);
   assert.match(source, /receipt_bytes: 64/);
-  assert.match(source, /await WebAssembly\.compile\(frontendBytes\)/);
+  assert.match(source, /native and WebAssembly pose\/quality receipts matched byte-for-byte/);
+  assert.match(source, /native and WebAssembly geometry counts matched at 227 surfels/);
+  assert.match(source, /await WebAssembly\.compile\(wasmBytes\)/);
+  assert.doesNotMatch(source, /keyxym-standalone-frontend-v1/);
+  assert.doesNotMatch(source, /keyxym-frontend-v1\.wasm/);
+});
+
+test("browser assurance is provenance-bound and entropy-limited", async () => {
+  const source = await read("src/browser-assurance-runtime.ts");
+  assert.match(source, /tessaryn\.browser-assurance-provenance\/v1/);
+  assert.match(source, /eform\/world-cell-assurance\/v1/);
+  assert.match(source, /tessaryn-browser-assurance::ed25519-dalek\/2\.2\.0/);
+  assert.match(source, /imports\.length !== 1/);
+  assert.match(source, /imports\[0\]\?\.module !== "tessaryn"/);
+  assert.match(source, /imports\[0\]\?\.name !== "random_fill"/);
+  assert.match(source, /crypto\.getRandomValues/);
+  assert.match(source, /crypto\.subtle\.digest\("SHA-256"/);
 });
 
 test("scale request cannot impersonate verified metric calibration", async () => {
