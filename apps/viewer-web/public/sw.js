@@ -1,10 +1,11 @@
 // World Cell Theater route extends the stable TESSARYN offline contract.
-const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r2";
+const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r3";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
   "./personal-weave.html",
   "./world-cell-theater.html",
+  "./release.json",
   "./world/archviz-tiny-house-locus.json",
   "./world/vesper-court.json",
   "./validation/portfolio.json",
@@ -20,6 +21,7 @@ const CORE = [
 ];
 const AUTHORITY_PREFIXES = ["./keyxym-v26/", "./assurance/"]
   .map((path) => new URL(path, self.registration.scope).pathname);
+const RELEASE_ATTESTATION_PATH = new URL("./release.json", self.registration.scope).pathname;
 
 function isAuthorityRequest(url) {
   return AUTHORITY_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
@@ -86,9 +88,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(Response.redirect(new URL("./", self.location.href), 302));
     return;
   }
-  if (isAuthorityRequest(url)) {
-    // Provenance manifests and executable authority bytes must never be satisfied
-    // cache-first: a stale/new mixture is rejected rather than silently executed.
+  if (isAuthorityRequest(url) || url.pathname === RELEASE_ATTESTATION_PATH) {
+    // Provenance manifests, executable authority bytes, and release evidence must
+    // never be satisfied cache-first: a stale/new mixture is rejected rather
+    // than silently executed or reported as the active deployment.
     event.respondWith(networkFirst(event.request));
     return;
   }
