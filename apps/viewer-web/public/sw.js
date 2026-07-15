@@ -97,22 +97,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith((async () => {
-    const cached = await caches.match(event.request);
-    if (cached) {
-      event.waitUntil(fetch(event.request).then(async (response) => {
-        if (response.ok) {
-          const cache = await caches.open(CACHE);
-          await cache.put(event.request, response.clone());
-        }
-      }).catch(() => undefined));
-      return cached;
-    }
-    const response = await fetch(event.request);
+  const network = fetch(event.request).then(async (response) => {
     if (response.ok) {
       const cache = await caches.open(CACHE);
       await cache.put(event.request, response.clone());
     }
     return response;
-  })());
+  });
+  event.waitUntil(network.then(() => undefined).catch(() => undefined));
+  event.respondWith(caches.match(event.request).then((cached) => cached || network));
 });
