@@ -52,6 +52,9 @@ float epipolar_residual(const Pair& pair,const Mat3& rotation,Vec3 translation){
 bool closest_rays(Vec3 first_origin,Vec3 first_direction,Vec3 second_origin,Vec3 second_direction,float& first_depth,float& second_depth,Vec3& point){const Vec3 offset=subtract(first_origin,second_origin);const float a=dot(first_direction,first_direction),b=dot(first_direction,second_direction),c=dot(second_direction,second_direction),d=dot(first_direction,offset),e=dot(second_direction,offset),denominator=a*c-b*b;if(std::abs(denominator)<1.0e-7F)return false;first_depth=(b*e-c*d)/denominator;second_depth=(a*e-b*d)/denominator;point=multiply(add(add(first_origin,multiply(first_direction,first_depth)),add(second_origin,multiply(second_direction,second_depth))),0.5F);return finite(point);}
 int positive_depth_count(const std::vector<Pair>& correspondences,const Mat3& rotation,Vec3 translation){const Mat3 current_to_reference=transpose(rotation);const Vec3 current_origin=multiply(transform(current_to_reference,translation),-1.0F);int positive=0;for(const auto& pair:correspondences){float first_depth=0.0F,second_depth=0.0F;Vec3 point{};if(closest_rays({},pair.reference_bearing,current_origin,transform(current_to_reference,pair.current_bearing),first_depth,second_depth,point)&&first_depth>0.0F&&second_depth>0.0F)++positive;}return positive;}
 float rotation_angle_degrees(const Mat3& rotation){const float cosine=std::max(-1.0F,std::min(1.0F,(rotation[0]+rotation[4]+rotation[8]-1.0F)*0.5F));return std::acos(cosine)*kRadToDeg;}
+struct MotionHypothesis{Mat3 rotation{identity3()};TranslationEstimate translation{};std::size_t inliers{};int positive_depth{};float median_residual{std::numeric_limits<float>::infinity()};float rotation_degrees{};};
+MotionHypothesis fit_hypothesis(const std::vector<Pair>& correspondences,const Mat3& initial_rotation,bool refine_rotation,float focal){MotionHypothesis hypothesis;hypothesis.rotation=initial_rotation;std::vector<float> weights(correspondences.size(),1.0F);std::vector<float> residuals(correspondences.size(),1.0F);for(int iteration=0;iteration<5;++iteration){if(refine_rotation)hypothesis.rotation=estimate_rotation(correspondences,weights);hypothesis.translation=estimate_translation(correspondences,weights,hypothesis.rotation);for(std::size_t index=0;index<correspondences.size();++index)residuals[index]=epipolar_residual(correspondences[index],hypothesis.rotation,hypothesis.translation.direction);const float scale=std::max(0.0015F,median(residuals)*2.5F);for(std::size_t index=0;index<weights.size();++index){const float normalized=residuals[index]/scale;const float robust=normalized<=1.0F?1.0F:1.0F/normalized;const float feature=1.0F/(1.0F+std::max(0.0F,correspondences[index].current.match_error));weights[index]=robust*feature;}}if(!finite(hypothesis.translation.direction)||length(hypothesis.translation.direction)<0.9F)return hypothesis;const int positive=positive_depth_count(correspondences,hypothesis.rotation,hypothesis.translation.direction);const int negative=positive_depth_count(correspondences,hypothesis.rotation,multiply(hypothesis.translation.direction,-1.0F));if(negative>positive)hypothesis.translation.direction=multiply(hypothesis.translation.direction,-1.0F);hypothesis.positive_depth=std::max(positive,negative);const float threshold=std::max(0.006F,6.0F/focal);std::vector<float> accepted;for(const auto& pair:correspondences){const float residual=epipolar_residual(pair,hypothesis.rotation,hypothesis.translation.direction);if(residual>threshold||pair.current.match_error>2.5F)continue;++hypothesis.inliers;accepted.push_back(residual);}hypothesis.median_residual=median(std::move(accepted));hypothesis.rotation_degrees=rotation_angle_degrees(hypothesis.rotation);return hypothesis;}
+bool stronger_hypothesis(const MotionHypothesis& candidate,const MotionHypothesis& incumbent,std::size_t matches){const std::size_t material=std::max<std::size_t>(3U,matches/20U);if(candidate.inliers>=incumbent.inliers+material)return true;if(incumbent.inliers>=candidate.inliers+material)return false;if(candidate.positive_depth!=incumbent.positive_depth)return candidate.positive_depth>incumbent.positive_depth;if(candidate.translation.observability>incumbent.translation.observability+0.01F)return true;if(incumbent.translation.observability>candidate.translation.observability+0.01F)return false;const float candidate_cost=candidate.median_residual+candidate.rotation_degrees*2.0e-5F;const float incumbent_cost=incumbent.median_residual+incumbent.rotation_degrees*2.0e-5F;return candidate_cost<incumbent_cost;}
 RigidPose compose_pose(const RigidPose& world_from_reference,const Mat3& reference_to_current,Vec3 translation_current){const Mat3 world_rotation=rotation_of(world_from_reference);const Mat3 current_to_reference=transpose(reference_to_current);const Mat3 world_from_current_rotation=multiply(world_rotation,current_to_reference);const Vec3 current_center_reference=multiply(transform(current_to_reference,translation_current),-1.0F);return make_pose(world_from_current_rotation,add(translation_of(world_from_reference),transform(world_rotation,current_center_reference)));}
 Hash256 pose_receipt_impl(const RealityPoseEstimate& pose,const MetricFrame& reference,const MetricFrame& current){std::vector<Byte> bytes;append_text(bytes,"keyxym/v26/reality-pose");for(float value:pose.pose.world_from_camera)append_f32(bytes,value);append_u64(bytes,pose.matches);append_u64(bytes,pose.inliers);append_f32(bytes,pose.tracking_confidence);append_f32(bytes,pose.parallax_degrees);append_f32(bytes,pose.reprojection_error_pixels);append_f32(bytes,pose.rotation_degrees);append_f32(bytes,pose.translation_observability);bytes.push_back(pose.recovered?Byte{1}:Byte{0});bytes.push_back(pose.degenerate?Byte{1}:Byte{0});bytes.push_back(pose.relocalized?Byte{1}:Byte{0});append_hash(bytes,reference.source_commitment);append_hash(bytes,current.source_commitment);return sha256(bytes);}
 } // namespace
@@ -68,56 +71,40 @@ RealityPoseEstimate recover_reality_pose(const MetricFrame& reference,
     const auto correspondences = pairs(reference, current);
     result.matches = correspondences.size();
     if (correspondences.size() < 12U) return result;
-    std::vector<float> weights(correspondences.size(), 1.0F);
-    Mat3 rotation = identity3();
-    TranslationEstimate translation{};
-    std::vector<float> residuals(correspondences.size(), 1.0F);
-    for (int iteration = 0; iteration < 5; ++iteration) {
-        rotation = estimate_rotation(correspondences, weights);
-        translation = estimate_translation(correspondences, weights, rotation);
-        for (std::size_t index = 0; index < correspondences.size(); ++index) {
-            residuals[index] = epipolar_residual(correspondences[index], rotation, translation.direction);
-        }
-        const float scale = std::max(0.0015F, median(residuals) * 2.5F);
-        for (std::size_t index = 0; index < weights.size(); ++index) {
-            const float normalized = residuals[index] / scale;
-            const float robust = normalized <= 1.0F ? 1.0F : 1.0F / normalized;
-            const float feature = 1.0F / (1.0F + std::max(0.0F, correspondences[index].current.match_error));
-            weights[index] = robust * feature;
-        }
-    }
-    if (!finite(translation.direction) || length(translation.direction) < 0.9F) return result;
-    if (positive_depth_count(correspondences, rotation, translation.direction) <
-        positive_depth_count(correspondences, rotation, multiply(translation.direction, -1.0F))) {
-        translation.direction = multiply(translation.direction, -1.0F);
-    }
     const float focal = std::max(1.0F, 0.5F * (current.camera.intrinsics.fx + current.camera.intrinsics.fy));
-    const float inlier_threshold = std::max(0.006F, 6.0F / focal);
+    const MotionHypothesis translation_only = fit_hypothesis(correspondences, identity3(), false, focal);
+    const MotionHypothesis rotation_and_translation = fit_hypothesis(correspondences, identity3(), true, focal);
+    const MotionHypothesis& selected = stronger_hypothesis(rotation_and_translation, translation_only,
+                                                            correspondences.size())
+        ? rotation_and_translation : translation_only;
+    if (!finite(selected.translation.direction) || length(selected.translation.direction) < 0.9F) return result;
+    result.inliers = selected.inliers;
+    if (result.inliers < 10U) return result;
     float error_sum = 0.0F;
     std::vector<float> parallax;
     std::vector<float> normalized_motion;
-    for (std::size_t index = 0; index < correspondences.size(); ++index) {
-        const float residual = epipolar_residual(correspondences[index], rotation, translation.direction);
-        if (residual > inlier_threshold || correspondences[index].current.match_error > 2.5F) continue;
-        ++result.inliers;
+    const float inlier_threshold = std::max(0.006F, 6.0F / focal);
+    for (const auto& pair : correspondences) {
+        const float residual = epipolar_residual(pair, selected.rotation, selected.translation.direction);
+        if (residual > inlier_threshold || pair.current.match_error > 2.5F) continue;
         error_sum += residual * focal;
-        const Vec3 rotated = normalize(transform(rotation, correspondences[index].reference_bearing));
-        const float cosine = std::max(-1.0F, std::min(1.0F, dot(rotated, correspondences[index].current_bearing)));
+        const Vec3 rotated = normalize(transform(selected.rotation, pair.reference_bearing));
+        const float cosine = std::max(-1.0F, std::min(1.0F, dot(rotated, pair.current_bearing)));
         parallax.push_back(std::acos(cosine) * kRadToDeg);
-        normalized_motion.push_back(std::hypot(correspondences[index].current.x - correspondences[index].reference.x,
-                                               correspondences[index].current.y - correspondences[index].reference.y) / focal);
+        normalized_motion.push_back(std::hypot(pair.current.x - pair.reference.x,
+                                               pair.current.y - pair.reference.y) / focal);
     }
-    if (result.inliers < 10U) return result;
     const float baseline = std::max(0.004F, std::min(0.15F,
         median(normalized_motion) * current.camera.scale_meters_per_unit));
-    result.pose = compose_pose(world_from_reference, rotation, multiply(translation.direction, baseline));
+    result.pose = compose_pose(world_from_reference, selected.rotation,
+                               multiply(selected.translation.direction, baseline));
     result.parallax_degrees = median(parallax);
     result.reprojection_error_pixels = error_sum / float(result.inliers);
-    result.rotation_degrees = rotation_angle_degrees(rotation);
-    result.translation_observability = translation.observability;
+    result.rotation_degrees = selected.rotation_degrees;
+    result.translation_observability = selected.translation.observability;
     const float inlier_support = float(result.inliers) / float(std::max<std::size_t>(40U, result.matches));
-    result.tracking_confidence = clamp01(inlier_support * (0.55F + 0.45F * translation.observability));
-    result.degenerate = translation.observability < 0.005F || result.parallax_degrees < 0.08F;
+    result.tracking_confidence = clamp01(inlier_support * (0.55F + 0.45F * selected.translation.observability));
+    result.degenerate = selected.translation.observability < 0.005F || result.parallax_degrees < 0.08F;
     result.recovered = !result.degenerate && result.tracking_confidence >= 0.15F &&
         std::isfinite(result.reprojection_error_pixels);
     result.receipt = v26_detail::pose_receipt(result, reference, current);
