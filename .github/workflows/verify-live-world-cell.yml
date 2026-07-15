@@ -30,25 +30,28 @@ jobs:
           ORIGIN: https://tessaryn.com
         run: |
           set -euo pipefail
-          mkdir -p /tmp/live-world-cell
-          for path in \
-            world-cell-theater.html \
-            keyxym/manifest.json \
-            keyxym/build-closure.json \
-            keyxym/keyxym-v22.mjs \
-            keyxym/keyxym-v22.wasm \
-            assurance/manifest.json \
-            assurance/tessaryn-browser-assurance-v1.wasm; do
+          root=/tmp/live-world-cell
+          mkdir -p "$root"
+          fetch() {
+            path="$1"
+            destination="$2"
             curl --fail --location --silent --show-error \
               --retry 8 --retry-all-errors --connect-timeout 10 --max-time 90 \
               -H 'Cache-Control: no-cache' \
               "${ORIGIN}/${path}?production_probe=${GITHUB_SHA}" \
-              -o "/tmp/live-world-cell/$(basename "$path")"
-          done
+              -o "${root}/${destination}"
+          }
+          fetch world-cell-theater.html world-cell-theater.html
+          fetch keyxym/manifest.json keyxym-manifest.json
+          fetch keyxym/build-closure.json build-closure.json
+          fetch keyxym/keyxym-v22.mjs keyxym-v22.mjs
+          fetch keyxym/keyxym-v22.wasm keyxym-v22.wasm
+          fetch assurance/manifest.json assurance-manifest.json
+          fetch assurance/tessaryn-browser-assurance-v1.wasm tessaryn-browser-assurance-v1.wasm
           python3 - <<'PY'
           import hashlib, json, pathlib
           root = pathlib.Path('/tmp/live-world-cell')
-          keyxym = json.loads((root / 'manifest.json').read_text())
+          keyxym = json.loads((root / 'keyxym-manifest.json').read_text())
           assert keyxym['schema'] == 'keyxym.browser-runtime-provenance/v4'
           assert keyxym['abi'] == 'keyxym-v22-browser-dual-field-4'
           assert keyxym['source_commit'] == '700cb523ef9c1fb37733ffd1b1cbe0227be420c3'
@@ -58,17 +61,6 @@ jobs:
               data = (root / name).read_bytes()
               assert len(data) == record['bytes'], (name, len(data), record['bytes'])
               assert hashlib.sha256(data).hexdigest() == record['sha256'], name
-          assurance = json.loads((root / 'manifest.json').read_text()) if False else json.loads((root / 'manifest.json').read_text())
-          # The assurance manifest was downloaded last with the same basename; refetch it distinctly below.
-          PY
-          curl --fail --location --silent --show-error \
-            --retry 8 --retry-all-errors --connect-timeout 10 --max-time 90 \
-            -H 'Cache-Control: no-cache' \
-            "${ORIGIN}/assurance/manifest.json?production_probe=${GITHUB_SHA}" \
-            -o /tmp/live-world-cell/assurance-manifest.json
-          python3 - <<'PY'
-          import hashlib, json, pathlib
-          root = pathlib.Path('/tmp/live-world-cell')
           assurance = json.loads((root / 'assurance-manifest.json').read_text())
           assert assurance['schema'] == 'tessaryn.browser-assurance-provenance/v1'
           assert assurance['profile'] == 'eform/world-cell-assurance/v1'
