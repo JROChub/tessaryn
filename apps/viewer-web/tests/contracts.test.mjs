@@ -8,6 +8,7 @@ const validationFixtureUrl = new URL(
   import.meta.url,
 );
 const htmlUrl = new URL("../index.html", import.meta.url);
+const theaterHtmlUrl = new URL("../world-cell-theater.html", import.meta.url);
 const packageUrl = new URL("../package-lock.json", import.meta.url);
 const packageManifestUrl = new URL("../package.json", import.meta.url);
 const workerUrl = new URL("../public/sw.js", import.meta.url);
@@ -21,6 +22,9 @@ const cinematicObjectUrl = new URL("../src/cinematic-object.ts", import.meta.url
 const sourceGeometryUrl = new URL("../src/source-geometry.ts", import.meta.url);
 const weaveClientUrl = new URL("../src/weave-client.ts", import.meta.url);
 const worldCellGuidanceUrl = new URL("../src/world-cell-guidance.ts", import.meta.url);
+const worldCellEntryUrl = new URL("../src/world-cell-authority-entry.ts", import.meta.url);
+const worldCellVisionUrl = new URL("../src/world-cell-vision-layer.ts", import.meta.url);
+const worldCellVisionCssUrl = new URL("../src/world-cell-vision-layer.css", import.meta.url);
 
 test("the bounded Origin declares its local verification profile", async () => {
   const world = JSON.parse(await readFile(fixtureUrl, "utf8"));
@@ -160,6 +164,27 @@ test("World Cell guidance translates native authority rejection flags into scan 
   assert.match(guidance, /avoid flat walls, digital screens, blur, and repeating patterns/);
   assert.match(guidance, /AUTHORITY RECEIPT REJECTED/);
   assert.doesNotMatch(guidance, /momentAllowed\s*=|sealAllowed\s*=/);
+});
+
+test("World Cell vision layer renders a visual cockpit without bypassing authority gates", async () => {
+  const [theater, entry, vision, visionCss] = await Promise.all([
+    readFile(theaterHtmlUrl, "utf8"),
+    readFile(worldCellEntryUrl, "utf8"),
+    readFile(worldCellVisionUrl, "utf8"),
+    readFile(worldCellVisionCssUrl, "utf8"),
+  ]);
+  assert.match(theater, /world-cell-vision-layer\.css/);
+  assert.match(entry, /installWorldCellVisionLayer/);
+  assert.match(vision, /NON-AUTHORITATIVE VISION PREVIEW/);
+  assert.match(vision, /requestAnimationFrame/);
+  assert.match(vision, /data-authority-rejection-mask/);
+  assert.match(vision, /START GUIDED CAPTURE/);
+  assert.match(visionCss, /vision-canvas/);
+  assert.match(visionCss, /vision-console/);
+  assert.match(visionCss, /mix-blend-mode:screen/);
+  assert.doesNotMatch(vision, /capture-button[\s\S]{0,180}disabled\s*=\s*false/);
+  assert.doesNotMatch(vision, /seal-button[\s\S]{0,180}disabled\s*=\s*false/);
+  assert.doesNotMatch(vision, /momentAllowed\s*=(?!=)|sealAllowed\s*=(?!=)/);
 });
 
 test("publication is product-native, resumable, signed, and device-persistent", async () => {
