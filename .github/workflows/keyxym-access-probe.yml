@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - name: Probe sibling repository without reading content
+      - name: Require repository-scoped sibling access
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -24,8 +24,4 @@ jobs:
             --header 'Accept: application/vnd.github+json' \
             --header 'X-GitHub-Api-Version: 2022-11-28' \
             'https://api.github.com/repos/JROChub/keyxym_map/contents/wasm/CMakeLists.txt?ref=agent/world-cell-consensus-engine')"
-          echo "repository_scope_status=${status}"
-          case "$status" in
-            200|403|404) ;;
-            *) exit 1 ;;
-          esac
+          test "$status" = 200
