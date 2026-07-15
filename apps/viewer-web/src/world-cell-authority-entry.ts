@@ -44,6 +44,8 @@ try {
   document.documentElement.dataset.keyxymAuthority = "verified";
   document.documentElement.dataset.keyxymSource = manifest.source_commit;
   document.documentElement.dataset.keyxymAbi = manifest.abi;
+  const start = document.getElementById("start-button");
+  if (start instanceof HTMLButtonElement) start.disabled = false;
 } catch (error) {
   rejectAuthority(error);
 }
