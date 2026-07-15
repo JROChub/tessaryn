@@ -1,0 +1,14 @@
+{
+  "artifact": {
+    "bytes": 561270,
+    "name": "tessaryn-browser-assurance-v1.wasm",
+    "sha256": "74308022cd03f93ba5e73077f8a725c844cb1945290e5c8cd4a4f7ee99a8516b"
+  },
+  "entropy_import": "tessaryn.random_fill",
+  "power_house_version": "0.3.24",
+  "profile": "eform/world-cell-assurance/v1",
+  "provider": "tessaryn-browser-assurance::ed25519-dalek/2.2.0",
+  "schema": "tessaryn.browser-assurance-provenance/v1",
+  "source_commit": "ecfa0f6584f8890afd4a3a44b4aa972b2768a62e",
+  "source_repository": "JROChub/tessaryn"
+}

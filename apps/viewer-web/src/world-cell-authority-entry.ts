@@ -1,34 +1,51 @@
+import { installBrowserAssuranceBridge } from "./browser-assurance-runtime";
 import { verifyKeyxymV22Bundle } from "./keyxym-v22-provenance";
 
-function text(id: string, value: string): void {
-  const element = document.getElementById(id);
-  if (element) element.textContent = value;
+function rejectAuthority(error: unknown): void {
+  const reason = error instanceof Error ? error.message : String(error);
+  const badge = document.getElementById("cell-state");
+  const stage = document.getElementById("stage-message");
+  const capture = document.getElementById("capture-button") as HTMLButtonElement | null;
+  const seal = document.getElementById("seal-button") as HTMLButtonElement | null;
+  const send = document.getElementById("send-button") as HTMLButtonElement | null;
+  const start = document.getElementById("start-button") as HTMLButtonElement | null;
+  if (badge) badge.textContent = "WORLD CELL / AUTHORITY REJECTED";
+  if (stage) {
+    const heading = stage.querySelector("b");
+    const detail = stage.querySelector("span");
+    if (heading) heading.textContent = "KEYXYM AUTHORITY REJECTED";
+    if (detail) detail.textContent = `${reason}. No camera frame, Moment, seal, or transfer will execute.`;
+    stage.style.display = "";
+  }
+  if (capture) capture.disabled = true;
+  if (seal) seal.disabled = true;
+  if (send) send.disabled = true;
+  if (start) start.disabled = true;
+  document.documentElement.dataset.keyxymAuthority = "rejected";
+  console.error("Keyxym v0.22 authority rejected", error);
 }
 
-function disable(id: string): void {
-  const element = document.getElementById(id);
-  if (element instanceof HTMLButtonElement) element.disabled = true;
+async function installAssurance(): Promise<void> {
+  try {
+    const manifest = await installBrowserAssuranceBridge();
+    document.documentElement.dataset.worldCellAssurance = "verified";
+    document.documentElement.dataset.worldCellAssuranceSource = manifest.source_commit;
+  } catch (error) {
+    document.documentElement.dataset.worldCellAssurance = "rejected";
+    console.error("Browser eform/Power House assurance rejected", error);
+  }
 }
 
 try {
   const manifest = await verifyKeyxymV22Bundle();
+  await installAssurance();
+  const { installWorldCellTheater } = await import("./world-cell-theater");
+  await installWorldCellTheater(manifest);
   document.documentElement.dataset.keyxymAuthority = "verified";
-  document.documentElement.dataset.keyxymCommit = manifest.source_commit;
-  document.documentElement.dataset.keyxymTimestampAbi = manifest.timestamp_abi;
-  text("backend-name", "KEYXYM V0.22 / VERIFIED");
-  text("adapter-name", manifest.source_commit.slice(0, 12).toUpperCase());
-  await import("./authoritative-world-cell");
+  document.documentElement.dataset.keyxymSource = manifest.source_commit;
+  document.documentElement.dataset.keyxymAbi = manifest.abi;
+  const start = document.getElementById("start-button");
+  if (start instanceof HTMLButtonElement) start.disabled = false;
 } catch (error) {
-  const reason = error instanceof Error ? error.message : String(error);
-  document.documentElement.dataset.keyxymAuthority = "rejected";
-  text("backend-name", "PREVIEW ONLY");
-  text("adapter-name", "AUTHORITY REJECTED");
-  text("pose-state", "AUTHORITY OFFLINE");
-  text("cell-state", "VISUAL PREVIEW / UNSEALED");
-  text("rootprint", "UNSEALED");
-  text("stage-message", reason);
-  disable("capture-button");
-  disable("seal-button");
-  disable("send-button");
-  console.error("Keyxym v0.22 authority rejected", error);
+  rejectAuthority(error);
 }

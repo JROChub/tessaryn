@@ -1,22 +1,36 @@
 {
-  "schema": "tessaryn.keyxym-wasm-provenance/v1",
-  "version": "0.22.0",
-  "abi": "keyxym-v22-packed-1",
-  "source_repository": "JROChub/keyxym_map",
-  "source_commit": "3076c306126058c6e9b24d851681ae79a26b9b55",
-  "maximum_surfels": 48000,
-  "wasm_bigint": false,
-  "timestamp_abi": "legalized-i64-low-high",
-  "workflow_run": 29371949689,
-  "artifact_id": 8326403411,
+  "abi": "keyxym-v22-browser-dual-field-4",
   "artifacts": {
+    "build-closure.json": {
+      "bytes": 6610,
+      "sha256": "fb73f660feb2d03c4aa102a90380f5ea688d85a1ea7532a1c84f9d0be1324a23"
+    },
     "keyxym-v22.mjs": {
-      "bytes": 13521,
-      "sha256": "6e4bf53118937aeb32a34a42dff917034d330de04e0ecac4c24037ae1c7d828c"
+      "bytes": 9546,
+      "sha256": "e9867b1979eeb9dc5109c3882b5c10d2bb81d23faa38fcfd6b6bd18c707035d4"
     },
     "keyxym-v22.wasm": {
-      "bytes": 27785,
-      "sha256": "99524aa4e9b38adcf3a1cbe7cc5e1096964b15c60df36572092eb3e6bd0a2bd7"
+      "bytes": 48184,
+      "sha256": "3e2464e6be15a335d90c57c34d3066d5c265460eb9fe4166c5ed3f879f1c5f11"
     }
-  }
+  },
+  "build_closure_digest": "c910d501234def82e3551ddcc59d2482bfd694c6d9849bd62dce2a6380b614b8",
+  "build_closure_schema": "keyxym.browser-build-closure/v1",
+  "build_provenance": "independent-audited-semantic-closure",
+  "feature_record_floats": 6,
+  "geometry_record_floats": 13,
+  "maximum_analysis_height": 240,
+  "maximum_analysis_width": 320,
+  "maximum_preview_samples": 8192,
+  "maximum_surfels": 48000,
+  "maximum_tracks": 384,
+  "perception_abi": "keyxym-v22-browser-frontend-cpp-v1",
+  "preview_record_floats": 10,
+  "receipt_bytes": 64,
+  "schema": "keyxym.browser-runtime-provenance/v4",
+  "source_commit": "700cb523ef9c1fb37733ffd1b1cbe0227be420c3",
+  "source_exact": false,
+  "source_repository": "JROChub/keyxym_map",
+  "timestamp_abi": "wasm-bigint-i64",
+  "version": "0.22.0"
 }

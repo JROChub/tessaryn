@@ -1,0 +1,105 @@
+name: Browser World Cell assurance
+
+on:
+  pull_request:
+    paths:
+      - "tools/browser-assurance/**"
+      - ".github/workflows/browser-assurance.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/browser-assurance/**"
+      - ".github/workflows/browser-assurance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assurance-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Configure Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
+          rustup default stable
+          rustc --version
+          cargo --version
+      - name: Format
+        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml --check
+      - name: Clippy
+        shell: bash
+        run: |
+          set +e
+          cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings > browser-assurance-clippy.log 2>&1
+          status=$?
+          cat browser-assurance-clippy.log
+          exit $status
+      - name: Upload clippy diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-clippy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: browser-assurance-clippy.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Native assurance tests
+        shell: bash
+        run: |
+          set +e
+          cargo test --manifest-path tools/browser-assurance/Cargo.toml > browser-assurance-test.log 2>&1
+          status=$?
+          cat browser-assurance-test.log
+          exit $status
+      - name: Upload native test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: browser-assurance-test.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Build browser assurance WebAssembly
+        shell: bash
+        run: |
+          set +e
+          cargo build --manifest-path tools/browser-assurance/Cargo.toml --release --target wasm32-unknown-unknown > browser-assurance-wasm.log 2>&1
+          status=$?
+          cat browser-assurance-wasm.log
+          exit $status
+      - name: Upload WebAssembly compiler diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-wasm-${{ github.run_id }}-${{ github.run_attempt }}
+          path: browser-assurance-wasm.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Validate artifact ABI
+        run: |
+          cp tools/browser-assurance/target/wasm32-unknown-unknown/release/tessaryn_browser_assurance.wasm /tmp/tessaryn-browser-assurance-v1.wasm
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const bytes = await readFile('/tmp/tessaryn-browser-assurance-v1.wasm');
+          const module = await WebAssembly.compile(bytes);
+          const exports = WebAssembly.Module.exports(module).map(({ name }) => name);
+          for (const name of [
+            'memory',
+            'tessaryn_assurance_alloc',
+            'tessaryn_assurance_dealloc',
+            'tessaryn_assurance_seal',
+            'tessaryn_assurance_verify',
+            'tessaryn_assurance_result_pointer',
+            'tessaryn_assurance_result_length',
+            'tessaryn_assurance_error_pointer',
+            'tessaryn_assurance_error_length',
+          ]) {
+            if (!exports.includes(name)) throw new Error(`missing assurance export ${name}`);
+          }
+          const imports = WebAssembly.Module.imports(module);
+          if (imports.length !== 1 || imports[0]?.module !== 'tessaryn' ||
+              imports[0]?.name !== 'random_fill' || imports[0]?.kind !== 'function') {
+            throw new Error(`unexpected assurance imports: ${JSON.stringify(imports)}`);
+          }
+          NODE

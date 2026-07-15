@@ -79,17 +79,27 @@ test("the viewer has no remote script or map substrate dependency", async () => 
   assert.match(html, /\.GLB \.GLTF \.OBJ \.PLY \.STL/u);
 });
 
-test("the offline cache includes the local world fixture", async () => {
+test("the offline cache includes local worlds and verified authority runtimes", async () => {
   const worker = await readFile(workerUrl, "utf8");
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-write-weave2-intake";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v22";`),
   );
-  assert.match(worker, /\.\/world\/archviz-tiny-house-locus\.json/);
-  assert.match(worker, /\.\/world\/vesper-court\.json/);
-  assert.match(worker, /\.\/objects\/catalog\.json/);
-  assert.match(worker, /\.\/weave\.json/);
+  for (const asset of [
+    "./world/archviz-tiny-house-locus.json",
+    "./world/vesper-court.json",
+    "./objects/catalog.json",
+    "./weave.json",
+    "./keyxym/manifest.json",
+    "./keyxym/build-closure.json",
+    "./keyxym/keyxym-v22.mjs",
+    "./keyxym/keyxym-v22.wasm",
+    "./assurance/manifest.json",
+    "./assurance/tessaryn-browser-assurance-v1.wasm",
+  ]) {
+    assert.ok(worker.includes(`"${asset}"`), `offline cache omits ${asset}`);
+  }
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
 });

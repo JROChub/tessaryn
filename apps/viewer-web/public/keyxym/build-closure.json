@@ -1,0 +1,142 @@
+{
+  "closure_digest_sha256": "c910d501234def82e3551ddcc59d2482bfd694c6d9849bd62dce2a6380b614b8",
+  "compiled_files": {
+    "include/keyxym/provenance.hpp": {
+      "byte_identical_to_upstream": true,
+      "bytes": 582,
+      "git_blob": "7b6eea80713e3aeae2b80f6a130e88d5998db1de",
+      "sha256": "a0186265ac18e874b18e46bc6adf81fe8964995aeab70dd9587e627f817f0431",
+      "upstream_git_blob": "7b6eea80713e3aeae2b80f6a130e88d5998db1de"
+    },
+    "include/keyxym/reconstruction.hpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 392,
+      "git_blob": "7e0c5929f980a610a5a90207ea74bdff5577e089",
+      "sha256": "8670b7bd6bac4002b95d24e6f16a0ab1f5496ade7ffa47e08344894d27fc5910",
+      "upstream_git_blob": "0cf15b1210282981841af1563002d02c297d6d4d"
+    },
+    "include/keyxym/sha256.hpp": {
+      "byte_identical_to_upstream": true,
+      "bytes": 248,
+      "git_blob": "f3e9131f49ba33521980a25d4926f356884e8d56",
+      "sha256": "525113fd424907301d49e88a5025df6f605b9f628333577e06d6069c0f9c626e",
+      "upstream_git_blob": "f3e9131f49ba33521980a25d4926f356884e8d56"
+    },
+    "include/keyxym/types.hpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 610,
+      "git_blob": "bb137f9a3f025c7de4f124ee23891b5d97111451",
+      "sha256": "818daea1130599b274c6b52b7f22553b172f799939903debb68d3b54916e8e68",
+      "upstream_git_blob": "3aca10a2cfd7bccf8e729ca8b8acb59141bc1baa"
+    },
+    "include/keyxym/v20.hpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 1740,
+      "git_blob": "727a0c5c5887ab5feaa119e8196d1aaf944280e9",
+      "sha256": "64602bd4e91c88c9a7567e501ff0337afb014320f23d952b0f8a570c66d09bbd",
+      "upstream_git_blob": "8b447362942946951106b742649b7aa00cef6caf"
+    },
+    "include/keyxym/v21.hpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 62,
+      "git_blob": "c09cecb5ff68c38c87a757b9a2f469eacfd12c86",
+      "sha256": "f9fad2ce27b54c120a85da541dca78d86d03cb5c25edcdfac32ef8759f8f4f1b",
+      "upstream_git_blob": "05f40e59f2220f87aac603a8f4989bc0b9f9e842"
+    },
+    "include/keyxym/v22.hpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 3962,
+      "git_blob": "6cfd6a7eaae8ce8e432d537599d58fa3bdeea093",
+      "sha256": "c53dc4f901d740b643fcb59e20b64a293266e85c8d4687fe65df2c9d71eb8e9a",
+      "upstream_git_blob": "7216da8d94af23a7f4b56680c3830b92c7f32c6a"
+    },
+    "include/keyxym/v22_browser_frontend.hpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 1860,
+      "git_blob": "4678a1626f6c842a21615e92ce7c46141ca593ad",
+      "sha256": "386fca76bd7739eb4ddd79b3a9d70c5d0b8f788951a553aeaf1a40e726ee29e1",
+      "upstream_git_blob": "0827508d7b604262ff0343efb42c4e754b11949f"
+    },
+    "include/keyxym/v22_browser_runtime.h": {
+      "byte_identical_to_upstream": false,
+      "bytes": 1539,
+      "git_blob": "5dc0c7524f75c3de1ddf833e04ecaf6e41f13c80",
+      "sha256": "83f1702c400228f44f9ed48215913a18c3ac9cb5405588f38bab92d43c52eb79",
+      "upstream_git_blob": "f506af5745374160eeb17143e75e99478b092305"
+    },
+    "include/keyxym/v22_c_api.h": {
+      "byte_identical_to_upstream": false,
+      "bytes": 3022,
+      "git_blob": "9561629913c90f77eddcec3db3868196cac12cfa",
+      "sha256": "3a44284a2f0b518a23c5fa4ed06fd9d47df5ba330c00ebc89b33c3cfbe89e0a7",
+      "upstream_git_blob": "8037b2bf443aa3ce68311d630504232a479c2da8"
+    },
+    "include/keyxym/world_cell.hpp": {
+      "byte_identical_to_upstream": true,
+      "bytes": 442,
+      "git_blob": "3bb2fd866c58e07632cb92a051b8d7b40a7e8156",
+      "sha256": "2fd3cca619cbfcb61050544c33e937a3480d28b6429ec673eb39836d22487ae2",
+      "upstream_git_blob": "3bb2fd866c58e07632cb92a051b8d7b40a7e8156"
+    },
+    "src/sha256.cpp": {
+      "byte_identical_to_upstream": true,
+      "bytes": 2533,
+      "git_blob": "82d451286d40c02cf6dcdc729a406fef95c74f59",
+      "sha256": "a27ffb099543329c4aab5c43032fdcf666601e83f9f36f53bdafee242e63f5bd",
+      "upstream_git_blob": "82d451286d40c02cf6dcdc729a406fef95c74f59"
+    },
+    "src/v20.cpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 9104,
+      "git_blob": "badd62e4ee0e38d240bb6795187eef64ff350e43",
+      "sha256": "7ac29406f7fdc53bfa3581ad0235d69373d8c74120a22a5b703aa08b9c37bb84",
+      "upstream_git_blob": "92af5c1f457aa3dc42a57900468a488ced27c3d6"
+    },
+    "src/v22.cpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 13293,
+      "git_blob": "a2a2a213c82f7161f656d1ade4b5681ad60b94bf",
+      "sha256": "5434cb4611fdf3aedfd3b286b6ba95134b831b01bbb136a0c56cc5538eb7ab4a",
+      "upstream_git_blob": "8567979c5155846ac5c062625e2458a654e4624b"
+    },
+    "src/v22_browser_frontend.cpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 8357,
+      "git_blob": "3610331dc9733ea3083f7a197d1ff722ed1e990d",
+      "sha256": "dde76f17959363de3d533c76ec1e4758dda802ccdc893622e68b2977d74dcc40",
+      "upstream_git_blob": "5b1dafd35fc73d480a7e4840899f5975355a21c2"
+    },
+    "src/v22_browser_runtime.cpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 7037,
+      "git_blob": "b141d9d94d0afc3676804bc47097794f614cd39c",
+      "sha256": "749ab991c7cdbc387f346925cd3e5cbee05e03ee6ed5fe03d27747895ddc5465",
+      "upstream_git_blob": "7dbfa78a120e8c6d4c90108e7e298bae95d3dee2"
+    },
+    "src/v22_c_api.cpp": {
+      "byte_identical_to_upstream": false,
+      "bytes": 7688,
+      "git_blob": "3e33d1d23c29bb029f6d2c248f8d09ff8f86bfc5",
+      "sha256": "377488c3cb3df0221eee1930315280fc1fb23f9df9d80c3c5a865ca0ca9ffc15",
+      "upstream_git_blob": "6a173209ada0606b4aea0fa729bc01a6ec20d10b"
+    }
+  },
+  "derivation": "audited semantic closure reconstructed from the listed upstream Git blobs; never represented as a byte-identical checkout",
+  "schema": "keyxym.browser-build-closure/v1",
+  "source_commit": "700cb523ef9c1fb37733ffd1b1cbe0227be420c3",
+  "source_exact": false,
+  "source_repository": "JROChub/keyxym_map",
+  "toolchain": {
+    "name": "Emscripten",
+    "official_package_sha256": "3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3",
+    "release_commit": "9074aa513b501925adb1361e208932ad32a29a5f",
+    "version": "6.0.3-git (283e2d130132859fde6a4e4c87fd254b38127651)"
+  },
+  "validation": [
+    "upstream tests/test_v022_browser_frontend.cpp passed unchanged",
+    "upstream tests/test_v022_browser_runtime.cpp passed unchanged",
+    "native and WebAssembly pose/quality receipts matched byte-for-byte for a three-frame translated texture vector",
+    "native and WebAssembly geometry counts matched at 227 surfels",
+    "WebAssembly replayed timestamp rejected with KEYXYM_V22_INVALID_ARGUMENT"
+  ]
+}

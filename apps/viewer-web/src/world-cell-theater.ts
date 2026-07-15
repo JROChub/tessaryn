@@ -1,73 +1,1097 @@
 import "./world-cell-theater.css";
 import * as THREE from "three";
 import { sha256 } from "@noble/hashes/sha2.js";
+import type { KeyxymProvenanceManifest } from "./keyxym-v22-provenance";
+import {
+  KEYXYM_V22_SURFEL_FLOATS,
+  KeyxymV22Runtime,
+  type KeyxymFormingSample,
+  type KeyxymGeometrySnapshot,
+  type KeyxymPoseEstimate,
+  type KeyxymQuality,
+  type KeyxymReceipts,
+  type KeyxymSurfel,
+} from "./keyxym-v22-runtime";
+import {
+  bytesHex,
+  canonicalString,
+  digestBytes,
+  digestValue,
+  evidenceRequest,
+  nativeAssuranceBridge,
+  reconstructionReceipt,
+  runtimeCommitment,
+  validateNativeSeal,
+  type NativeWorldCellSeal,
+  type WorldCellEvidenceRequest,
+} from "./world-cell-assurance";
 
-const q=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
-const video=q<HTMLVideoElement>("camera"), canvas=q<HTMLCanvasElement>("stage");
-const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:"high-performance"});
-const scene=new THREE.Scene(), camera3=new THREE.PerspectiveCamera(52,1,.01,100);
-camera3.position.set(0,0,2.4); scene.add(new THREE.AmbientLight(0xffffff,1));
-const geometry=new THREE.BufferGeometry();
-const material=new THREE.PointsMaterial({size:.018,vertexColors:true,sizeAttenuation:true,transparent:true,opacity:.96});
-const cloud=new THREE.Points(geometry,material); scene.add(cloud);
-const grid=new THREE.GridHelper(4,32,0x1c5770,0x102433); grid.rotation.x=Math.PI/2; grid.position.z=-1.6; scene.add(grid);
+interface RuntimeEvidence {
+  time: number;
+  kind: string;
+  sourceCommitment: string;
+  poseReceipt: string;
+  qualityReceipt: string;
+  reconstructionReceipt: string;
+  runtimeCommitment: string;
+  geometryRevision: string;
+  details: Record<string, unknown>;
+}
 
-interface Point{x:number;y:number;z:number;r:number;g:number;b:number;c:number;t:number}
-interface Moment{id:string;created:number;points:Point[];pose:number[];sensor:string;backend:string;inputHash:string;outputHash:string;receipt:string}
-interface WorldCell{version:21;id:string;branch:string;created:number;moments:Moment[];pha:string;memoryCapsule:string;rootprint:string;evidence:Evidence[]}
-interface Evidence{time:number;kind:string;device:string;transport:string;input:string;output:string;receipt:string;hardware:boolean;details:Record<string,unknown>}
-let stream:MediaStream|null=null, running=false, frameNo=0, points:Point[]=[], moments:Moment[]=[], currentMoment=0, playTimer=0;
-let gpuDevice:GPUDevice|null=null, gpuAdapterName="CPU REFERENCE", backend="CPU REFERENCE";
-let pc:RTCPeerConnection|null=null, channel:RTCDataChannel|null=null, pendingChunks:Uint8Array[]=[], expectedDigest="", expectedBytes=0;
-const evidence:Evidence[]=[];
-const encoder=new TextEncoder();
-const hex=(b:Uint8Array)=>Array.from(b,x=>x.toString(16).padStart(2,"0")).join("");
-const digest=(v:unknown)=>hex(sha256(encoder.encode(typeof v==="string"?v:JSON.stringify(v))));
-const setText=(id:string,v:string)=>q(id).textContent=v;
+interface MomentRecord {
+  schema: "tessaryn/world-cell-moment/v22";
+  id: string;
+  sequence: number;
+  createdAtUnixMs: number;
+  geometryRevision: string;
+  geometryRecordFloats: 13;
+  geometry: number[];
+  pose: number[];
+  quality: KeyxymQuality;
+  sourceCommitment: string;
+  poseReceipt: string;
+  qualityReceipt: string;
+  reconstructionReceipt: string;
+  runtimeCommitment: string;
+  parentCommitment: string;
+  metricScale: boolean;
+  canonicalDigest: string;
+}
 
-function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera3.aspect=r.width/r.height;camera3.updateProjectionMatrix()}
-new ResizeObserver(resize).observe(canvas);
-function render(){cloud.rotation.y+=running?.0015:.00035;renderer.render(scene,camera3);requestAnimationFrame(render)}render();
+interface WorldCellDraft {
+  schema: "tessaryn/world-cell/v22";
+  version: 22;
+  branch: string;
+  createdAtUnixMs: number;
+  runtimeCommitment: string;
+  scaleState: "relative" | "metric";
+  moments: MomentRecord[];
+  evidence: RuntimeEvidence[];
+}
 
-function updateCloud(p:Point[]){const pos=new Float32Array(p.length*3), col=new Float32Array(p.length*3);for(let i=0;i<p.length;i++){const v=p[i]!;pos.set([v.x,v.y,v.z],i*3);col.set([v.r,v.g,v.b],i*3)}geometry.setAttribute("position",new THREE.BufferAttribute(pos,3));geometry.setAttribute("color",new THREE.BufferAttribute(col,3));geometry.computeBoundingSphere();setText("surfel-count",String(p.length))}
-function updateTimeline(){const el=q("timeline");el.innerHTML="";if(!moments.length){el.innerHTML='<span class="empty">No Moments committed.</span>';return}moments.forEach((m,i)=>{const b=document.createElement("button");b.className=i===currentMoment?"active":"";b.innerHTML=`<small>MOMENT ${String(i).padStart(2,"0")}</small><b>${m.points.length} SURFELS</b>`;b.onclick=()=>showMoment(i);el.appendChild(b)});const slider=q<HTMLInputElement>("replay-slider");slider.max=String(moments.length-1);slider.value=String(currentMoment);q<HTMLButtonElement>("prev-button").disabled=false;q<HTMLButtonElement>("next-button").disabled=false;q<HTMLButtonElement>("play-button").disabled=false;q<HTMLButtonElement>("seal-button").disabled=false}
-function showMoment(i:number){if(!moments.length)return;currentMoment=Math.max(0,Math.min(i,moments.length-1));updateCloud(moments[currentMoment]!.points);updateTimeline();setText("cell-state",`WORLD CELL / MOMENT ${currentMoment}`)}
+interface SealedWorldCell extends WorldCellDraft {
+  canonicalDigest: string;
+  assuranceEvidence: WorldCellEvidenceRequest;
+  seal: NativeWorldCellSeal;
+}
 
-async function probeGpu(){try{const nav=navigator as Navigator&{gpu?:GPU};if(!nav.gpu)throw new Error("WebGPU unavailable");const adapter=await nav.gpu.requestAdapter({powerPreference:"high-performance"});if(!adapter)throw new Error("No adapter");gpuDevice=await adapter.requestDevice();gpuAdapterName=(adapter.info?.description||adapter.info?.device||"WEBGPU ADAPTER").toUpperCase();backend="WEBGPU COMPUTE";setText("gpu-badge","ACTIVE");setText("compute-state","WEBGPU");setText("backend-name",backend);setText("adapter-name",gpuAdapterName)}catch{setText("gpu-badge","CPU FALLBACK");setText("backend-name",backend);setText("adapter-name","PORTABLE")}}
-probeGpu();
+interface MetricSensorCalibration {
+  verified: boolean;
+  scaleMetersPerUnit: number;
+  device: string;
+  receipt: string;
+}
 
-async function gpuTransform(samples:Float32Array){if(!gpuDevice)return samples;const shader=gpuDevice.createShaderModule({code:`@group(0) @binding(0) var<storage,read> src:array<f32>;@group(0) @binding(1) var<storage,read_write> dst:array<f32>;@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id:vec3<u32>){let i=id.x;if(i<arrayLength(&src)){dst[i]=src[i];}}`});const src=gpuDevice.createBuffer({size:samples.byteLength,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});const dst=gpuDevice.createBuffer({size:samples.byteLength,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_SRC});const read=gpuDevice.createBuffer({size:samples.byteLength,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});gpuDevice.queue.writeBuffer(src,0,samples);const pipeline=gpuDevice.createComputePipeline({layout:"auto",compute:{module:shader,entryPoint:"main"}});const bind=gpuDevice.createBindGroup({layout:pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:src}},{binding:1,resource:{buffer:dst}}]});const cmd=gpuDevice.createCommandEncoder();const pass=cmd.beginComputePass();pass.setPipeline(pipeline);pass.setBindGroup(0,bind);pass.dispatchWorkgroups(Math.ceil(samples.length/64));pass.end();cmd.copyBufferToBuffer(dst,0,read,0,samples.byteLength);gpuDevice.queue.submit([cmd.finish()]);await read.mapAsync(GPUMapMode.READ);const out=new Float32Array(read.getMappedRange().slice(0));read.unmap();src.destroy();dst.destroy();read.destroy();return out}
+declare global {
+  interface Window {
+    tessarynMetricSensor?: {
+      currentCalibration(): Promise<MetricSensorCalibration>;
+    };
+  }
+}
 
-function orientationPose(){const o=screen.orientation?.angle||0;return [1,0,0,0,1,0,0,0,1,Math.sin(o*Math.PI/180)*.03,0,0]}
-async function captureFrame(){if(!running||video.readyState<2)return;const w=160,h=Math.max(90,Math.round(160*video.videoHeight/video.videoWidth));const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d",{willReadFrequently:true})!;ctx.drawImage(video,0,0,w,h);const img=ctx.getImageData(0,0,w,h);const stride=3, fresh:Point[]=[];const packed:number[]=[];for(let y=0;y<h;y+=stride){for(let x=0;x<w;x+=stride){const i=(y*w+x)*4,r=img.data[i]!/255,g=img.data[i+1]!/255,b=img.data[i+2]!/255;const lum=.2126*r+.7152*g+.0722*b;const depth=.75+(1-lum)*.95;const nx=(x/w-.5)*depth*1.45,ny=-(y/h-.5)*depth*(h/w)*1.45,nz=-depth;packed.push(nx,ny,nz,r,g,b);fresh.push({x:nx,y:ny,z:nz,r,g,b,c:.5+lum*.5,t:performance.now()})}}
-const start=performance.now();const transformed=await gpuTransform(new Float32Array(packed));for(let i=0,j=0;i<fresh.length;i++,j+=6){fresh[i]!.x=transformed[j]!;fresh[i]!.y=transformed[j+1]!;fresh[i]!.z=transformed[j+2]!}points=mergePoints(points,fresh,48000);updateCloud(points);frameNo++;setText("frame-count",String(frameNo));setText("dispatch-time",`${(performance.now()-start).toFixed(1)} ms`);q("compute-meter").style.width=`${Math.min(100,20+points.length/480)}%`;setText("pose-state",`TRACK ${frameNo}`);if(frameNo%12===0)recordEvidence("reconstruction",fresh)}
-function mergePoints(a:Point[],b:Point[],max:number){const map=new Map<string,Point>();for(const p of [...a,...b]){const k=`${Math.round(p.x*45)}:${Math.round(p.y*45)}:${Math.round(p.z*45)}`;const old=map.get(k);map.set(k,old?{x:(old.x+p.x)/2,y:(old.y+p.y)/2,z:(old.z+p.z)/2,r:(old.r+p.r)/2,g:(old.g+p.g)/2,b:(old.b+p.b)/2,c:Math.min(1,(old.c+p.c)/2+.03),t:p.t}:p);if(map.size>=max)break}return [...map.values()]}
-function recordEvidence(kind:string,output:unknown,device=navigator.userAgent,transport="browser",hardware=!!gpuDevice,details:Record<string,unknown>={}){const input=digest(`${kind}:${frameNo}:${performance.now()}`),out=digest(output);const e={time:Date.now(),kind,device,transport,input,output:out,receipt:digest({kind,input,out,device,transport}),hardware,details};evidence.push(e);q("evidence-log").textContent=JSON.stringify(evidence,null,2)}
+type VideoWithFrameCallback = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: (now: number) => void) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
+};
 
-async function startCamera(){stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});video.srcObject=stream;await video.play();running=true;frameNo=0;q<HTMLButtonElement>("start-button").disabled=true;q<HTMLButtonElement>("capture-button").disabled=false;q<HTMLButtonElement>("stop-button").disabled=false;setText("capture-state","CAPTURING");q("stage-message").style.display="none";const loop=async()=>{if(!running)return;await captureFrame();setTimeout(loop,gpuDevice?110:190)};loop();recordEvidence("camera-open",{tracks:stream.getVideoTracks().map(t=>t.getSettings())})}
-function stopCamera(){running=false;stream?.getTracks().forEach(t=>t.stop());stream=null;q<HTMLButtonElement>("start-button").disabled=false;q<HTMLButtonElement>("capture-button").disabled=true;q<HTMLButtonElement>("stop-button").disabled=true;setText("capture-state","READY")}
-function commitMoment(){if(!points.length)return;const p=points.map(x=>({...x})),inputHash=digest({frameNo,p:orientationPose()}),outputHash=digest(p);const m:Moment={id:`moment-${moments.length}`,created:Date.now(),points:p,pose:orientationPose(),sensor:setTextValue("sensor-badge"),backend,inputHash,outputHash,receipt:digest({inputHash,outputHash,parent:moments.at(-1)?.receipt||"0"})};moments.push(m);currentMoment=moments.length-1;updateTimeline();recordEvidence("moment",m);setText("cell-state",`WORLD CELL / ${moments.length} MOMENTS`)}
-const setTextValue=(id:string)=>q(id).textContent||"";
-function buildCell():WorldCell{const base={version:21 as const,id:"",branch:"main",created:Date.now(),moments,pha:digest("tessaryn/pha/v21"),memoryCapsule:digest({moments:moments.map(m=>m.receipt)}),rootprint:"",evidence};const rootprint=digest({...base,rootprint:undefined,id:undefined});return {...base,id:rootprint,rootprint}}
-function seal(){const cell=buildCell();setText("rootprint",cell.rootprint.slice(0,16).toUpperCase());setText("cell-state",`WORLD CELL / SEALED / ${moments.length} MOMENTS`);recordEvidence("seal",cell,"browser-crypto","SHA-256",false,{rootprint:cell.rootprint});q<HTMLButtonElement>("send-button").disabled=!channel||channel.readyState!=="open"}
+const ZERO_DIGEST = "0".repeat(64);
+const MAX_MOMENTS = 24;
+const FRAME_INTERVAL_MS = 88;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
-function setupPeer(){pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});pc.onconnectionstatechange=()=>setText("peer-state",pc?.connectionState.toUpperCase()||"CLOSED");pc.ondatachannel=e=>attachChannel(e.channel);return pc}
-function attachChannel(ch:RTCDataChannel){channel=ch;channel.binaryType="arraybuffer";channel.onopen=()=>{setText("channel-state","OPEN");q<HTMLButtonElement>("send-button").disabled=!moments.length};channel.onclose=()=>setText("channel-state","CLOSED");channel.onmessage=onPeerMessage}
-const waitIce=(p:RTCPeerConnection)=>new Promise<void>(resolve=>{if(p.iceGatheringState==="complete")return resolve();p.onicegatheringstatechange=()=>p.iceGatheringState==="complete"&&resolve()});
-async function createOffer(){const p=setupPeer();attachChannel(p.createDataChannel("tessaryn-world-cell",{ordered:true}));await p.setLocalDescription(await p.createOffer());await waitIce(p);q<HTMLTextAreaElement>("pairing-text").value=JSON.stringify(p.localDescription);setText("transfer-state","Offer created. Copy it to the joining device.")}
-async function joinOffer(){const raw=q<HTMLTextAreaElement>("pairing-text").value.trim();if(!raw)return;const p=setupPeer();await p.setRemoteDescription(JSON.parse(raw));await p.setLocalDescription(await p.createAnswer());await waitIce(p);q<HTMLTextAreaElement>("pairing-text").value=JSON.stringify(p.localDescription);setText("transfer-state","Answer created. Copy it back to the offering device.")}
-async function applyAnswer(){if(!pc)throw new Error("Create an offer first");await pc.setRemoteDescription(JSON.parse(q<HTMLTextAreaElement>("pairing-text").value));setText("transfer-state","Answer applied. Waiting for the encrypted data channel.")}
-async function sendCell(){if(!channel||channel.readyState!=="open")return;const bytes=encoder.encode(JSON.stringify(buildCell())),full=hex(sha256(bytes)),chunk=32*1024,total=Math.ceil(bytes.length/chunk);channel.send(JSON.stringify({type:"manifest",digest:full,bytes:bytes.length,chunks:total}));for(let i=0;i<total;i++){const part=bytes.slice(i*chunk,(i+1)*chunk);channel.send(part);q("transfer-meter").style.width=`${Math.round((i+1)/total*100)}%`;await new Promise(r=>setTimeout(r,8))}channel.send(JSON.stringify({type:"complete"}));setText("transfer-state",`Sent ${bytes.length.toLocaleString()} verified bytes.`);recordEvidence("webrtc-send",{bytes:bytes.length,digest:full},"peer","WebRTC DataChannel",true)}
-function onPeerMessage(e:MessageEvent){if(typeof e.data==="string"){const msg=JSON.parse(e.data);if(msg.type==="manifest"){pendingChunks=[];expectedDigest=msg.digest;expectedBytes=msg.bytes;setText("transfer-state",`Receiving ${msg.bytes.toLocaleString()} bytes…`)}else if(msg.type==="complete")void finalizeReceive();return}pendingChunks.push(new Uint8Array(e.data));const got=pendingChunks.reduce((n,c)=>n+c.length,0);q("transfer-meter").style.width=`${Math.min(100,Math.round(got/expectedBytes*100))}%`}
-async function finalizeReceive(){const bytes=new Uint8Array(expectedBytes);let off=0;for(const c of pendingChunks){bytes.set(c,off);off+=c.length}const actual=hex(sha256(bytes));if(actual!==expectedDigest){setText("transfer-state","REJECTED / canonical digest mismatch");return}const cell=JSON.parse(new TextDecoder().decode(bytes)) as WorldCell;const calculated=digest({...cell,rootprint:undefined,id:undefined});if(calculated!==cell.rootprint){setText("transfer-state","REJECTED / World Cell Rootprint mismatch");return}moments=cell.moments;evidence.splice(0,evidence.length,...cell.evidence);currentMoment=Math.max(0,moments.length-1);updateTimeline();showMoment(currentMoment);setText("rootprint",cell.rootprint.slice(0,16).toUpperCase());setText("transfer-state",`VERIFIED / World Cell reconstructed from ${bytes.length.toLocaleString()} bytes.`);recordEvidence("webrtc-receive",{bytes:bytes.length,digest:actual},"peer","WebRTC DataChannel",true)}
+function element<T extends HTMLElement>(id: string): T {
+  const found = document.getElementById(id);
+  if (!found) throw new Error(`World Cell Theater element is missing: ${id}`);
+  return found as T;
+}
 
-async function connectSerial(){const n=navigator as Navigator&{serial?:{requestPort():Promise<any>}};if(!n.serial)throw new Error("WebSerial unavailable");const port=await n.serial.requestPort();await port.open({baudRate:3000000});setText("sensor-badge","EVENT CAMERA");setText("sensor-detail","External event-camera stream connected through WebSerial.");q("sensor-log").textContent="WebSerial event camera connected. Expecting newline-delimited JSON packets with x, y, polarity, timestamp_ns, confidence.";recordEvidence("sensor-connect",{port:"serial"},"external-event-camera","WebSerial",true);const reader=port.readable.getReader();let buffer="";for(;;){const {value,done}=await reader.read();if(done)break;buffer+=new TextDecoder().decode(value);let nl;while((nl=buffer.indexOf("\n"))>=0){const line=buffer.slice(0,nl);buffer=buffer.slice(nl+1);try{const ev=JSON.parse(line);const p:Point={x:(ev.x/640-.5)*1.3,y:-(ev.y/480-.5),z:-1+(ev.polarity?.02:-.02),r:ev.polarity?1:.1,g:.6,b:ev.polarity?.2:1,c:ev.confidence??1,t:ev.timestamp_ns??performance.now()};points=mergePoints(points,[p],48000);updateCloud(points)}catch{}}}}
-async function connectUsb(){const n=navigator as Navigator&{usb?:{requestDevice(o:{filters:any[]}):Promise<any>}};if(!n.usb)throw new Error("WebUSB unavailable");const device=await n.usb.requestDevice({filters:[]});await device.open();setText("sensor-badge","USB SENSOR");q("sensor-log").textContent=`Connected ${device.productName||"USB spatial sensor"}. Vendor ${device.vendorId}, product ${device.productId}.`;recordEvidence("sensor-connect",{vendorId:device.vendorId,productId:device.productId},device.productName||"USB sensor","WebUSB",true)}
-async function probeXr(){const xr=(navigator as Navigator&{xr?:XRSystem}).xr;if(!xr||!await xr.isSessionSupported("immersive-ar")){q("sensor-log").textContent="WebXR immersive AR/depth is not exposed by this browser.";return}q("sensor-log").textContent="WebXR immersive AR is available. Depth sensing will be requested by a native/installed AR host session.";setText("sensor-badge","WEBXR READY");recordEvidence("sensor-probe",{immersiveAR:true},"phone-depth","WebXR",true)}
+function setText(id: string, value: string): void {
+  element(id).textContent = value;
+}
 
-q("start-button").onclick=()=>void startCamera().catch(e=>setText("stage-message",String(e)));
-q("stop-button").onclick=stopCamera;q("capture-button").onclick=commitMoment;q("seal-button").onclick=seal;
-q<HTMLInputElement>("replay-slider").oninput=e=>showMoment(Number((e.target as HTMLInputElement).value));q("prev-button").onclick=()=>showMoment(currentMoment-1);q("next-button").onclick=()=>showMoment(currentMoment+1);q("play-button").onclick=()=>{if(playTimer){clearInterval(playTimer);playTimer=0;setText("play-button","PLAY");return}setText("play-button","STOP");playTimer=window.setInterval(()=>showMoment((currentMoment+1)%moments.length),900)};
-q("host-button").onclick=()=>void createOffer();q("join-button").onclick=()=>void joinOffer();q("answer-button").onclick=()=>void applyAnswer();q("send-button").onclick=()=>void sendCell();
-q("sensor-button").onclick=()=>q<HTMLDialogElement>("sensor-dialog").showModal();q("evidence-button").onclick=()=>q<HTMLDialogElement>("evidence-dialog").showModal();document.querySelectorAll<HTMLElement>("[data-close]").forEach(b=>b.onclick=()=>q<HTMLDialogElement>(b.dataset.close!).close());q("serial-button").onclick=()=>void connectSerial().catch(e=>q("sensor-log").textContent=String(e));q("usb-button").onclick=()=>void connectUsb().catch(e=>q("sensor-log").textContent=String(e));q("xr-button").onclick=()=>void probeXr();q("reset-button").onclick=()=>{stopCamera();points=[];moments=[];evidence.length=0;updateCloud([]);updateTimeline();setText("rootprint","UNSEALED");setText("cell-state","WORLD CELL / EMPTY")};
-window.addEventListener("beforeunload",stopCamera);navigator.serviceWorker?.register("./sw.js").catch(()=>{});updateTimeline();
+function setWidth(id: string, value: number): void {
+  element(id).style.width = `${Math.max(0, Math.min(100, value))}%`;
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
+
+function nonzeroDigest(value: string): boolean {
+  return /^[0-9a-f]{64}$/.test(value) && value !== ZERO_DIGEST;
+}
+
+function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    vertexShader: `
+      attribute vec3 color;
+      attribute float aAlpha;
+      attribute float aSize;
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        vColor = color;
+        vAlpha = aAlpha;
+        vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * viewPosition;
+        gl_PointSize = clamp(aSize * (260.0 / max(0.35, -viewPosition.z)), 1.5, 24.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        float radius = length(gl_PointCoord - vec2(0.5));
+        if (radius > 0.5) discard;
+        float core = smoothstep(0.5, 0.08, radius);
+        float glow = smoothstep(0.5, 0.0, radius) * 0.42;
+        gl_FragColor = vec4(vColor * (0.72 + glow), vAlpha * core);
+      }
+    `,
+  });
+}
+
+function setPointGeometry(
+  geometry: THREE.BufferGeometry,
+  positions: Float32Array,
+  colors: Float32Array,
+  alpha: Float32Array,
+  size: Float32Array,
+): void {
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geometry.setAttribute("aAlpha", new THREE.BufferAttribute(alpha, 1));
+  geometry.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
+  geometry.computeBoundingSphere();
+}
+
+function packedSurfels(surfels: KeyxymSurfel[]): number[] {
+  const output = new Array<number>(surfels.length * KEYXYM_V22_SURFEL_FLOATS);
+  let offset = 0;
+  for (const surfel of surfels) {
+    output[offset++] = surfel.x;
+    output[offset++] = surfel.y;
+    output[offset++] = surfel.z;
+    output[offset++] = surfel.nx;
+    output[offset++] = surfel.ny;
+    output[offset++] = surfel.nz;
+    output[offset++] = surfel.r;
+    output[offset++] = surfel.g;
+    output[offset++] = surfel.b;
+    output[offset++] = surfel.confidence;
+    output[offset++] = surfel.uncertainty;
+    output[offset++] = surfel.observations;
+    output[offset++] = surfel.sourceKeyframe;
+  }
+  return output;
+}
+
+function unpackSurfels(values: number[]): KeyxymSurfel[] {
+  if (values.length % KEYXYM_V22_SURFEL_FLOATS !== 0) {
+    throw new Error("Moment geometry record is malformed");
+  }
+  const output: KeyxymSurfel[] = [];
+  for (let index = 0; index < values.length; index += KEYXYM_V22_SURFEL_FLOATS) {
+    const record = values.slice(index, index + KEYXYM_V22_SURFEL_FLOATS);
+    if (!record.every(Number.isFinite)) throw new Error("Moment geometry is non-finite");
+    output.push({
+      x: record[0]!, y: record[1]!, z: record[2]!,
+      nx: record[3]!, ny: record[4]!, nz: record[5]!,
+      r: record[6]!, g: record[7]!, b: record[8]!,
+      confidence: record[9]!, uncertainty: record[10]!,
+      observations: record[11]!, sourceKeyframe: record[12]!,
+    });
+  }
+  return output;
+}
+
+function confirmedGeometry(surfels: KeyxymSurfel[]): KeyxymSurfel[] {
+  return surfels.filter((surfel) =>
+    surfel.observations >= 2 && surfel.confidence >= 0.55 && surfel.uncertainty <= 0.25);
+}
+
+function momentBody(moment: MomentRecord): Omit<MomentRecord, "canonicalDigest"> {
+  const { canonicalDigest: _canonicalDigest, ...body } = moment;
+  return body;
+}
+
+function validateMoment(moment: MomentRecord, expectedParent: string): void {
+  if (moment.schema !== "tessaryn/world-cell-moment/v22" ||
+      moment.geometryRecordFloats !== KEYXYM_V22_SURFEL_FLOATS ||
+      moment.parentCommitment !== expectedParent ||
+      !nonzeroDigest(moment.runtimeCommitment) ||
+      !nonzeroDigest(moment.reconstructionReceipt) ||
+      digestValue(momentBody(moment)) !== moment.canonicalDigest) {
+    throw new Error(`Moment ${moment.id} failed canonical lineage verification`);
+  }
+  unpackSurfels(moment.geometry);
+}
+
+class TheaterController {
+  private readonly video = element<VideoWithFrameCallback>("camera");
+  private readonly canvas = element<HTMLCanvasElement>("stage");
+  private readonly renderer = new THREE.WebGLRenderer({
+    canvas: this.canvas,
+    alpha: true,
+    antialias: true,
+    powerPreference: "high-performance",
+  });
+  private readonly scene = new THREE.Scene();
+  private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
+  private readonly formingGeometry = new THREE.BufferGeometry();
+  private readonly authorityGeometry = new THREE.BufferGeometry();
+  private readonly formingCloud = new THREE.Points(this.formingGeometry, createPointMaterial(true));
+  private readonly authorityCloud = new THREE.Points(this.authorityGeometry, createPointMaterial(false));
+  private readonly captureCanvas = document.createElement("canvas");
+  private readonly captureContext: CanvasRenderingContext2D;
+  private readonly runtimeCommitmentValue: string;
+
+  private runtime: KeyxymV22Runtime | null = null;
+  private mediaStream: MediaStream | null = null;
+  private running = false;
+  private processing = false;
+  private frameCallback = 0;
+  private fallbackTimer = 0;
+  private lastProcessedAt = 0;
+  private lastTimestampNs = 0n;
+  private frameNumber = 0;
+  private geometryRevision = -1n;
+  private formingSamples: KeyxymFormingSample[] = [];
+  private geometrySnapshot: KeyxymGeometrySnapshot = { revision: 0n, surfels: [] };
+  private pose: KeyxymPoseEstimate | null = null;
+  private quality: KeyxymQuality | null = null;
+  private receipts: KeyxymReceipts | null = null;
+  private sourceCommitment = ZERO_DIGEST;
+  private moments: MomentRecord[] = [];
+  private currentMoment = 0;
+  private playTimer = 0;
+  private evidence: RuntimeEvidence[] = [];
+  private sealedCell: SealedWorldCell | null = null;
+  private metricCalibration: MetricSensorCalibration | null = null;
+  private requestedReferenceMeters: number | null = null;
+  private peer: RTCPeerConnection | null = null;
+  private channel: RTCDataChannel | null = null;
+  private pendingChunks: Uint8Array[] = [];
+  private expectedDigest = "";
+  private expectedBytes = 0;
+
+  constructor(private readonly manifest: KeyxymProvenanceManifest) {
+    const context = this.captureCanvas.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("World Cell capture canvas is unavailable");
+    this.captureContext = context;
+    this.runtimeCommitmentValue = runtimeCommitment(manifest);
+
+    this.camera.position.set(0, 0, 2.65);
+    this.scene.add(this.formingCloud, this.authorityCloud);
+    const grid = new THREE.GridHelper(3.6, 36, 0x123d52, 0x091925);
+    grid.rotation.x = Math.PI / 2;
+    grid.position.z = -1.35;
+    (grid.material as THREE.Material).transparent = true;
+    (grid.material as THREE.Material).opacity = 0.24;
+    this.scene.add(grid);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 1));
+
+    new ResizeObserver(() => this.resize()).observe(this.canvas);
+    this.resize();
+    this.render();
+  }
+
+  async initialize(): Promise<void> {
+    this.runtime = await KeyxymV22Runtime.load({
+      branch: "main/world-cell-theater",
+      maximumAnalysisWidth: this.manifest.maximum_analysis_width,
+      maximumAnalysisHeight: this.manifest.maximum_analysis_height,
+      maximumTracks: this.manifest.maximum_tracks,
+      maximumFormingSamples: this.manifest.maximum_preview_samples,
+    });
+    this.bindControls();
+    document.documentElement.dataset.worldCellController = "keyxym-consensus-v1";
+    setText("backend-name", "KEYXYM V0.22 / DUAL FIELD");
+    setText("adapter-name", this.manifest.source_commit.slice(0, 12).toUpperCase());
+    setText("gpu-badge", "WASM READY");
+    setText("compute-state", "KEYXYM");
+    setText("cell-state", "WORLD CELL / READY / RELATIVE");
+    this.setStageMessage(
+      "REALITY FORMATION READY",
+      "The forming field appears immediately. Confirmed geometry emerges only from Keyxym multi-view evidence.",
+    );
+    this.updateControls();
+    navigator.serviceWorker?.register("./sw.js").catch(() => undefined);
+  }
+
+  private resize(): void {
+    const bounds = this.canvas.getBoundingClientRect();
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.renderer.setSize(Math.max(1, bounds.width), Math.max(1, bounds.height), false);
+    this.camera.aspect = Math.max(1, bounds.width) / Math.max(1, bounds.height);
+    this.camera.updateProjectionMatrix();
+  }
+
+  private render = (): void => {
+    if (!this.running) this.authorityCloud.rotation.y += 0.00035;
+    this.formingCloud.rotation.y *= 0.96;
+    this.renderer.render(this.scene, this.camera);
+    requestAnimationFrame(this.render);
+  };
+
+  private bindControls(): void {
+    element<HTMLButtonElement>("start-button").onclick = () => {
+      void this.startCamera().catch((error: unknown) => this.fail(error));
+    };
+    element<HTMLButtonElement>("stop-button").onclick = () => this.stopCamera();
+    element<HTMLButtonElement>("capture-button").onclick = () => {
+      void this.commitMoment().catch((error: unknown) => this.fail(error));
+    };
+    element<HTMLButtonElement>("seal-button").onclick = () => {
+      void this.seal().catch((error: unknown) => this.fail(error));
+    };
+    element<HTMLInputElement>("replay-slider").oninput = (event) => {
+      this.showMoment(Number((event.target as HTMLInputElement).value));
+    };
+    element<HTMLButtonElement>("prev-button").onclick = () => this.showMoment(this.currentMoment - 1);
+    element<HTMLButtonElement>("next-button").onclick = () => this.showMoment(this.currentMoment + 1);
+    element<HTMLButtonElement>("play-button").onclick = () => this.togglePlayback();
+    element<HTMLButtonElement>("host-button").onclick = () => void this.createOffer().catch((error: unknown) => this.fail(error));
+    element<HTMLButtonElement>("join-button").onclick = () => void this.joinOffer().catch((error: unknown) => this.fail(error));
+    element<HTMLButtonElement>("answer-button").onclick = () => void this.applyAnswer().catch((error: unknown) => this.fail(error));
+    element<HTMLButtonElement>("send-button").onclick = () => void this.sendCell().catch((error: unknown) => this.fail(error));
+    element<HTMLButtonElement>("reset-button").onclick = () => void this.reset().catch((error: unknown) => this.fail(error));
+    element<HTMLButtonElement>("sensor-button").onclick = () => element<HTMLDialogElement>("sensor-dialog").showModal();
+    element<HTMLButtonElement>("evidence-button").onclick = () => element<HTMLDialogElement>("evidence-dialog").showModal();
+    element<HTMLButtonElement>("calibrate-button").onclick = () => element<HTMLDialogElement>("calibration-dialog").showModal();
+    element<HTMLButtonElement>("apply-calibration").onclick = () => this.recordReferenceRequest();
+    element<HTMLButtonElement>("serial-button").onclick = () => void this.connectSerial().catch((error: unknown) => this.sensorError(error));
+    element<HTMLButtonElement>("usb-button").onclick = () => void this.connectUsb().catch((error: unknown) => this.sensorError(error));
+    element<HTMLButtonElement>("xr-button").onclick = () => void this.probeXr().catch((error: unknown) => this.sensorError(error));
+    document.querySelectorAll<HTMLElement>("[data-close]").forEach((button) => {
+      button.onclick = () => element<HTMLDialogElement>(button.dataset.close ?? "").close();
+    });
+    window.addEventListener("beforeunload", () => {
+      this.stopCamera();
+      this.runtime?.destroy();
+    });
+  }
+
+  private async startCamera(): Promise<void> {
+    if (!this.runtime) throw new Error("Keyxym authority is not initialized");
+    this.mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30, max: 60 },
+      },
+      audio: false,
+    });
+    this.video.srcObject = this.mediaStream;
+    await this.video.play();
+    this.running = true;
+    this.frameNumber = 0;
+    this.lastProcessedAt = 0;
+    element<HTMLButtonElement>("start-button").disabled = true;
+    element<HTMLButtonElement>("stop-button").disabled = false;
+    setText("capture-state", "FORMING");
+    this.hideStageMessage();
+    await this.refreshMetricCalibration();
+    this.scheduleFrame();
+  }
+
+  private stopCamera(): void {
+    this.running = false;
+    if (this.frameCallback && this.video.cancelVideoFrameCallback) {
+      this.video.cancelVideoFrameCallback(this.frameCallback);
+    }
+    if (this.fallbackTimer) window.clearTimeout(this.fallbackTimer);
+    this.frameCallback = 0;
+    this.fallbackTimer = 0;
+    this.mediaStream?.getTracks().forEach((track) => track.stop());
+    this.mediaStream = null;
+    this.video.srcObject = null;
+    element<HTMLButtonElement>("start-button").disabled = false;
+    element<HTMLButtonElement>("stop-button").disabled = true;
+    setText("capture-state", "READY");
+    this.updateControls();
+  }
+
+  private scheduleFrame(): void {
+    if (!this.running) return;
+    if (this.video.requestVideoFrameCallback) {
+      this.frameCallback = this.video.requestVideoFrameCallback((now) => {
+        void this.onVideoFrame(now);
+      });
+    } else {
+      this.fallbackTimer = window.setTimeout(() => {
+        void this.onVideoFrame(performance.now());
+      }, 32);
+    }
+  }
+
+  private async onVideoFrame(now: number): Promise<void> {
+    this.scheduleFrame();
+    if (!this.running || this.processing || now - this.lastProcessedAt < FRAME_INTERVAL_MS ||
+        this.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    this.processing = true;
+    this.lastProcessedAt = now;
+    const started = performance.now();
+    try {
+      await this.processFrame(now);
+      setText("dispatch-time", `${(performance.now() - started).toFixed(1)} ms`);
+    } catch (error) {
+      this.freezeOnTrackingFailure(error);
+    } finally {
+      this.processing = false;
+    }
+  }
+
+  private async processFrame(now: number): Promise<void> {
+    if (!this.runtime) throw new Error("Keyxym authority is unavailable");
+    const sourceWidth = this.video.videoWidth;
+    const sourceHeight = this.video.videoHeight;
+    if (!sourceWidth || !sourceHeight) return;
+    const scale = Math.min(1, this.manifest.maximum_analysis_width / sourceWidth,
+      this.manifest.maximum_analysis_height / sourceHeight);
+    const width = Math.max(16, Math.floor(sourceWidth * scale));
+    const height = Math.max(16, Math.floor(sourceHeight * scale));
+    this.captureCanvas.width = width;
+    this.captureCanvas.height = height;
+    this.captureContext.drawImage(this.video, 0, 0, width, height);
+    const image = this.captureContext.getImageData(0, 0, width, height);
+    const rgba = new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.byteLength);
+    const commitmentBytes = sha256(rgba);
+    const sourceCommitment = bytesHex(commitmentBytes);
+    const calculatedTimestamp = BigInt(Math.max(1, Math.round((performance.timeOrigin + now) * 1_000_000)));
+    const timestampNs = calculatedTimestamp > this.lastTimestampNs
+      ? calculatedTimestamp : this.lastTimestampNs + 1n;
+    this.lastTimestampNs = timestampNs;
+    const focal = width / (2 * Math.tan(Math.PI / 6));
+    const calibration = this.metricCalibration?.verified === true ? this.metricCalibration : null;
+
+    const pose = this.runtime.ingest({
+      timestampNs,
+      width,
+      height,
+      fx: focal,
+      fy: focal,
+      cx: width / 2,
+      cy: height / 2,
+      scaleMetersPerUnit: calibration?.scaleMetersPerUnit ?? 1,
+      metricScale: calibration !== null,
+      rgba,
+      sourceCommitment: commitmentBytes,
+    });
+    const forming = this.runtime.formingField();
+    const quality = this.runtime.quality();
+    const receipts = this.runtime.receipts();
+    const snapshot = this.runtime.geometrySnapshot(this.geometryRevision);
+
+    this.pose = pose;
+    this.quality = quality;
+    this.receipts = receipts;
+    this.formingSamples = forming;
+    this.sourceCommitment = sourceCommitment;
+    this.frameNumber += 1;
+    if (snapshot && pose.recovered) {
+      this.geometrySnapshot = snapshot;
+      this.geometryRevision = snapshot.revision;
+    }
+
+    this.updateFormingCloud(forming, quality.coverage);
+    this.updateAuthorityCloud(this.geometrySnapshot.surfels);
+    this.updateQualityUi();
+    this.recordRuntimeEvidence();
+    this.updateControls();
+    document.documentElement.dataset.formingSamples = String(forming.length);
+    document.documentElement.dataset.authoritativeSurfels = String(this.geometrySnapshot.surfels.length);
+    document.documentElement.dataset.geometryRevision = this.geometrySnapshot.revision.toString();
+  }
+
+  private updateFormingCloud(samples: KeyxymFormingSample[], coverage: number): void {
+    const count = samples.length;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const alpha = new Float32Array(count);
+    const size = new Float32Array(count);
+    const authorityWeight = clamp01(coverage);
+    for (let index = 0; index < count; index += 1) {
+      const sample = samples[index]!;
+      const flow = Math.hypot(sample.flowX, sample.flowY);
+      positions[index * 3] = sample.normalizedX * 1.15 + sample.flowX * 3.2;
+      positions[index * 3 + 1] = sample.normalizedY * 0.86 + sample.flowY * 3.2;
+      positions[index * 3 + 2] = -0.72 + Math.min(0.16, flow * 2.8) +
+        Math.min(0.05, sample.salience * 0.08);
+      colors[index * 3] = sample.r;
+      colors[index * 3 + 1] = sample.g;
+      colors[index * 3 + 2] = sample.b;
+      alpha[index] = Math.max(0.08, (0.68 - authorityWeight * 0.48) *
+        (0.35 + clamp01(sample.trackSupport) * 0.65));
+      size[index] = 2.4 + Math.min(8, sample.age * 0.18) + Math.min(4, flow * 70);
+    }
+    setPointGeometry(this.formingGeometry, positions, colors, alpha, size);
+  }
+
+  private updateAuthorityCloud(surfels: KeyxymSurfel[]): void {
+    const count = surfels.length;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const alpha = new Float32Array(count);
+    const size = new Float32Array(count);
+    for (let index = 0; index < count; index += 1) {
+      const surfel = surfels[index]!;
+      positions[index * 3] = surfel.x;
+      positions[index * 3 + 1] = surfel.y;
+      positions[index * 3 + 2] = surfel.z;
+      colors[index * 3] = clamp01(surfel.r);
+      colors[index * 3 + 1] = clamp01(surfel.g);
+      colors[index * 3 + 2] = clamp01(surfel.b);
+      alpha[index] = Math.max(0.15, clamp01(surfel.confidence) *
+        (1 - Math.min(0.75, Math.max(0, surfel.uncertainty))));
+      size[index] = 3.2 + Math.min(7, surfel.observations * 0.8) +
+        clamp01(surfel.confidence) * 2.5;
+    }
+    setPointGeometry(this.authorityGeometry, positions, colors, alpha, size);
+    const sphere = this.authorityGeometry.boundingSphere;
+    if (sphere && sphere.radius > 0.00001) {
+      this.authorityCloud.position.copy(sphere.center).multiplyScalar(-1);
+      const visualScale = Math.min(4, 0.92 / sphere.radius);
+      this.authorityCloud.scale.setScalar(visualScale);
+    } else {
+      this.authorityCloud.position.set(0, 0, 0);
+      this.authorityCloud.scale.setScalar(1);
+    }
+    setText("surfel-count", count.toLocaleString());
+  }
+
+  private updateQualityUi(): void {
+    const pose = this.pose;
+    const quality = this.quality;
+    if (!pose || !quality) return;
+    setText("frame-count", String(this.frameNumber));
+    setText("pose-state", pose.recovered
+      ? `SOLVED ${Math.round(pose.tracking * 100)}%`
+      : `FORMING ${Math.round(pose.tracking * 100)}%`);
+    setText("tracking-value", `${Math.round(clamp01(quality.tracking) * 100)}%`);
+    setText("parallax-value", `${quality.parallaxDegrees.toFixed(2)}°`);
+    setText("error-value", Number.isFinite(quality.reprojectionErrorPixels)
+      ? `${quality.reprojectionErrorPixels.toFixed(2)} px` : "—");
+    setText("coverage-value", `${Math.round(clamp01(quality.coverage) * 100)}%`);
+    setText("confirmed-value", Math.round(quality.confirmed).toLocaleString());
+    setText("uncertain-value", Math.round(quality.uncertain).toLocaleString());
+    setText("rejected-value", Math.round(quality.rejected).toLocaleString());
+    setText("scale-value", quality.metricScale ? "METRIC" : "RELATIVE");
+    setText("cell-state", `WORLD CELL / ${quality.metricScale ? "METRIC" : "RELATIVE"} / ${pose.recovered ? "TRACKING" : "FORMING"}`);
+    setWidth("quality-meter", clamp01(quality.tracking * 0.45 + quality.coverage * 0.55) * 100);
+    setWidth("compute-meter", Math.min(100, 18 + this.formingSamples.length / 120 +
+      this.geometrySnapshot.surfels.length / 480));
+    setText("capture-state", pose.recovered ? "TRACKING" : "FORMING");
+  }
+
+  private recordRuntimeEvidence(): void {
+    if (!this.receipts || !this.pose || !this.quality) return;
+    const poseReceipt = bytesHex(this.receipts.pose);
+    const qualityReceipt = bytesHex(this.receipts.quality);
+    const pair = reconstructionReceipt(this.receipts);
+    const latest = this.evidence.at(-1);
+    if (latest?.sourceCommitment === this.sourceCommitment &&
+        latest.geometryRevision === this.geometrySnapshot.revision.toString()) return;
+    this.evidence.push({
+      time: Date.now(),
+      kind: "keyxym-frame",
+      sourceCommitment: this.sourceCommitment,
+      poseReceipt,
+      qualityReceipt,
+      reconstructionReceipt: pair,
+      runtimeCommitment: this.runtimeCommitmentValue,
+      geometryRevision: this.geometrySnapshot.revision.toString(),
+      details: {
+        matches: this.pose.matches,
+        inliers: this.pose.inliers,
+        tracking: this.pose.tracking,
+        parallaxDegrees: this.pose.parallaxDegrees,
+        reprojectionErrorPixels: this.pose.reprojectionErrorPixels,
+        confirmed: this.quality.confirmed,
+        uncertain: this.quality.uncertain,
+        rejected: this.quality.rejected,
+        metricScale: this.quality.metricScale,
+      },
+    });
+    if (this.evidence.length > 96) this.evidence.splice(0, this.evidence.length - 96);
+    element("evidence-log").textContent = JSON.stringify(this.evidence, null, 2);
+  }
+
+  private canCommitMoment(): boolean {
+    if (!this.pose?.recovered || !this.quality || !this.receipts) return false;
+    const confirmed = confirmedGeometry(this.geometrySnapshot.surfels);
+    return this.pose.matches >= 12 && this.pose.inliers >= 10 &&
+      this.quality.tracking >= 0.2 && this.quality.parallaxDegrees >= 0.3 &&
+      this.quality.reprojectionErrorPixels <= 3 && confirmed.length >= 4 &&
+      this.receipts.pose.some((value) => value !== 0) &&
+      this.receipts.quality.some((value) => value !== 0) &&
+      nonzeroDigest(this.sourceCommitment);
+  }
+
+  private async commitMoment(): Promise<void> {
+    if (!this.canCommitMoment() || !this.pose || !this.quality || !this.receipts) {
+      throw new Error("A Moment requires recovered pose, parallax, bounded error, native receipts, and confirmed geometry");
+    }
+    if (this.moments.length >= MAX_MOMENTS) throw new Error("World Cell Moment limit reached");
+    const geometry = confirmedGeometry(this.geometrySnapshot.surfels);
+    const parent = this.moments.at(-1)?.canonicalDigest ?? ZERO_DIGEST;
+    const pairReceipt = reconstructionReceipt(this.receipts);
+    const body: Omit<MomentRecord, "canonicalDigest"> = {
+      schema: "tessaryn/world-cell-moment/v22",
+      id: `moment-${String(this.moments.length).padStart(4, "0")}`,
+      sequence: this.moments.length + 1,
+      createdAtUnixMs: Date.now(),
+      geometryRevision: this.geometrySnapshot.revision.toString(),
+      geometryRecordFloats: 13,
+      geometry: packedSurfels(geometry),
+      pose: Array.from(this.pose.worldFromCamera),
+      quality: { ...this.quality },
+      sourceCommitment: this.sourceCommitment,
+      poseReceipt: bytesHex(this.receipts.pose),
+      qualityReceipt: bytesHex(this.receipts.quality),
+      reconstructionReceipt: pairReceipt,
+      runtimeCommitment: this.runtimeCommitmentValue,
+      parentCommitment: parent,
+      metricScale: this.quality.metricScale,
+    };
+    const moment: MomentRecord = { ...body, canonicalDigest: digestValue(body) };
+    validateMoment(moment, parent);
+    this.moments.push(moment);
+    this.currentMoment = this.moments.length - 1;
+    this.sealedCell = null;
+    this.updateTimeline();
+    setText("cell-state", `WORLD CELL / ${this.moments.length} VERIFIED MOMENT${this.moments.length === 1 ? "" : "S"} / UNSEALED`);
+    setText("rootprint", "UNSEALED");
+    this.updateControls();
+  }
+
+  private updateTimeline(): void {
+    const timeline = element("timeline");
+    timeline.innerHTML = "";
+    if (!this.moments.length) {
+      const empty = document.createElement("span");
+      empty.className = "empty";
+      empty.textContent = "No authoritative Moments committed.";
+      timeline.appendChild(empty);
+      return;
+    }
+    this.moments.forEach((moment, index) => {
+      const button = document.createElement("button");
+      button.className = index === this.currentMoment ? "active" : "";
+      const small = document.createElement("small");
+      small.textContent = `MOMENT ${String(index).padStart(2, "0")}`;
+      const strong = document.createElement("b");
+      strong.textContent = `${(moment.geometry.length / KEYXYM_V22_SURFEL_FLOATS).toLocaleString()} CONFIRMED`;
+      button.append(small, strong);
+      button.onclick = () => this.showMoment(index);
+      timeline.appendChild(button);
+    });
+    const slider = element<HTMLInputElement>("replay-slider");
+    slider.max = String(this.moments.length - 1);
+    slider.value = String(this.currentMoment);
+    element<HTMLButtonElement>("prev-button").disabled = false;
+    element<HTMLButtonElement>("next-button").disabled = false;
+    element<HTMLButtonElement>("play-button").disabled = false;
+  }
+
+  private showMoment(index: number): void {
+    if (!this.moments.length) return;
+    this.currentMoment = Math.max(0, Math.min(index, this.moments.length - 1));
+    const moment = this.moments[this.currentMoment]!;
+    this.updateAuthorityCloud(unpackSurfels(moment.geometry));
+    this.updateTimeline();
+    setText("cell-state", `WORLD CELL / MOMENT ${this.currentMoment} / ${moment.metricScale ? "METRIC" : "RELATIVE"}`);
+  }
+
+  private togglePlayback(): void {
+    if (this.playTimer) {
+      window.clearInterval(this.playTimer);
+      this.playTimer = 0;
+      setText("play-button", "PLAY");
+      return;
+    }
+    if (!this.moments.length) return;
+    setText("play-button", "STOP");
+    this.playTimer = window.setInterval(() => {
+      this.showMoment((this.currentMoment + 1) % this.moments.length);
+    }, 900);
+  }
+
+  private worldCellDraft(): WorldCellDraft {
+    return {
+      schema: "tessaryn/world-cell/v22",
+      version: 22,
+      branch: "main/world-cell-theater",
+      createdAtUnixMs: Date.now(),
+      runtimeCommitment: this.runtimeCommitmentValue,
+      scaleState: this.moments.every((moment) => moment.metricScale) ? "metric" : "relative",
+      moments: this.moments.map((moment) => ({
+        ...moment,
+        geometry: [...moment.geometry],
+        pose: [...moment.pose],
+        quality: { ...moment.quality },
+      })),
+      evidence: this.evidence.map((item) => ({ ...item, details: { ...item.details } })),
+    };
+  }
+
+  private async seal(): Promise<void> {
+    const bridge = nativeAssuranceBridge();
+    if (!bridge) throw new Error("A verified native eform and Power House bridge is required to seal this World Cell");
+    if (!this.moments.length || !this.receipts || !this.quality) {
+      throw new Error("Commit at least one authoritative Moment before sealing");
+    }
+    const draft = this.worldCellDraft();
+    const canonicalCell = canonicalString(draft);
+    const canonicalDigest = digestBytes(encoder.encode(canonicalCell));
+    const evidence = evidenceRequest({
+      artifactKind: "world-cell",
+      canonicalDigest,
+      reconstructionReceipt: reconstructionReceipt(this.receipts),
+      runtimeCommitment: this.runtimeCommitmentValue,
+      parentCommitment: this.moments.at(-1)?.canonicalDigest,
+      sequence: this.moments.length,
+      metricScale: draft.scaleState === "metric",
+    });
+    const seal = await bridge.sealWorldCell({ canonicalCell, evidence });
+    validateNativeSeal(seal);
+    if (!await bridge.verifyWorldCell({ canonicalCell, evidence, seal })) {
+      throw new Error("Native eform and Power House verification rejected the sealed World Cell");
+    }
+    this.sealedCell = { ...draft, canonicalDigest, assuranceEvidence: evidence, seal };
+    setText("rootprint", seal.rootprint.slice(0, 16).toUpperCase());
+    setText("cell-state", `WORLD CELL / SEALED / ${draft.scaleState.toUpperCase()} / ${this.moments.length} MOMENTS`);
+    element("evidence-log").textContent = JSON.stringify({
+      runtimeEvidence: this.evidence,
+      assuranceEvidence: evidence,
+      seal,
+    }, null, 2);
+    this.updateControls();
+  }
+
+  private setupPeer(): RTCPeerConnection {
+    this.peer?.close();
+    const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    peer.onconnectionstatechange = () => setText("peer-state", peer.connectionState.toUpperCase());
+    peer.ondatachannel = (event) => this.attachChannel(event.channel);
+    this.peer = peer;
+    return peer;
+  }
+
+  private attachChannel(channel: RTCDataChannel): void {
+    this.channel = channel;
+    channel.binaryType = "arraybuffer";
+    channel.onopen = () => {
+      setText("channel-state", "OPEN");
+      this.updateControls();
+    };
+    channel.onclose = () => {
+      setText("channel-state", "CLOSED");
+      this.updateControls();
+    };
+    channel.onmessage = (event) => this.onPeerMessage(event);
+  }
+
+  private waitForIce(peer: RTCPeerConnection): Promise<void> {
+    return new Promise((resolve) => {
+      if (peer.iceGatheringState === "complete") return resolve();
+      peer.onicegatheringstatechange = () => {
+        if (peer.iceGatheringState === "complete") resolve();
+      };
+    });
+  }
+
+  private async createOffer(): Promise<void> {
+    const peer = this.setupPeer();
+    this.attachChannel(peer.createDataChannel("tessaryn-world-cell-v22", { ordered: true }));
+    await peer.setLocalDescription(await peer.createOffer());
+    await this.waitForIce(peer);
+    element<HTMLTextAreaElement>("pairing-text").value = JSON.stringify(peer.localDescription);
+    setText("transfer-state", "Offer created. Copy it to the receiving device.");
+  }
+
+  private async joinOffer(): Promise<void> {
+    const raw = element<HTMLTextAreaElement>("pairing-text").value.trim();
+    if (!raw) throw new Error("Paste a World Cell offer first");
+    const peer = this.setupPeer();
+    await peer.setRemoteDescription(JSON.parse(raw) as RTCSessionDescriptionInit);
+    await peer.setLocalDescription(await peer.createAnswer());
+    await this.waitForIce(peer);
+    element<HTMLTextAreaElement>("pairing-text").value = JSON.stringify(peer.localDescription);
+    setText("transfer-state", "Answer created. Copy it back to the sending device.");
+  }
+
+  private async applyAnswer(): Promise<void> {
+    if (!this.peer) throw new Error("Create an offer first");
+    const raw = element<HTMLTextAreaElement>("pairing-text").value.trim();
+    if (!raw) throw new Error("Paste the answer first");
+    await this.peer.setRemoteDescription(JSON.parse(raw) as RTCSessionDescriptionInit);
+    setText("transfer-state", "Answer applied. Waiting for the encrypted channel.");
+  }
+
+  private async sendCell(): Promise<void> {
+    if (!this.sealedCell) throw new Error("Only an eform and Power House sealed World Cell can be sent");
+    if (!this.channel || this.channel.readyState !== "open") throw new Error("World Cell channel is not open");
+    const bytes = encoder.encode(canonicalString(this.sealedCell));
+    const fullDigest = digestBytes(bytes);
+    const chunkBytes = 32 * 1024;
+    const total = Math.ceil(bytes.byteLength / chunkBytes);
+    this.channel.send(JSON.stringify({
+      type: "manifest",
+      schema: "tessaryn/world-cell-transfer/v22",
+      digest: fullDigest,
+      bytes: bytes.byteLength,
+      chunks: total,
+    }));
+    for (let index = 0; index < total; index += 1) {
+      const part = bytes.slice(index * chunkBytes, (index + 1) * chunkBytes);
+      this.channel.send(part);
+      setWidth("transfer-meter", ((index + 1) / total) * 100);
+      await new Promise((resolve) => window.setTimeout(resolve, 4));
+    }
+    this.channel.send(JSON.stringify({ type: "complete" }));
+    setText("transfer-state", `Sent ${bytes.byteLength.toLocaleString()} sealed bytes.`);
+  }
+
+  private onPeerMessage(event: MessageEvent): void {
+    if (typeof event.data === "string") {
+      const message = JSON.parse(event.data) as Record<string, unknown>;
+      if (message.type === "manifest") {
+        const bytes = Number(message.bytes);
+        const digest = String(message.digest ?? "");
+        if (!Number.isSafeInteger(bytes) || bytes <= 0 || bytes > 128 * 1024 * 1024 ||
+            !/^[0-9a-f]{64}$/.test(digest)) {
+          throw new Error("Incoming World Cell manifest is invalid");
+        }
+        this.pendingChunks = [];
+        this.expectedBytes = bytes;
+        this.expectedDigest = digest;
+        setText("transfer-state", `Receiving ${bytes.toLocaleString()} sealed bytes…`);
+      } else if (message.type === "complete") {
+        void this.finalizeReceive().catch((error: unknown) => this.fail(error));
+      }
+      return;
+    }
+    const bytes = event.data instanceof ArrayBuffer
+      ? new Uint8Array(event.data)
+      : new Uint8Array(event.data as ArrayBufferLike);
+    this.pendingChunks.push(bytes);
+    const received = this.pendingChunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+    setWidth("transfer-meter", this.expectedBytes ? received / this.expectedBytes * 100 : 0);
+  }
+
+  private async finalizeReceive(): Promise<void> {
+    const received = this.pendingChunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+    if (received !== this.expectedBytes) throw new Error("Incoming World Cell byte count is incomplete");
+    const bytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of this.pendingChunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    if (digestBytes(bytes) !== this.expectedDigest) {
+      throw new Error("Incoming World Cell canonical digest mismatch");
+    }
+    const cell = JSON.parse(decoder.decode(bytes)) as SealedWorldCell;
+    await this.verifyReceivedCell(cell);
+    this.sealedCell = cell;
+    this.moments = cell.moments;
+    this.evidence = cell.evidence;
+    this.currentMoment = Math.max(0, this.moments.length - 1);
+    this.updateTimeline();
+    this.showMoment(this.currentMoment);
+    setText("rootprint", cell.seal.rootprint.slice(0, 16).toUpperCase());
+    setText("transfer-state", `VERIFIED / reconstructed ${bytes.byteLength.toLocaleString()} sealed bytes.`);
+    this.updateControls();
+  }
+
+  private async verifyReceivedCell(cell: SealedWorldCell): Promise<void> {
+    if (cell.schema !== "tessaryn/world-cell/v22" || cell.version !== 22 ||
+        !Array.isArray(cell.moments) || !cell.moments.length ||
+        !nonzeroDigest(cell.runtimeCommitment)) {
+      throw new Error("Incoming World Cell schema is invalid");
+    }
+    let parent = ZERO_DIGEST;
+    for (const moment of cell.moments) {
+      validateMoment(moment, parent);
+      parent = moment.canonicalDigest;
+    }
+    const draft: WorldCellDraft = {
+      schema: cell.schema,
+      version: cell.version,
+      branch: cell.branch,
+      createdAtUnixMs: cell.createdAtUnixMs,
+      runtimeCommitment: cell.runtimeCommitment,
+      scaleState: cell.scaleState,
+      moments: cell.moments,
+      evidence: cell.evidence,
+    };
+    const canonicalCell = canonicalString(draft);
+    const digest = digestBytes(encoder.encode(canonicalCell));
+    if (digest !== cell.canonicalDigest || cell.assuranceEvidence.canonicalDigest !== digest ||
+        cell.assuranceEvidence.parentCommitment !== parent ||
+        cell.assuranceEvidence.runtimeCommitment !== cell.runtimeCommitment) {
+      throw new Error("Incoming World Cell evidence binding failed");
+    }
+    validateNativeSeal(cell.seal);
+    const bridge = nativeAssuranceBridge();
+    if (!bridge || !await bridge.verifyWorldCell({
+      canonicalCell,
+      evidence: cell.assuranceEvidence,
+      seal: cell.seal,
+    })) {
+      throw new Error("Incoming World Cell requires native eform and Power House verification");
+    }
+  }
+
+  private updateControls(): void {
+    element<HTMLButtonElement>("capture-button").disabled = !this.running || !this.canCommitMoment();
+    const bridge = nativeAssuranceBridge();
+    const sealButton = element<HTMLButtonElement>("seal-button");
+    sealButton.disabled = !this.moments.length || bridge === null;
+    sealButton.textContent = bridge ? "SEAL CELL" : "EFORM REQUIRED";
+    element<HTMLButtonElement>("send-button").disabled = !this.sealedCell ||
+      !this.channel || this.channel.readyState !== "open";
+  }
+
+  private freezeOnTrackingFailure(error: unknown): void {
+    const reason = error instanceof Error ? error.message : String(error);
+    setText("pose-state", "TRACKING LOST");
+    setText("capture-state", "FROZEN");
+    setText("cell-state", "WORLD CELL / AUTHORITY FROZEN");
+    this.setStageMessage("TRACKING FROZEN", `${reason}. Move back to a textured, previously observed view.`, true);
+    this.updateControls();
+  }
+
+  private setStageMessage(title: string, detail: string, visible = true): void {
+    const message = element("stage-message");
+    const heading = message.querySelector("b");
+    const body = message.querySelector("span");
+    if (heading) heading.textContent = title;
+    if (body) body.textContent = detail;
+    message.style.display = visible ? "" : "none";
+  }
+
+  private hideStageMessage(): void {
+    element("stage-message").style.display = "none";
+  }
+
+  private fail(error: unknown): void {
+    const reason = error instanceof Error ? error.message : String(error);
+    this.setStageMessage("WORLD CELL OPERATION REJECTED", reason, true);
+    console.error("World Cell Theater", error);
+  }
+
+  private sensorError(error: unknown): void {
+    element("sensor-log").textContent = error instanceof Error ? error.message : String(error);
+  }
+
+  private recordReferenceRequest(): void {
+    const value = Number(element<HTMLInputElement>("scale-input").value);
+    if (!Number.isFinite(value) || value < 0.01 || value > 20) {
+      throw new Error("Reference length must be between 0.01 and 20 meters");
+    }
+    this.requestedReferenceMeters = value;
+    setText("sensor-detail", `Reference request recorded: ${value.toFixed(3)} m. Metric scale remains disabled until a verified sensor or measured spatial correspondence supplies scale evidence.`);
+    element<HTMLDialogElement>("calibration-dialog").close();
+  }
+
+  private async refreshMetricCalibration(): Promise<void> {
+    const calibration = await window.tessarynMetricSensor?.currentCalibration().catch(() => null) ?? null;
+    if (calibration?.verified === true && Number.isFinite(calibration.scaleMetersPerUnit) &&
+        calibration.scaleMetersPerUnit > 0 && nonzeroDigest(calibration.receipt)) {
+      this.metricCalibration = calibration;
+      setText("sensor-badge", calibration.device.toUpperCase());
+      setText("sensor-detail", `Verified metric scale: ${calibration.scaleMetersPerUnit.toFixed(6)} meters per unit.`);
+    } else {
+      this.metricCalibration = null;
+    }
+  }
+
+  private async connectSerial(): Promise<void> {
+    const navigatorWithSerial = navigator as Navigator & {
+      serial?: { requestPort(): Promise<{ open(options: { baudRate: number }): Promise<void>; getInfo(): unknown }> };
+    };
+    if (!navigatorWithSerial.serial) throw new Error("WebSerial is unavailable");
+    const port = await navigatorWithSerial.serial.requestPort();
+    await port.open({ baudRate: 921_600 });
+    element("sensor-log").textContent = `Serial transport connected: ${JSON.stringify(port.getInfo())}. Metric status requires a verified Tessaryn sensor adapter receipt.`;
+    await this.refreshMetricCalibration();
+  }
+
+  private async connectUsb(): Promise<void> {
+    const navigatorWithUsb = navigator as Navigator & {
+      usb?: { requestDevice(options: { filters: Array<Record<string, number>> }): Promise<{
+        open(): Promise<void>;
+        productName?: string;
+        vendorId: number;
+        productId: number;
+      }> };
+    };
+    if (!navigatorWithUsb.usb) throw new Error("WebUSB is unavailable");
+    const device = await navigatorWithUsb.usb.requestDevice({ filters: [] });
+    await device.open();
+    element("sensor-log").textContent = `USB transport connected: ${device.productName ?? "spatial sensor"} (${device.vendorId}:${device.productId}). Metric status requires a verified adapter receipt.`;
+    await this.refreshMetricCalibration();
+  }
+
+  private async probeXr(): Promise<void> {
+    const xr = (navigator as Navigator & { xr?: XRSystem }).xr;
+    if (!xr || !await xr.isSessionSupported("immersive-ar")) {
+      element("sensor-log").textContent = "WebXR immersive AR/depth is not exposed by this browser.";
+      return;
+    }
+    element("sensor-log").textContent = "WebXR immersive AR is available. Metric status activates only when the installed host exposes a verified depth calibration receipt.";
+    await this.refreshMetricCalibration();
+  }
+
+  private async reset(): Promise<void> {
+    this.stopCamera();
+    if (this.playTimer) window.clearInterval(this.playTimer);
+    this.playTimer = 0;
+    this.runtime?.destroy();
+    this.runtime = await KeyxymV22Runtime.load({
+      branch: "main/world-cell-theater",
+      maximumAnalysisWidth: this.manifest.maximum_analysis_width,
+      maximumAnalysisHeight: this.manifest.maximum_analysis_height,
+      maximumTracks: this.manifest.maximum_tracks,
+      maximumFormingSamples: this.manifest.maximum_preview_samples,
+    });
+    this.frameNumber = 0;
+    this.lastTimestampNs = 0n;
+    this.geometryRevision = -1n;
+    this.formingSamples = [];
+    this.geometrySnapshot = { revision: 0n, surfels: [] };
+    this.pose = null;
+    this.quality = null;
+    this.receipts = null;
+    this.sourceCommitment = ZERO_DIGEST;
+    this.moments = [];
+    this.evidence = [];
+    this.sealedCell = null;
+    this.currentMoment = 0;
+    setPointGeometry(this.formingGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
+    setPointGeometry(this.authorityGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
+    setText("surfel-count", "0");
+    setText("frame-count", "0");
+    setText("pose-state", "ORIGIN");
+    setText("rootprint", "UNSEALED");
+    setText("cell-state", "WORLD CELL / READY / RELATIVE");
+    element("evidence-log").textContent = "No evidence recorded.";
+    this.updateTimeline();
+    this.updateControls();
+    this.setStageMessage("REALITY FORMATION READY", "Start the camera and move slowly to build multi-view evidence.", true);
+  }
+}
+
+export async function installWorldCellTheater(manifest: KeyxymProvenanceManifest): Promise<void> {
+  const controller = new TheaterController(manifest);
+  await controller.initialize();
+}
