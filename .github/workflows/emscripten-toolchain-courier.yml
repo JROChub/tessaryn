@@ -1,0 +1,37 @@
+name: Official Emscripten toolchain courier
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/emscripten-toolchain-courier.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  courier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Download official Emscripten 6.0.3 package
+        run: |
+          set -euo pipefail
+          url="https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/9074aa513b501925adb1361e208932ad32a29a5f/wasm-binaries.tar.xz"
+          curl --fail --location --proto '=https' --tlsv1.2 "$url" --output wasm-binaries.tar.xz
+          test -s wasm-binaries.tar.xz
+          sha256sum wasm-binaries.tar.xz | tee SHA256SUMS
+          printf '%s\n' "$url" > SOURCE_URL
+      - name: Inspect package root
+        run: tar -tf wasm-binaries.tar.xz | sed -n '1,80p'
+      - name: Upload untouched official package
+        uses: actions/upload-artifact@v4
+        with:
+          name: emscripten-6.0.3-linux-official-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            wasm-binaries.tar.xz
+            SHA256SUMS
+            SOURCE_URL
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
