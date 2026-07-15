@@ -35,6 +35,15 @@ check src/v22_browser_frontend.cpp 5b1dafd35fc73d480a7e4840899f5975355a21c2
 check src/v22_browser_runtime.cpp 7dbfa78a120e8c6d4c90108e7e298bae95d3dee2
 check tests/test_v022_browser_frontend.cpp 5ac11a04c68bd0924ff5e27064d7bd33d3f3e9e0
 check tests/test_v022_browser_runtime.cpp 3550a35b3fe631c85a0d79f2944ae703b142c49d
+check include/keyxym/v26.hpp c43c97e8efd86cad9dc915fe6d9ac9a1baab46e8
+check include/keyxym/v26_browser_runtime.h 4a97f93b2b4129b19dbf6786aed9719adefa5883
+check src/v26_internal.hpp 168f3be8c95de7e386620b161b8edf5cba90e3e1
+check src/v26_pose.cpp bdbd2d0e745c4199d85f15e97a462096b0dad265
+check src/v26_geometry.cpp 1f5ef8bb7c6aafe590afc0ce9e71f77001782670
+check src/v26_session.cpp f69334624317ab2c80a62011d1cdd716cc5a4de1
+check src/v26_browser_runtime.cpp bc480746168e29015cc9fb44a41eb16e5ea4adf8
+check tests/test_v026.cpp 3dedb51851d6db9ac0370adccf22e84665a79d7b
+check tests/test_v026_browser_runtime.cpp a07be0feffc45f11b5a5ade98f43d26a5178435b
 if [[ "$status" == 0 ]]; then
   printf 'keyxym_private_blobs=exact\n' | tee -a "$report"
 fi
