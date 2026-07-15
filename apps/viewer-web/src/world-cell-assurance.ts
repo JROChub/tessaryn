@@ -49,6 +49,12 @@ function hex(bytes: Uint8Array): string {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
+function exactArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const output = new Uint8Array(bytes.byteLength);
+  output.set(bytes);
+  return output.buffer;
+}
+
 function bytesFromHex(value: string): Uint8Array {
   if (!/^[0-9a-f]{64}$/.test(value)) throw new Error("World Cell evidence digest is invalid");
   const output = new Uint8Array(32);
@@ -251,7 +257,7 @@ export async function verifyWorldCellAssurance(
   const signatureBase64 = required(fields, "signature");
   const key = await crypto.subtle.importKey(
     "raw",
-    bytesFromBase64(publicKeyBase64),
+    exactArrayBuffer(bytesFromBase64(publicKeyBase64)),
     { name: "Ed25519" },
     false,
     ["verify"],
@@ -259,8 +265,8 @@ export async function verifyWorldCellAssurance(
   const verified = await crypto.subtle.verify(
     { name: "Ed25519" },
     key,
-    bytesFromBase64(signatureBase64),
-    bytesFromHex(envelopeDigest),
+    exactArrayBuffer(bytesFromBase64(signatureBase64)),
+    exactArrayBuffer(bytesFromHex(envelopeDigest)),
   );
   if (!verified) throw new Error("eform Ed25519 signature verification failed");
   return {
