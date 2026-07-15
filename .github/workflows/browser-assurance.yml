@@ -13,15 +13,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   assurance-wasm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
       - name: Configure Rust toolchain
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
@@ -78,13 +76,12 @@ jobs:
           path: browser-assurance-wasm.log
           if-no-files-found: ignore
           retention-days: 14
-      - name: Assemble and validate artifact
+      - name: Validate artifact ABI
         run: |
-          mkdir -p build-browser-assurance
-          cp tools/browser-assurance/target/wasm32-unknown-unknown/release/tessaryn_browser_assurance.wasm build-browser-assurance/tessaryn-browser-assurance-v1.wasm
+          cp tools/browser-assurance/target/wasm32-unknown-unknown/release/tessaryn_browser_assurance.wasm /tmp/tessaryn-browser-assurance-v1.wasm
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
-          const bytes = await readFile('build-browser-assurance/tessaryn-browser-assurance-v1.wasm');
+          const bytes = await readFile('/tmp/tessaryn-browser-assurance-v1.wasm');
           const module = await WebAssembly.compile(bytes);
           const exports = WebAssembly.Module.exports(module).map(({ name }) => name);
           for (const name of [
@@ -106,48 +103,3 @@ jobs:
             throw new Error(`unexpected assurance imports: ${JSON.stringify(imports)}`);
           }
           NODE
-          SOURCE_COMMIT="$(git log -1 --format=%H -- tools/browser-assurance)" python3 - <<'PY'
-          import hashlib, json, os, pathlib
-          root = pathlib.Path('build-browser-assurance')
-          path = root / 'tessaryn-browser-assurance-v1.wasm'
-          data = path.read_bytes()
-          manifest = {
-              'schema': 'tessaryn.browser-assurance-provenance/v1',
-              'profile': 'eform/world-cell-assurance/v1',
-              'provider': 'tessaryn-browser-assurance::ed25519-dalek/2.2.0',
-              'power_house_version': '0.3.24',
-              'entropy_import': 'tessaryn.random_fill',
-              'source_repository': 'JROChub/tessaryn',
-              'source_commit': os.environ['SOURCE_COMMIT'],
-              'artifact': {
-                  'name': path.name,
-                  'bytes': len(data),
-                  'sha256': hashlib.sha256(data).hexdigest(),
-              },
-          }
-          (root / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
-          PY
-          cat build-browser-assurance/manifest.json
-      - name: Install verified viewer runtime
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          mkdir -p apps/viewer-web/public/assurance
-          cp build-browser-assurance/tessaryn-browser-assurance-v1.wasm apps/viewer-web/public/assurance/
-          cp build-browser-assurance/manifest.json apps/viewer-web/public/assurance/
-          if [ -z "$(git status --porcelain -- apps/viewer-web/public/assurance)" ]; then
-            exit 0
-          fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add apps/viewer-web/public/assurance
-          git commit -m "install verified browser assurance runtime"
-          git push origin "HEAD:${HEAD_BRANCH}"
-      - name: Upload browser assurance bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: browser-world-cell-assurance-${{ github.run_id }}-${{ github.run_attempt }}
-          path: build-browser-assurance
-          if-no-files-found: error
-          retention-days: 90
