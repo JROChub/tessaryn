@@ -14,35 +14,47 @@ test("synthetic camera frames reach the v0.26 worker and form authoritative geom
     canvas.height = 480;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("synthetic camera canvas unavailable");
-    let frame = 0;
-    const render = () => {
-      const phase = Math.min(40, Math.floor(frame / 3));
-      context.fillStyle = "#05080d";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      for (let y = -32; y < canvas.height + 32; y += 20) {
-        for (let x = -80; x < canvas.width + 80; x += 20) {
-          const sx = x + phase;
-          const checker = ((Math.floor(x / 20) ^ Math.floor(y / 20)) & 1) === 0;
-          const detail = ((x * x + y * y + x * y) % 53 + 53) % 53;
-          context.fillStyle = checker
-            ? `rgb(${185 + detail},${90 + detail / 2},220)`
-            : `rgb(20,${55 + detail},${105 + detail / 2})`;
-          context.fillRect(sx, y, 15, 15);
+    const shifts = [0, 8, 16, 24, 32, 40];
+    let sequenceStarted = false;
+
+    const draw = (shift: number) => {
+      const image = context.createImageData(canvas.width, canvas.height);
+      for (let y = 0; y < canvas.height; y += 1) {
+        for (let x = 0; x < canvas.width; x += 1) {
+          const sourceX = x - shift;
+          const checker = ((Math.trunc(sourceX / 5) ^ Math.trunc(y / 5)) & 1);
+          const detail = ((sourceX * sourceX + y * y + sourceX * y) % 53 + 53) % 53;
+          const value = checker ? 190 + detail % 50 : 25 + detail;
+          const offset = (y * canvas.width + x) * 4;
+          image.data[offset] = value;
+          image.data[offset + 1] = Math.trunc(value * 3 / 4);
+          image.data[offset + 2] = 255 - Math.trunc(value / 2);
+          image.data[offset + 3] = 255;
         }
       }
-      context.strokeStyle = "white";
-      context.lineWidth = 3;
-      context.strokeRect(80 + phase, 70, 160, 120);
-      context.strokeRect(340 + phase, 240, 190, 140);
-      frame += 1;
-      requestAnimationFrame(render);
+      context.putImageData(image, 0, 0);
     };
-    render();
+
+    draw(shifts[0]!);
     const stream = canvas.captureStream(30);
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
       value: {
-        getUserMedia: async () => stream,
+        getUserMedia: async () => {
+          if (!sequenceStarted) {
+            sequenceStarted = true;
+            let index = 0;
+            const timer = window.setInterval(() => {
+              index += 1;
+              if (index >= shifts.length) {
+                window.clearInterval(timer);
+                return;
+              }
+              draw(shifts[index]!);
+            }, 180);
+          }
+          return stream;
+        },
       },
     });
   });
