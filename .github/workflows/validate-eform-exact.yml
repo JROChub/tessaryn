@@ -45,6 +45,16 @@ jobs:
           else
             printf 'EFORM_FORMAT_DIRTY=0\n' >> "$GITHUB_ENV"
           fi
+          tar -czf /tmp/eform-rustfmt-output.tar.gz \
+            validation/eform/src validation/eform/tests /tmp/eform-rustfmt.patch
+      - name: Upload exact rustfmt output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exact-eform-rustfmt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/eform-rustfmt-output.tar.gz
+          if-no-files-found: error
+          retention-days: 7
       - name: Clippy
         working-directory: validation/eform
         run: cargo clippy --all-targets --locked -- -D warnings
