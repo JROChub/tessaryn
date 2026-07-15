@@ -136,7 +136,7 @@ jobs:
           mkdir -p apps/viewer-web/public/assurance
           cp build-browser-assurance/tessaryn-browser-assurance-v1.wasm apps/viewer-web/public/assurance/
           cp build-browser-assurance/manifest.json apps/viewer-web/public/assurance/
-          if git diff --quiet -- apps/viewer-web/public/assurance; then
+          if [ -z "$(git status --porcelain -- apps/viewer-web/public/assurance)" ]; then
             exit 0
           fi
           git config user.name github-actions[bot]
