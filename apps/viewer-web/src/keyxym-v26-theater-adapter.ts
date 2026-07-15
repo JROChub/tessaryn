@@ -4,7 +4,7 @@ import {
 } from "./keyxym-v26-runtime";
 import type { KeyxymV26Authority, KeyxymV26Pose, KeyxymV26Quality, KeyxymV26Receipts } from "./keyxym-v26-runtime";
 import { KeyxymV26WorkerClient } from "./keyxym-v26-client";
-import type { KeyxymV26Manifest } from "./keyxym-v26-provenance";
+import { keyxymV26AssetUrls, type KeyxymV26Manifest } from "./keyxym-v26-provenance";
 
 export const KEYXYM_V26_SURFEL_FLOATS = SURFEL_FLOATS;
 
@@ -68,7 +68,10 @@ export class KeyxymV26TheaterRuntime {
   private constructor(private readonly client: KeyxymV26WorkerClient) {}
 
   static async load(manifest: KeyxymV26Manifest): Promise<KeyxymV26TheaterRuntime> {
+    const assets = keyxymV26AssetUrls();
     return new KeyxymV26TheaterRuntime(await KeyxymV26WorkerClient.load({
+      moduleUrl: assets.module,
+      wasmUrl: assets.wasm,
       maximumAnalysisWidth: manifest.maximum_analysis_width,
       maximumAnalysisHeight: manifest.maximum_analysis_height,
       maximumTracks: manifest.maximum_tracks,
