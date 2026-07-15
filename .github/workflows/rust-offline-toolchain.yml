@@ -15,9 +15,14 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
-        with:
-          components: rustfmt, clippy
+      - name: Install stable Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup default stable
+          rustc --version --verbose
+          cargo --version --verbose
       - name: Vendor public eform dependency graph
         shell: bash
         run: |
