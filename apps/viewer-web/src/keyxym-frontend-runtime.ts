@@ -102,6 +102,12 @@ function decodeBase64(value: string): Uint8Array {
   return output;
 }
 
+function exactArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const output = new Uint8Array(bytes.byteLength);
+  output.set(bytes);
+  return output.buffer;
+}
+
 function requireExports(value: WebAssembly.Exports): KeyxymFrontendExports {
   const required = [
     "memory",
@@ -144,7 +150,7 @@ export class KeyxymFrontendRuntime {
     if (hex(sha256(bytes)) !== manifest.decoded_sha256) {
       throw new Error("Keyxym frontend artifact digest mismatch");
     }
-    const instantiated = await WebAssembly.instantiate(bytes, {});
+    const instantiated = await WebAssembly.instantiate(exactArrayBuffer(bytes), {});
     const exports = requireExports(instantiated.instance.exports);
     if (exports.keyxym_frontend_rgba_capacity() !== 320 * 240 * 4) {
       throw new Error("Keyxym frontend capacity mismatch");
