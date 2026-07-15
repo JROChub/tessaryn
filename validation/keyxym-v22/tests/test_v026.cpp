@@ -18,9 +18,11 @@ keyxym::MetricFeatureObservation project(std::uint32_t id,
             0.0F,
             0.15F};
 }
-} // namespace
 
-int main() {
+std::pair<keyxym::MetricFrame, keyxym::MetricFrame> make_scene(float angle_degrees,
+                                                               float translation_x,
+                                                               float translation_y,
+                                                               float translation_z) {
     keyxym::MetricFrame reference;
     keyxym::MetricFrame current;
     reference.camera.intrinsics = {640, 480, 520, 520, 320, 240, 0.001F};
@@ -31,8 +33,7 @@ int main() {
     current.source_commitment[0] = 2U;
     reference.rgb.resize(640U * 480U, {0.4F, 0.6F, 0.8F});
     current.rgb = reference.rgb;
-
-    const float angle = 5.0F * 3.14159265358979323846F / 180.0F;
+    const float angle = angle_degrees * 3.14159265358979323846F / 180.0F;
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
     std::uint32_t id = 1U;
@@ -42,9 +43,9 @@ int main() {
             const float y = float(grid_y) * 0.10F;
             const float z = 2.0F + float((grid_x + grid_y + 20) % 5) * 0.25F;
             reference.features.push_back(project(id, x, y, z, reference.camera.intrinsics));
-            const float current_x = cosine * x + sine * z + 0.12F;
-            const float current_y = y + 0.01F;
-            const float current_z = -sine * x + cosine * z + 0.02F;
+            const float current_x = cosine * x + sine * z + translation_x;
+            const float current_y = y + translation_y;
+            const float current_z = -sine * x + cosine * z + translation_z;
             auto observation = project(id, current_x, current_y, current_z,
                                        current.camera.intrinsics);
             observation.disparity = std::hypot(
@@ -54,13 +55,17 @@ int main() {
             ++id;
         }
     }
+    return {std::move(reference), std::move(current)};
+}
+} // namespace
 
+int main() {
+    auto [reference, current] = make_scene(5.0F, 0.12F, 0.01F, 0.02F);
     for (std::uint32_t outlier = 0; outlier < 12U; ++outlier) {
         current.features[outlier].x += 35.0F + float(outlier);
         current.features[outlier].y -= 24.0F;
         current.features[outlier].match_error = 3.5F;
     }
-
     const auto pose = keyxym::recover_reality_pose(reference, current);
     assert(pose.recovered);
     assert(!pose.degenerate);
@@ -71,12 +76,44 @@ int main() {
     assert(pose.reprojection_error_pixels < 3.0F);
     assert(std::any_of(pose.receipt.begin(), pose.receipt.end(),
                        [](std::uint8_t value) { return value != 0U; }));
-
     std::uint64_t rejected = 0U;
     const auto geometry = keyxym::triangulate_reality_surfels(
         reference, {}, current, pose, 0U, rejected);
     assert(geometry.size() >= 50U);
     assert(rejected >= 10U);
+
+    auto [translation_reference, translation_current] = make_scene(0.0F, 0.12F, 0.01F, 0.0F);
+    const auto translation_pose = keyxym::recover_reality_pose(
+        translation_reference, translation_current);
+    assert(translation_pose.recovered);
+    assert(!translation_pose.degenerate);
+    assert(translation_pose.inliers >= 80U);
+    assert(translation_pose.rotation_degrees < 1.0F);
+    assert(translation_pose.parallax_degrees > 0.08F);
+    std::uint64_t translation_rejected = 0U;
+    const auto translation_geometry = keyxym::triangulate_reality_surfels(
+        translation_reference, {}, translation_current, translation_pose, 0U,
+        translation_rejected);
+    assert(translation_geometry.size() >= 70U);
+
+    auto [rotation_reference, rotation_current] = make_scene(5.0F, 0.0F, 0.0F, 0.0F);
+    const auto rotation_only = keyxym::recover_reality_pose(rotation_reference, rotation_current);
+    assert(!rotation_only.recovered);
+
+    auto [low_reference, low_current] = make_scene(0.0F, 0.0001F, 0.0F, 0.0F);
+    const auto low_parallax = keyxym::recover_reality_pose(low_reference, low_current);
+    assert(!low_parallax.recovered);
+
+    auto [outlier_reference, outlier_current] = make_scene(0.0F, 0.12F, 0.0F, 0.0F);
+    for (std::size_t index = 0; index < outlier_current.features.size(); ++index) {
+        if (index % 4U != 0U) {
+            outlier_current.features[index].x += 80.0F + float(index % 17U);
+            outlier_current.features[index].y -= 55.0F;
+            outlier_current.features[index].match_error = 3.8F;
+        }
+    }
+    const auto outlier_pose = keyxym::recover_reality_pose(outlier_reference, outlier_current);
+    assert(!outlier_pose.recovered);
 
     keyxym::MetricReconstructionQuality quality;
     quality.tracking_confidence = 0.70F;
@@ -89,7 +126,6 @@ int main() {
     assert(decision.seal_allowed);
     assert(decision.stage == keyxym::RealityAuthorityStage::SealReady);
     assert(decision.rejection_mask == keyxym::RealityRejectNone);
-
     quality.confirmed = 10U;
     const auto blocked = keyxym::decide_reality_authority(pose, quality, 6U, true);
     assert(!blocked.moment_allowed);
