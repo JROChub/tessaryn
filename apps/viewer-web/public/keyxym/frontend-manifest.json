@@ -1,0 +1,16 @@
+{
+  "schema": "keyxym.browser-perception-provenance/v1",
+  "abi": "keyxym-standalone-frontend-v1",
+  "source_repository": "JROChub/keyxym_map",
+  "source_commit": "7b12b87028deae1c4cfedb42c9939175811fca8d",
+  "encoding": "base64",
+  "artifact": "keyxym-frontend-v1.wasm.b64",
+  "decoded_bytes": 4543,
+  "decoded_sha256": "b630de5c05cd22a63bd5fd23ab1615f73ec45aadd46bab8eabc53458613d68f7",
+  "maximum_analysis_width": 320,
+  "maximum_analysis_height": 240,
+  "maximum_tracks": 384,
+  "maximum_preview_samples": 8192,
+  "feature_record_floats": 6,
+  "preview_record_floats": 10
+}
