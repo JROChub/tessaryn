@@ -1,0 +1,334 @@
+name: Migrate World Cell Theater to v0.26
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/migrate-world-cell-v026.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/viewer-web/package-lock.json
+      - name: Apply exact controller migration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('apps/viewer-web/src/world-cell-theater.ts')
+          text = path.read_text()
+
+          def replace(old, new, count=1):
+              global text
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f'expected {count} occurrences, found {actual}: {old[:100]!r}')
+              text = text.replace(old, new)
+
+          replace('import { sha256 } from "@noble/hashes/sha2.js";\n', '')
+          replace('import type { KeyxymProvenanceManifest } from "./keyxym-v22-provenance";\n',
+                  'import type { KeyxymV26Manifest } from "./keyxym-v26-provenance";\n')
+          replace('''import {
+  KEYXYM_V22_SURFEL_FLOATS,
+  KeyxymV22Runtime,
+  type KeyxymFormingSample,
+  type KeyxymGeometrySnapshot,
+  type KeyxymPoseEstimate,
+  type KeyxymQuality,
+  type KeyxymReceipts,
+  type KeyxymSurfel,
+} from "./keyxym-v22-runtime";
+''', '''import {
+  KEYXYM_V26_SURFEL_FLOATS,
+  KeyxymV26TheaterRuntime,
+  type KeyxymAuthorityDecision,
+  type KeyxymFormingSample,
+  type KeyxymGeometrySnapshot,
+  type KeyxymPoseEstimate,
+  type KeyxymQuality,
+  type KeyxymReceipts,
+  type KeyxymSurfel,
+} from "./keyxym-v26-theater-adapter";
+''')
+          text = text.replace('KEYXYM_V22_SURFEL_FLOATS', 'KEYXYM_V26_SURFEL_FLOATS')
+          text = text.replace('"tessaryn/world-cell-moment/v22"', '"tessaryn/world-cell-moment/v26"')
+          text = text.replace('"tessaryn/world-cell/v22"', '"tessaryn/world-cell/v26"')
+          replace('  version: 22;\n', '  version: 26;\n')
+          replace('  qualityReceipt: string;\n  reconstructionReceipt: string;\n',
+                  '  qualityReceipt: string;\n  authorityReceipt: string;\n  reconstructionReceipt: string;\n', 2)
+          replace('  quality: KeyxymQuality;\n  sourceCommitment: string;\n',
+                  '  quality: KeyxymQuality;\n  authority: KeyxymAuthorityDecision;\n  sourceCommitment: string;\n')
+          replace('''      !nonzeroDigest(moment.runtimeCommitment) ||
+      !nonzeroDigest(moment.reconstructionReceipt) ||
+''', '''      !nonzeroDigest(moment.runtimeCommitment) ||
+      !nonzeroDigest(moment.authorityReceipt) ||
+      !moment.authority.momentAllowed ||
+      !nonzeroDigest(moment.reconstructionReceipt) ||
+''')
+          replace('''  private readonly captureCanvas = document.createElement("canvas");
+  private readonly captureContext: CanvasRenderingContext2D;
+''', '')
+          replace('  private runtime: KeyxymV22Runtime | null = null;\n',
+                  '  private runtime: KeyxymV26TheaterRuntime | null = null;\n')
+          replace('  private quality: KeyxymQuality | null = null;\n  private receipts: KeyxymReceipts | null = null;\n',
+                  '  private quality: KeyxymQuality | null = null;\n  private authority: KeyxymAuthorityDecision | null = null;\n  private receipts: KeyxymReceipts | null = null;\n')
+          replace('  private lastProcessedAt = 0;\n',
+                  '  private lastProcessedAt = 0;\n  private analysisIntervalMs = 50;\n')
+          replace('  constructor(private readonly manifest: KeyxymProvenanceManifest) {\n    const context = this.captureCanvas.getContext("2d", { willReadFrequently: true });\n    if (!context) throw new Error("World Cell capture canvas is unavailable");\n    this.captureContext = context;\n',
+                  '  constructor(private readonly manifest: KeyxymV26Manifest) {\n')
+          replace('''    this.runtime = await KeyxymV22Runtime.load({
+      branch: "main/world-cell-theater",
+      maximumAnalysisWidth: this.manifest.maximum_analysis_width,
+      maximumAnalysisHeight: this.manifest.maximum_analysis_height,
+      maximumTracks: this.manifest.maximum_tracks,
+      maximumFormingSamples: this.manifest.maximum_preview_samples,
+    });
+    this.bindControls();
+    document.documentElement.dataset.worldCellController = "keyxym-consensus-v1";
+    setText("backend-name", "KEYXYM V0.22 / DUAL FIELD");
+''', '''    this.runtime = await KeyxymV26TheaterRuntime.load(this.manifest);
+    this.bindControls();
+    document.documentElement.dataset.worldCellController = "keyxym-v026-worker-v1";
+    setText("backend-name", "KEYXYM V0.26 / REALITY");
+''')
+          replace('    setText("cell-state", "WORLD CELL / READY / RELATIVE");\n',
+                  '    setText("pose-state", "KEYXYM READY");\n    setText("cell-state", "WORLD CELL / READY / RELATIVE");\n', 1)
+          replace('const FRAME_INTERVAL_MS = 88;\n', '')
+          replace('''    if (!this.running || this.processing || now - this.lastProcessedAt < FRAME_INTERVAL_MS ||
+        this.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+''', '''    if (!this.running || this.processing || this.runtime?.busy ||
+        now - this.lastProcessedAt < this.analysisIntervalMs ||
+        this.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+''')
+
+          start = text.index('  private async processFrame(now: number): Promise<void> {')
+          end = text.index('\n  private updateFormingCloud(', start)
+          text = text[:start] + '''  private async processFrame(now: number): Promise<void> {
+    if (!this.runtime) throw new Error("Keyxym authority is unavailable");
+    const sourceWidth = this.video.videoWidth;
+    const sourceHeight = this.video.videoHeight;
+    if (!sourceWidth || !sourceHeight) return;
+    const calculatedTimestamp = BigInt(Math.max(1, Math.round((performance.timeOrigin + now) * 1_000_000)));
+    const timestampNs = calculatedTimestamp > this.lastTimestampNs
+      ? calculatedTimestamp : this.lastTimestampNs + 1n;
+    this.lastTimestampNs = timestampNs;
+    const calibration = this.metricCalibration?.verified === true ? this.metricCalibration : null;
+    const bitmap = await createImageBitmap(this.video);
+    const result = await this.runtime.ingest({
+      bitmap,
+      timestampNs,
+      sourceWidth,
+      sourceHeight,
+      scaleMetersPerUnit: calibration?.scaleMetersPerUnit ?? 1,
+      metricScale: calibration !== null,
+    });
+    this.pose = result.pose;
+    this.quality = result.quality;
+    this.authority = result.authority;
+    this.receipts = result.receipts;
+    this.formingSamples = result.forming;
+    this.sourceCommitment = bytesHex(result.sourceCommitment);
+    this.frameNumber += 1;
+    if (result.geometrySnapshot && result.pose.recovered) {
+      this.geometrySnapshot = result.geometrySnapshot;
+      this.geometryRevision = result.geometrySnapshot.revision;
+    }
+    this.analysisIntervalMs = Math.max(33, Math.min(100, result.processingMs * 1.25));
+    setText("dispatch-time", `${result.processingMs.toFixed(1)} ms / worker`);
+    this.updateFormingCloud(result.forming, result.quality.coverage);
+    this.updateAuthorityCloud(this.geometrySnapshot.surfels);
+    this.updateQualityUi();
+    this.recordRuntimeEvidence();
+    this.updateControls();
+    document.documentElement.dataset.formingSamples = String(result.forming.length);
+    document.documentElement.dataset.authoritativeSurfels = String(this.geometrySnapshot.surfels.length);
+    document.documentElement.dataset.geometryRevision = this.geometrySnapshot.revision.toString();
+    document.documentElement.dataset.authorityStage = result.authority.stage;
+    document.documentElement.dataset.authorityRejectionMask = String(result.authority.rejectionMask);
+  }
+''' + text[end:]
+
+          start = text.index('  private updateQualityUi(): void {')
+          end = text.index('\n  private recordRuntimeEvidence()', start)
+          text = text[:start] + '''  private updateQualityUi(): void {
+    const pose = this.pose;
+    const quality = this.quality;
+    const authority = this.authority;
+    if (!pose || !quality || !authority) return;
+    const labels: Record<KeyxymAuthorityDecision["stage"], string> = {
+      forming: "FORMING",
+      tracking: pose.relocalized ? "RELOCALIZED" : "TRACKING",
+      "moment-ready": "MOMENT READY",
+      "seal-ready": "SEAL READY",
+    };
+    setText("frame-count", String(this.frameNumber));
+    setText("pose-state", `${labels[authority.stage]} ${Math.round(pose.tracking * 100)}%`);
+    setText("tracking-value", `${Math.round(clamp01(quality.tracking) * 100)}%`);
+    setText("parallax-value", `${quality.parallaxDegrees.toFixed(2)}°`);
+    setText("error-value", Number.isFinite(quality.reprojectionErrorPixels)
+      ? `${quality.reprojectionErrorPixels.toFixed(2)} px` : "—");
+    setText("coverage-value", `${Math.round(clamp01(quality.coverage) * 100)}%`);
+    setText("confirmed-value", Math.round(quality.confirmed).toLocaleString());
+    setText("uncertain-value", Math.round(quality.uncertain).toLocaleString());
+    setText("rejected-value", Math.round(quality.rejected).toLocaleString());
+    setText("scale-value", quality.metricScale ? "METRIC" : "RELATIVE");
+    setText("cell-state", `WORLD CELL / ${quality.metricScale ? "METRIC" : "RELATIVE"} / ${labels[authority.stage]}`);
+    setWidth("quality-meter", clamp01(authority.score) * 100);
+    setWidth("compute-meter", Math.min(100, 18 + this.formingSamples.length / 120 +
+      this.geometrySnapshot.surfels.length / 480));
+    setText("capture-state", labels[authority.stage]);
+    document.documentElement.dataset.momentAllowed = String(authority.momentAllowed);
+    document.documentElement.dataset.sealAllowed = String(authority.sealAllowed);
+  }
+''' + text[end:]
+
+          replace('''    const poseReceipt = bytesHex(this.receipts.pose);
+    const qualityReceipt = bytesHex(this.receipts.quality);
+    const pair = reconstructionReceipt(this.receipts);
+''', '''    if (!this.authority) return;
+    const poseReceipt = bytesHex(this.receipts.pose);
+    const qualityReceipt = bytesHex(this.receipts.quality);
+    const authorityReceipt = bytesHex(this.receipts.authority);
+    const pair = reconstructionReceipt(this.receipts);
+''')
+          replace('''      poseReceipt,
+      qualityReceipt,
+      reconstructionReceipt: pair,
+''', '''      poseReceipt,
+      qualityReceipt,
+      authorityReceipt,
+      reconstructionReceipt: pair,
+''', 1)
+          replace('''        reprojectionErrorPixels: this.pose.reprojectionErrorPixels,
+        confirmed: this.quality.confirmed,
+''', '''        reprojectionErrorPixels: this.pose.reprojectionErrorPixels,
+        rotationDegrees: this.pose.rotationDegrees,
+        translationObservability: this.pose.translationObservability,
+        degenerate: this.pose.degenerate,
+        relocalized: this.pose.relocalized,
+        authorityStage: this.authority.stage,
+        authorityScore: this.authority.score,
+        rejectionMask: this.authority.rejectionMask,
+        momentAllowed: this.authority.momentAllowed,
+        sealAllowed: this.authority.sealAllowed,
+        confirmed: this.quality.confirmed,
+''')
+
+          start = text.index('  private canCommitMoment(): boolean {')
+          end = text.index('\n  private async commitMoment()', start)
+          text = text[:start] + '''  private canCommitMoment(): boolean {
+    if (!this.authority?.momentAllowed || !this.pose?.recovered || this.pose.degenerate ||
+        !this.quality || !this.receipts) return false;
+    return confirmedGeometry(this.geometrySnapshot.surfels).length >= 32 &&
+      this.receipts.pose.some((value) => value !== 0) &&
+      this.receipts.quality.some((value) => value !== 0) &&
+      this.receipts.authority.some((value) => value !== 0) &&
+      nonzeroDigest(this.sourceCommitment);
+  }
+''' + text[end:]
+          replace('''    if (!this.canCommitMoment() || !this.pose || !this.quality || !this.receipts) {
+      throw new Error("A Moment requires recovered pose, parallax, bounded error, native receipts, and confirmed geometry");
+    }
+''', '''    if (!this.canCommitMoment() || !this.pose || !this.quality || !this.authority || !this.receipts) {
+      throw new Error("The native Keyxym v0.26 authority decision does not permit a Moment");
+    }
+''')
+          replace('''      quality: { ...this.quality },
+      sourceCommitment: this.sourceCommitment,
+      poseReceipt: bytesHex(this.receipts.pose),
+      qualityReceipt: bytesHex(this.receipts.quality),
+      reconstructionReceipt: pairReceipt,
+''', '''      quality: { ...this.quality },
+      authority: { ...this.authority },
+      sourceCommitment: this.sourceCommitment,
+      poseReceipt: bytesHex(this.receipts.pose),
+      qualityReceipt: bytesHex(this.receipts.quality),
+      authorityReceipt: bytesHex(this.receipts.authority),
+      reconstructionReceipt: pairReceipt,
+''')
+          replace('      version: 22,\n      branch: "main/world-cell-theater",\n',
+                  '      version: 26,\n      branch: "main/world-cell-theater-v026",\n')
+          replace('''    if (!this.moments.length || !this.receipts || !this.quality) {
+      throw new Error("Commit at least one authoritative Moment before sealing");
+    }
+''', '''    if (!this.moments.length || !this.receipts || !this.quality || !this.authority?.sealAllowed) {
+      throw new Error("The native Keyxym v0.26 authority decision does not permit sealing");
+    }
+''')
+          replace('''    if (cell.schema !== "tessaryn/world-cell/v26" || cell.version !== 22 ||
+''', '''    if (cell.schema !== "tessaryn/world-cell/v26" || cell.version !== 26 ||
+''')
+          replace('''    sealButton.disabled = !this.moments.length || bridge === null;
+''', '''    sealButton.disabled = !this.moments.length || bridge === null || !this.authority?.sealAllowed;
+''')
+          replace('''    this.runtime = await KeyxymV22Runtime.load({
+      branch: "main/world-cell-theater",
+      maximumAnalysisWidth: this.manifest.maximum_analysis_width,
+      maximumAnalysisHeight: this.manifest.maximum_analysis_height,
+      maximumTracks: this.manifest.maximum_tracks,
+      maximumFormingSamples: this.manifest.maximum_preview_samples,
+    });
+''', '''    this.runtime = await KeyxymV26TheaterRuntime.load(this.manifest);
+''')
+          replace('    this.quality = null;\n    this.receipts = null;\n',
+                  '    this.quality = null;\n    this.authority = null;\n    this.receipts = null;\n')
+          replace('    this.lastTimestampNs = 0n;\n',
+                  '    this.lastTimestampNs = 0n;\n    this.analysisIntervalMs = 50;\n', 1)
+          replace('    setText("pose-state", "ORIGIN");\n', '    setText("pose-state", "KEYXYM READY");\n')
+          replace('export async function installWorldCellTheater(manifest: KeyxymProvenanceManifest): Promise<void> {',
+                  'export async function installWorldCellTheater(manifest: KeyxymV26Manifest): Promise<void> {')
+
+          if 'KeyxymV22Runtime' in text or 'KeyxymProvenanceManifest' in text or 'v22"' in text:
+              raise SystemExit('v0.22 controller symbols remain after migration')
+          path.write_text(text)
+
+          html_path = Path('apps/viewer-web/world-cell-theater.html')
+          html = html_path.read_text()
+          html = html.replace('Metric World Cell Theater / TESSARYN', 'Reality World Cell Theater / TESSARYN')
+          html = html.replace('METRIC WORLD CELL THEATER', 'REALITY WORLD CELL THEATER')
+          html = html.replace('KEYXYM V0.22', 'KEYXYM V0.26')
+          html = html.replace('VERIFYING KEYXYM AUTHORITY', 'VERIFYING KEYXYM V0.26 AUTHORITY')
+          html_path.write_text(html)
+
+          worker = Path('apps/viewer-web/public/sw.js')
+          sw = worker.read_text()
+          sw = sw.replace('tessaryn-origin-v0-5-0-world-cell-v22-exact', 'tessaryn-origin-v0-5-0-world-cell-v26-exact')
+          for asset in ['./keyxym/manifest.json', './keyxym/keyxym-v22.mjs', './keyxym/keyxym-v22.wasm']:
+              sw = sw.replace(f'  "{asset}",\n', '')
+          marker = '  "./assurance/manifest.json",\n'
+          if marker not in sw:
+              raise SystemExit('service worker authority marker missing')
+          sw = sw.replace(marker, '  "./keyxym-v26/manifest.json",\n  "./keyxym-v26/keyxym-v26.mjs",\n  "./keyxym-v26/keyxym-v26.wasm",\n' + marker)
+          worker.write_text(sw)
+
+          Path('.github/workflows/migrate-world-cell-v026.yml').unlink()
+          PY
+      - name: Compile migrated viewer
+        working-directory: apps/viewer-web
+        run: |
+          npm ci
+          npm run build
+      - name: Commit exact migration
+        run: |
+          set -euo pipefail
+          git config user.name 'tessaryn-v026-migrator[bot]'
+          git config user.email 'tessaryn-v026-migrator[bot]@users.noreply.github.com'
+          git add apps/viewer-web/src/world-cell-theater.ts apps/viewer-web/world-cell-theater.html apps/viewer-web/public/sw.js .github/workflows/migrate-world-cell-v026.yml
+          git diff --cached --quiet && { echo 'no migration changes'; exit 1; }
+          git commit -m 'Migrate World Cell Theater to Keyxym v0.26 worker authority'
+          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
