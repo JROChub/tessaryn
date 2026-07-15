@@ -26,19 +26,40 @@ jobs:
           rustup default stable
           rustc --version
           cargo --version
-      - name: Normalize current assurance source
-        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml
-      - name: Upload current rustfmt output
+      - name: Format
+        run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml --check
+      - name: Clippy
+        shell: bash
+        run: |
+          set +e
+          cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings > browser-assurance-clippy.log 2>&1
+          status=$?
+          cat browser-assurance-clippy.log
+          exit $status
+      - name: Upload clippy diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-assurance-current-rustfmt-${{ github.run_id }}-${{ github.run_attempt }}
-          path: tools/browser-assurance/src/lib.rs
-          if-no-files-found: error
-          retention-days: 7
-      - name: Clippy
-        run: cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings
+          name: browser-assurance-clippy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: browser-assurance-clippy.log
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Native assurance tests
-        run: cargo test --manifest-path tools/browser-assurance/Cargo.toml
+        shell: bash
+        run: |
+          set +e
+          cargo test --manifest-path tools/browser-assurance/Cargo.toml > browser-assurance-test.log 2>&1
+          status=$?
+          cat browser-assurance-test.log
+          exit $status
+      - name: Upload native test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-assurance-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: browser-assurance-test.log
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Build browser assurance WebAssembly
         run: cargo build --manifest-path tools/browser-assurance/Cargo.toml --release --target wasm32-unknown-unknown
       - name: Assemble and validate artifact
