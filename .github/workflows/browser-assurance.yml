@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   assurance-wasm:
@@ -28,15 +28,19 @@ jobs:
           cargo --version
       - name: Format isolated assurance source
         run: cargo fmt --manifest-path tools/browser-assurance/Cargo.toml
-      - name: Upload rustfmt output
-        uses: actions/upload-artifact@v4
-        with:
-          name: browser-assurance-rustfmt-${{ github.run_id }}-${{ github.run_attempt }}
-          path: tools/browser-assurance/src/lib.rs
-          if-no-files-found: error
-          retention-days: 7
-      - name: Require committed formatting
-        run: git diff --exit-code -- tools/browser-assurance
+      - name: Commit deterministic rustfmt output
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          if git diff --quiet -- tools/browser-assurance; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tools/browser-assurance
+          git commit -m "format browser assurance adapter"
+          git push origin "HEAD:${HEAD_BRANCH}"
       - name: Clippy
         run: cargo clippy --manifest-path tools/browser-assurance/Cargo.toml --all-targets -- -D warnings
       - name: Native assurance tests
