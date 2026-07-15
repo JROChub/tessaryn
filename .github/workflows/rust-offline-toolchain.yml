@@ -1,0 +1,72 @@
+name: Rust offline validation toolchain
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-offline-toolchain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          components: rustfmt, clippy
+      - name: Vendor public eform dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/eform-deps"
+          mkdir -p "$root/src"
+          cat > "$root/Cargo.toml" <<'EOF'
+          [package]
+          name = "eform-offline-dependencies"
+          version = "0.0.0"
+          edition = "2021"
+          publish = false
+
+          [dependencies]
+          power_house = { git = "https://github.com/JROChub/power_house", rev = "7f3aa496104cccab0ab813ec7dc6f45d5d55e2f8", features = ["net"] }
+          EOF
+          printf 'fn main() {}\n' > "$root/src/main.rs"
+          cargo generate-lockfile --manifest-path "$root/Cargo.toml"
+          mkdir -p "$root/.cargo"
+          cargo vendor --locked --manifest-path "$root/Cargo.toml" "$root/vendor" \
+            > "$root/.cargo/config.toml"
+          tar --zstd -cf "$RUNNER_TEMP/eform-public-vendor.tar.zst" \
+            -C "$root" Cargo.lock .cargo vendor
+          sha256sum "$RUNNER_TEMP/eform-public-vendor.tar.zst" \
+            > "$RUNNER_TEMP/eform-public-vendor.SHA256"
+      - name: Package stable Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain="$(rustup show active-toolchain | awk '{print $1}')"
+          directory="$(rustc --print sysroot)"
+          printf '%s\n' "$toolchain" > "$RUNNER_TEMP/rust-toolchain.txt"
+          rustc --version --verbose > "$RUNNER_TEMP/rustc-version.txt"
+          cargo --version --verbose > "$RUNNER_TEMP/cargo-version.txt"
+          tar --zstd -cf "$RUNNER_TEMP/rust-stable-toolchain.tar.zst" \
+            -C "$(dirname "$directory")" "$(basename "$directory")"
+          sha256sum "$RUNNER_TEMP/rust-stable-toolchain.tar.zst" \
+            > "$RUNNER_TEMP/rust-stable-toolchain.SHA256"
+      - name: Upload offline validation inputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rust-offline-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/rust-stable-toolchain.tar.zst
+            ${{ runner.temp }}/rust-stable-toolchain.SHA256
+            ${{ runner.temp }}/rust-toolchain.txt
+            ${{ runner.temp }}/rustc-version.txt
+            ${{ runner.temp }}/cargo-version.txt
+            ${{ runner.temp }}/eform-public-vendor.tar.zst
+            ${{ runner.temp }}/eform-public-vendor.SHA256
+          if-no-files-found: error
+          retention-days: 1
