@@ -1,0 +1,32 @@
+{
+  "schema": "tessaryn/deployment-attestation/v1",
+  "product": "TESSARYN Origin",
+  "version": "0.5.0",
+  "mode": "development",
+  "source": {
+    "repository": "JROChub/tessaryn",
+    "branch": "working-tree",
+    "commit": null
+  },
+  "qualification": null,
+  "deployment": null,
+  "authority": {
+    "keyxym": {
+      "version": "0.26.0",
+      "abi": "keyxym-v26-reality-authority-1",
+      "source_repository": "JROChub/keyxym_map",
+      "source_commit": "c94d4db57d1db89e96cb7fd860da2d4c1617f516",
+      "source_exact": true
+    },
+    "browser_assurance": {
+      "profile": "eform/world-cell-assurance/v1",
+      "provider": "tessaryn-browser-assurance::ed25519-dalek/2.2.0",
+      "source_repository": "JROChub/tessaryn",
+      "source_commit": "ecfa0f6584f8890afd4a3a44b4aa972b2768a62e"
+    }
+  },
+  "distribution": {
+    "algorithm": "sha256",
+    "files": []
+  }
+}
