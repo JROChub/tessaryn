@@ -12,7 +12,7 @@ permissions:
 jobs:
   live-production:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
@@ -25,13 +25,51 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Verify deployed artifact bytes and provenance
+      - name: Wait for merged source-exact deployment
+        env:
+          ORIGIN: https://tessaryn.com
+          EXPECTED_SOURCE: 5187ff10dfb63d4abbfee51ab894451efe428490
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-world-cell
+          for attempt in $(seq 1 40); do
+            if curl --fail --location --silent --show-error \
+                --connect-timeout 10 --max-time 60 \
+                -H 'Cache-Control: no-cache' \
+                "${ORIGIN}/keyxym/manifest.json?production_probe=${GITHUB_SHA}-${attempt}" \
+                -o /tmp/live-world-cell/keyxym-manifest.json; then
+              source_commit="$(python3 - <<'PY'
+          import json
+          try:
+              print(json.load(open('/tmp/live-world-cell/keyxym-manifest.json')).get('source_commit', ''))
+          except Exception:
+              print('')
+          PY
+              )"
+              source_exact="$(python3 - <<'PY'
+          import json
+          try:
+              print(str(json.load(open('/tmp/live-world-cell/keyxym-manifest.json')).get('source_exact', False)).lower())
+          except Exception:
+              print('false')
+          PY
+              )"
+              if test "$source_commit" = "$EXPECTED_SOURCE" && test "$source_exact" = true; then
+                printf 'deployment_ready=true attempt=%s\n' "$attempt"
+                exit 0
+              fi
+              printf 'deployment_pending attempt=%s source=%s exact=%s\n' "$attempt" "$source_commit" "$source_exact"
+            fi
+            sleep 30
+          done
+          echo 'Merged source-exact Keyxym deployment did not become visible in time' >&2
+          exit 1
+      - name: Verify deployed artifact bytes, cache, and provenance
         env:
           ORIGIN: https://tessaryn.com
         run: |
           set -euo pipefail
           root=/tmp/live-world-cell
-          mkdir -p "$root"
           fetch() {
             path="$1"
             destination="$2"
@@ -42,25 +80,74 @@ jobs:
               -o "${root}/${destination}"
           }
           fetch world-cell-theater.html world-cell-theater.html
+          fetch sw.js sw.js
           fetch keyxym/manifest.json keyxym-manifest.json
-          fetch keyxym/build-closure.json build-closure.json
           fetch keyxym/keyxym-v22.mjs keyxym-v22.mjs
           fetch keyxym/keyxym-v22.wasm keyxym-v22.wasm
           fetch assurance/manifest.json assurance-manifest.json
           fetch assurance/tessaryn-browser-assurance-v1.wasm tessaryn-browser-assurance-v1.wasm
+
+          closure_status="$(curl --location --silent --show-error \
+            --output "${root}/build-closure-response" --write-out '%{http_code}' \
+            --connect-timeout 10 --max-time 60 \
+            -H 'Cache-Control: no-cache' \
+            "${ORIGIN}/keyxym/build-closure.json?production_probe=${GITHUB_SHA}")"
+          test "$closure_status" = 404
+
           python3 - <<'PY'
           import hashlib, json, pathlib
           root = pathlib.Path('/tmp/live-world-cell')
           keyxym = json.loads((root / 'keyxym-manifest.json').read_text())
-          assert keyxym['schema'] == 'keyxym.browser-runtime-provenance/v4'
-          assert keyxym['abi'] == 'keyxym-v22-browser-dual-field-4'
-          assert keyxym['source_commit'] == '700cb523ef9c1fb37733ffd1b1cbe0227be420c3'
-          assert keyxym['timestamp_abi'] == 'wasm-bigint-i64'
-          for name in ('build-closure.json', 'keyxym-v22.mjs', 'keyxym-v22.wasm'):
+          assert keyxym == {
+              'abi': 'keyxym-v22-browser-dual-field-4',
+              'artifacts': {
+                  'keyxym-v22.mjs': {
+                      'bytes': 9026,
+                      'sha256': 'ba0b596d150239c14c18530ed369fcff0ef222c74774e54ac6f6f160aab98e1c',
+                  },
+                  'keyxym-v22.wasm': {
+                      'bytes': 47030,
+                      'sha256': 'e265f9c5d843f2fb0a1e9399cc5162cb08cca06a6b92d5d469419f5a3a4add75',
+                  },
+              },
+              'derivation': 'source-exact-external-validation-build',
+              'feature_record_floats': 6,
+              'geometry_record_floats': 13,
+              'maximum_analysis_height': 240,
+              'maximum_analysis_width': 320,
+              'maximum_preview_samples': 8192,
+              'maximum_surfels': 48000,
+              'maximum_tracks': 384,
+              'perception_abi': 'keyxym-v22-unified-cpp-frontend-v1',
+              'preview_record_floats': 10,
+              'receipt_bytes': 64,
+              'schema': 'keyxym.browser-runtime-provenance/v4',
+              'source_commit': '5187ff10dfb63d4abbfee51ab894451efe428490',
+              'source_exact': True,
+              'source_repository': 'JROChub/keyxym_map',
+              'timestamp_abi': 'wasm-bigint-i64',
+              'toolchain': {
+                  'name': 'Emscripten',
+                  'official_package_sha256': '3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3',
+                  'release_commit': '9074aa513b501925adb1361e208932ad32a29a5f',
+                  'version': '6.0.3',
+              },
+              'validation': {
+                  'asan_ubsan': True,
+                  'exact_blob_matrix_run': 29412516894,
+                  'gcc': True,
+                  'mobile_sdk': True,
+                  'msvc': True,
+                  'wasm_runtime': True,
+              },
+              'version': '0.22.0',
+          }
+          for name in ('keyxym-v22.mjs', 'keyxym-v22.wasm'):
               record = keyxym['artifacts'][name]
               data = (root / name).read_bytes()
               assert len(data) == record['bytes'], (name, len(data), record['bytes'])
               assert hashlib.sha256(data).hexdigest() == record['sha256'], name
+
           assurance = json.loads((root / 'assurance-manifest.json').read_text())
           assert assurance['schema'] == 'tessaryn.browser-assurance-provenance/v1'
           assert assurance['profile'] == 'eform/world-cell-assurance/v1'
@@ -70,6 +157,18 @@ jobs:
           data = (root / record['name']).read_bytes()
           assert len(data) == record['bytes']
           assert hashlib.sha256(data).hexdigest() == record['sha256']
+
+          worker = (root / 'sw.js').read_text()
+          assert 'tessaryn-origin-v0-5-0-world-cell-v22-exact' in worker
+          for asset in (
+              './keyxym/manifest.json',
+              './keyxym/keyxym-v22.mjs',
+              './keyxym/keyxym-v22.wasm',
+              './assurance/manifest.json',
+              './assurance/tessaryn-browser-assurance-v1.wasm',
+          ):
+              assert f'"{asset}"' in worker, asset
+          assert 'build-closure.json' not in worker
           PY
       - name: Exercise deployed Theater in Chromium
         working-directory: apps/viewer-web
@@ -83,7 +182,7 @@ jobs:
 
           const resultPath = '/tmp/live-world-cell/browser-result.json';
           const screenshotPath = '/tmp/live-world-cell-production.png';
-          const result = { state: null, pageErrors: [], consoleErrors: [], failure: null };
+          const result = { state: null, resetState: null, pageErrors: [], consoleErrors: [], failure: null };
           const browser = await chromium.launch({ headless: true });
           try {
             const context = await browser.newContext({ serviceWorkers: 'block' });
@@ -99,7 +198,9 @@ jobs:
             assert(response?.ok(), `page status ${response?.status()}`);
             await page.waitForFunction(() => document.documentElement.dataset.keyxymAuthority === 'verified', null, { timeout: 120_000 });
             await page.waitForFunction(() => document.documentElement.dataset.worldCellAssurance === 'verified', null, { timeout: 120_000 });
-            result.state = await page.evaluate(() => ({
+            await page.waitForFunction(() => document.querySelector('#pose-state')?.textContent?.trim() === 'KEYXYM READY', null, { timeout: 120_000 });
+
+            const readState = () => page.evaluate(() => ({
               authority: document.documentElement.dataset.keyxymAuthority,
               source: document.documentElement.dataset.keyxymSource,
               abi: document.documentElement.dataset.keyxymAbi,
@@ -111,17 +212,28 @@ jobs:
               cell: document.querySelector('#cell-state')?.textContent,
               stage: document.querySelector('#stage-message')?.textContent,
             }));
-            await page.screenshot({ path: screenshotPath, fullPage: true });
+
+            result.state = await readState();
             assert.equal(result.state.authority, 'verified');
-            assert.equal(result.state.source, '700cb523ef9c1fb37733ffd1b1cbe0227be420c3');
+            assert.equal(result.state.source, '5187ff10dfb63d4abbfee51ab894451efe428490');
             assert.equal(result.state.abi, 'keyxym-v22-browser-dual-field-4');
             assert.equal(result.state.assurance, 'verified');
             assert.equal(result.state.controller, 'keyxym-consensus-v1');
             assert.equal(result.state.startDisabled, false);
             assert.match(result.state.backend ?? '', /KEYXYM V0\.22/);
-            assert.match(result.state.pose ?? '', /KEYXYM READY/);
+            assert.equal(result.state.pose?.trim(), 'KEYXYM READY');
+            assert.equal(result.state.cell?.trim(), 'WORLD CELL / READY / RELATIVE');
+
+            await page.locator('#reset-button').click();
+            await page.waitForFunction(() => document.querySelector('#pose-state')?.textContent?.trim() === 'KEYXYM READY', null, { timeout: 120_000 });
+            result.resetState = await readState();
+            assert.equal(result.resetState.startDisabled, false);
+            assert.equal(result.resetState.pose?.trim(), 'KEYXYM READY');
+            assert.equal(result.resetState.cell?.trim(), 'WORLD CELL / READY / RELATIVE');
+
             assert.deepEqual(result.pageErrors, []);
             assert.deepEqual(result.consoleErrors, []);
+            await page.screenshot({ path: screenshotPath, fullPage: true });
           } catch (error) {
             result.failure = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : String(error);
             throw error;
