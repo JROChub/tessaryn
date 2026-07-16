@@ -4,26 +4,24 @@ import test from "node:test";
 
 const sourceUrl = new URL("../src/world-cell-preview-fallback.ts", import.meta.url);
 
-test("RGB preview uses measured sparse flow and bounded ordinal layers", async () => {
+test("RGB preview keeps the camera primary with bounded live tracks", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /function detectFeatures/);
   assert.match(source, /function trackFeatures/);
   assert.match(source, /function estimateMotion/);
-  assert.match(source, /function ordinalDepth/);
-  assert.match(source, /function appendTrackedKeyframe/);
-  assert.match(source, /motion\.inliers\.length/);
-  assert.match(source, /dataset\.visualTracking/);
-  assert.match(source, /dataset\.visualParallax/);
-  assert.match(source, /dataset\.visualKeyframes/);
-  assert.match(source, /dataset\.visualRenderer = "sparse-ordinal-flow"/);
-  assert.match(source, /MAX_VISUAL_POINTS = 7_200/);
-  assert.match(source, /0 AUTH \/ \$\{visualPoints\.length\.toLocaleString\(\)\} FLOW PTS/);
-  assert.match(source, /video\.style\.opacity = "0\.72"/);
+  assert.match(source, /function selectVisibleTracks/);
+  assert.match(source, /function drawTrackHistory/);
+  assert.match(source, /MAX_VISIBLE_TRACKS = 72/);
+  assert.match(source, /MAX_TRACK_HISTORY = 2/);
+  assert.match(source, /dataset\.visualRenderer = "camera-first-live-tracks"/);
+  assert.match(source, /0 AUTH \/ \$\{visibleTracks\.length\} LIVE TRACKS/);
+  assert.match(source, /video\.style\.opacity = "1"/);
+  assert.match(source, /canvas\.style\.mixBlendMode = "screen"/);
   assert.match(source, /capture\.disabled = true/);
   assert.match(source, /seal\.disabled = true/);
   assert.match(source, /send\.disabled = true/);
-  assert.doesNotMatch(source, /const stride = 4/);
-  assert.doesNotMatch(source, /1 - luminance/);
-  assert.doesNotMatch(source, /VISUAL TRACK 100%/);
+  assert.doesNotMatch(source, /from "three"/);
+  assert.doesNotMatch(source, /VisualPoint|ordinalDepth|appendTrackedKeyframe|MAX_VISUAL_POINTS/);
+  assert.doesNotMatch(source, /FLOW PTS|point cloud.*active/i);
   assert.doesNotMatch(source, /commitMoment|buildCell|channel\.send/);
 });
