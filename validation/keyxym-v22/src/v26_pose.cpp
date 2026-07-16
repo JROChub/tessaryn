@@ -58,6 +58,7 @@ MotionHypothesis fit_hypothesis(const std::vector<Pair>& correspondences,const M
 bool stronger_hypothesis(const MotionHypothesis& candidate,const MotionHypothesis& incumbent,std::size_t matches){const bool physical_mixed=candidate.rotation_degrees>=2.0F&&candidate.rotation_degrees<=8.0F&&candidate.inliers*10U>=incumbent.inliers*7U;if(physical_mixed)return true;if(std::isfinite(candidate.model_score)&&std::isfinite(incumbent.model_score)){if(candidate.model_score+1.0e-7F<incumbent.model_score*0.995F)return true;if(incumbent.model_score+1.0e-7F<candidate.model_score*0.995F)return false;}if(std::isfinite(candidate.median_residual)&&std::isfinite(incumbent.median_residual)){if(candidate.median_residual<incumbent.median_residual*0.8F)return true;if(incumbent.median_residual<candidate.median_residual*0.8F)return false;}const std::size_t material=std::max<std::size_t>(3U,matches/20U);if(candidate.inliers>=incumbent.inliers+material)return true;if(incumbent.inliers>=candidate.inliers+material)return false;if(candidate.positive_depth!=incumbent.positive_depth)return candidate.positive_depth>incumbent.positive_depth;if(candidate.translation.observability>incumbent.translation.observability+0.01F)return true;if(incumbent.translation.observability>candidate.translation.observability+0.01F)return false;const float candidate_cost=candidate.median_residual+candidate.rotation_degrees*2.0e-5F;const float incumbent_cost=incumbent.median_residual+incumbent.rotation_degrees*2.0e-5F;return candidate_cost<incumbent_cost;}
 RigidPose compose_pose(const RigidPose& world_from_reference,const Mat3& reference_to_current,Vec3 translation_current){const Mat3 world_rotation=rotation_of(world_from_reference);const Mat3 current_to_reference=transpose(reference_to_current);const Mat3 world_from_current_rotation=multiply(world_rotation,current_to_reference);const Vec3 current_center_reference=multiply(transform(current_to_reference,translation_current),-1.0F);return make_pose(world_from_current_rotation,add(translation_of(world_from_reference),transform(world_rotation,current_center_reference)));}
 Hash256 pose_receipt_impl(const RealityPoseEstimate& pose,const MetricFrame& reference,const MetricFrame& current){std::vector<Byte> bytes;append_text(bytes,"keyxym/v26/reality-pose");for(float value:pose.pose.world_from_camera)append_f32(bytes,value);append_u64(bytes,pose.matches);append_u64(bytes,pose.inliers);append_f32(bytes,pose.tracking_confidence);append_f32(bytes,pose.parallax_degrees);append_f32(bytes,pose.reprojection_error_pixels);append_f32(bytes,pose.rotation_degrees);append_f32(bytes,pose.translation_observability);bytes.push_back(pose.recovered?Byte{1}:Byte{0});bytes.push_back(pose.degenerate?Byte{1}:Byte{0});bytes.push_back(pose.relocalized?Byte{1}:Byte{0});append_hash(bytes,reference.source_commitment);append_hash(bytes,current.source_commitment);return sha256(bytes);}
+RealityPoseEstimate with_receipt(RealityPoseEstimate result,const MetricFrame& reference,const MetricFrame& current){result.receipt=pose_receipt_impl(result,reference,current);return result;}
 } // namespace
 
 namespace v26_detail {
@@ -71,16 +72,16 @@ RealityPoseEstimate recover_reality_pose(const MetricFrame& reference,
     result.pose = world_from_reference;
     const auto correspondences = pairs(reference, current);
     result.matches = correspondences.size();
-    if (correspondences.size() < 12U) return result;
+    if (correspondences.size() < 12U) return with_receipt(result, reference, current);
     const float focal = std::max(1.0F, 0.5F * (current.camera.intrinsics.fx + current.camera.intrinsics.fy));
     const MotionHypothesis translation_only = fit_hypothesis(correspondences, identity3(), false, focal);
     const MotionHypothesis rotation_and_translation = fit_hypothesis(correspondences, identity3(), true, focal);
     const MotionHypothesis& selected = stronger_hypothesis(rotation_and_translation, translation_only,
                                                             correspondences.size())
         ? rotation_and_translation : translation_only;
-    if (!finite(selected.translation.direction) || length(selected.translation.direction) < 0.9F) return result;
+    if (!finite(selected.translation.direction) || length(selected.translation.direction) < 0.9F) return with_receipt(result, reference, current);
     result.inliers = selected.inliers;
-    if (result.inliers < 10U) return result;
+    if (result.inliers < 10U) return with_receipt(result, reference, current);
     float error_sum = 0.0F;
     std::vector<float> parallax;
     std::vector<float> normalized_motion;
@@ -108,8 +109,7 @@ RealityPoseEstimate recover_reality_pose(const MetricFrame& reference,
     result.degenerate = selected.translation.observability < 0.005F || result.parallax_degrees < 0.08F;
     result.recovered = !result.degenerate && result.tracking_confidence >= 0.15F &&
         std::isfinite(result.reprojection_error_pixels);
-    result.receipt = v26_detail::pose_receipt(result, reference, current);
-    return result;
+    return with_receipt(result, reference, current);
 }
 
 } // namespace keyxym
