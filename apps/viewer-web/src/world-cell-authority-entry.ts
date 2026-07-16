@@ -14,12 +14,8 @@ function installEmergencyShell(reason: unknown): void {
 
   document.documentElement.dataset.keyxymAuthority = "boot-failed";
   document.documentElement.dataset.worldCellMode = "recovery";
-  if (!document.documentElement.dataset.keyxymMapAuthority) {
-    document.documentElement.dataset.keyxymMapAuthority = "unavailable";
-  }
-  if (!document.documentElement.dataset.eformAuthority) {
-    document.documentElement.dataset.eformAuthority = "unavailable";
-  }
+  document.documentElement.dataset.keyxymMapAuthority ||= "unavailable";
+  document.documentElement.dataset.eformAuthority ||= "unavailable";
 
   setText("capture-state", "RECOVERY");
   setText("compute-state", "RUNTIME UNAVAILABLE");
@@ -95,9 +91,29 @@ async function enterPreview(error: unknown): Promise<void> {
   }
 }
 
+function hasVerifiedSpatialAdapter(): boolean {
+  const bridge = (window as unknown as {
+    tessarynMetricSensor?: { currentCalibration?: unknown; currentSpatialFrame?: unknown };
+  }).tessarynMetricSensor;
+  return typeof bridge?.currentCalibration === "function" &&
+    typeof bridge?.currentSpatialFrame === "function";
+}
+
 async function boot(): Promise<void> {
   try {
     await refreshServiceWorker();
+
+    // v0.21's working spatial contract required calibrated depth and tracked 3D
+    // landmarks. Ordinary Safari camera RGB is therefore a responsive visual
+    // preview, not an authoritative reconstruction input.
+    if (!hasVerifiedSpatialAdapter()) {
+      document.documentElement.dataset.keyxymMapAuthority = "adapter-required";
+      document.documentElement.dataset.eformAuthority = "not-requested";
+      document.documentElement.dataset.worldCellAssurance = "not-requested";
+      await enterPreview(new Error("Verified depth, intrinsics, pose, and landmark adapter not present"));
+      return;
+    }
+
     const { verifyKeyxymV26Bundle } = await import("./keyxym-v26-provenance");
     const manifest = await verifyKeyxymV26Bundle();
     document.documentElement.dataset.keyxymMapAuthority = "verified";
@@ -117,9 +133,7 @@ async function boot(): Promise<void> {
     const start = document.getElementById("start-button");
     if (start instanceof HTMLButtonElement) start.disabled = false;
   } catch (error) {
-    if (!document.documentElement.dataset.keyxymMapAuthority) {
-      document.documentElement.dataset.keyxymMapAuthority = "rejected";
-    }
+    document.documentElement.dataset.keyxymMapAuthority ||= "rejected";
     if (!document.documentElement.dataset.eformAuthority) {
       document.documentElement.dataset.eformAuthority = "unavailable";
       document.documentElement.dataset.worldCellAssurance = "unavailable";
