@@ -59,6 +59,11 @@ std::pair<keyxym::MetricFrame, keyxym::MetricFrame> make_scene(float angle_degre
     return {std::move(reference), std::move(current)};
 }
 
+bool nonzero(const keyxym::Hash256& digest) {
+    return std::any_of(digest.begin(), digest.end(),
+                       [](std::uint8_t value) { return value != 0U; });
+}
+
 void report(const char* label, const keyxym::RealityPoseEstimate& pose) {
     std::fprintf(stderr,
                  "%s recovered=%d degenerate=%d matches=%zu inliers=%zu rotation=%.6f parallax=%.6f residual=%.6f observability=%.6f confidence=%.6f\n",
@@ -76,6 +81,17 @@ void report(const char* label, const keyxym::RealityPoseEstimate& pose) {
 } // namespace
 
 int main() {
+    keyxym::MetricFrame empty_reference;
+    keyxym::MetricFrame empty_current;
+    empty_reference.camera.intrinsics = {640, 480, 520, 520, 320, 240, 0.001F};
+    empty_current.camera = empty_reference.camera;
+    empty_reference.source_commitment[0] = 9U;
+    empty_current.source_commitment[0] = 10U;
+    const auto empty_pose = keyxym::recover_reality_pose(empty_reference, empty_current);
+    assert(!empty_pose.recovered);
+    assert(nonzero(empty_pose.receipt));
+    assert(empty_pose.receipt == keyxym::recover_reality_pose(empty_reference, empty_current).receipt);
+
     auto [reference, current] = make_scene(5.0F, 0.12F, 0.01F, 0.02F);
     for (std::uint32_t outlier = 0; outlier < 12U; ++outlier) {
         current.features[outlier].x += 35.0F + float(outlier);
@@ -91,8 +107,7 @@ int main() {
     assert(pose.rotation_degrees > 2.0F && pose.rotation_degrees < 8.0F);
     assert(pose.translation_observability > 0.005F);
     assert(pose.reprojection_error_pixels < 3.0F);
-    assert(std::any_of(pose.receipt.begin(), pose.receipt.end(),
-                       [](std::uint8_t value) { return value != 0U; }));
+    assert(nonzero(pose.receipt));
     std::uint64_t rejected = 0U;
     const auto geometry = keyxym::triangulate_reality_surfels(
         reference, {}, current, pose, 0U, rejected);
@@ -108,6 +123,7 @@ int main() {
     assert(translation_pose.inliers >= 80U);
     assert(translation_pose.rotation_degrees < 1.0F);
     assert(translation_pose.parallax_degrees > 0.08F);
+    assert(nonzero(translation_pose.receipt));
     std::uint64_t translation_rejected = 0U;
     const auto translation_geometry = keyxym::triangulate_reality_surfels(
         translation_reference, {}, translation_current, translation_pose, 0U,
@@ -118,11 +134,13 @@ int main() {
     const auto rotation_only = keyxym::recover_reality_pose(rotation_reference, rotation_current);
     report("rotation-only", rotation_only);
     assert(!rotation_only.recovered);
+    assert(nonzero(rotation_only.receipt));
 
     auto [low_reference, low_current] = make_scene(0.0F, 0.0001F, 0.0F, 0.0F);
     const auto low_parallax = keyxym::recover_reality_pose(low_reference, low_current);
     report("low-parallax", low_parallax);
     assert(!low_parallax.recovered);
+    assert(nonzero(low_parallax.receipt));
 
     auto [outlier_reference, outlier_current] = make_scene(0.0F, 0.12F, 0.0F, 0.0F);
     for (std::size_t index = 0; index < outlier_current.features.size(); ++index) {
@@ -135,6 +153,7 @@ int main() {
     const auto outlier_pose = keyxym::recover_reality_pose(outlier_reference, outlier_current);
     report("outlier-heavy", outlier_pose);
     assert(!outlier_pose.recovered);
+    assert(nonzero(outlier_pose.receipt));
 
     keyxym::MetricReconstructionQuality quality;
     quality.tracking_confidence = 0.70F;
