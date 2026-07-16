@@ -1,5 +1,5 @@
 // World Cell Theater route extends the stable TESSARYN offline contract.
-const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r4";
+const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r5";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
@@ -122,8 +122,18 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirst(event.request));
     return;
   }
-  if (event.request.mode === "navigate" || url.pathname.endsWith("/world/archviz-tiny-house-locus.json") || url.pathname.endsWith("/world/vesper-court.json")) {
-    event.respondWith(networkFirst(event.request, "./"));
+  if (event.request.mode === "navigate" ||
+      event.request.destination === "script" ||
+      event.request.destination === "style" ||
+      event.request.destination === "worker" ||
+      url.pathname.endsWith("/world/archviz-tiny-house-locus.json") ||
+      url.pathname.endsWith("/world/vesper-court.json")) {
+    // Application shells and executable chunks must never be cache-first. A
+    // stale JS chunk can pair an obsolete preview controller with a new HTML
+    // shell and falsely expose geometry or Moment controls while authority is
+    // offline. Network-first keeps the release atomic, with cache only as a
+    // true offline fallback.
+    event.respondWith(networkFirst(event.request, event.request.mode === "navigate" ? "./" : null));
     return;
   }
 
