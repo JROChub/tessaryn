@@ -32,21 +32,20 @@ test("TESSARYN keeps keyxym_map, eform, and preview as separate authorities", as
 
   assert.match(preview, /worldCellMode = "visual-preview"/);
   assert.match(preview, /tessaryn-visual-odometry-v1/);
-  assert.match(preview, /sparse-ordinal-flow/);
+  assert.match(preview, /camera-first-live-tracks/);
   assert.match(preview, /detectFeatures/);
   assert.match(preview, /trackFeatures/);
   assert.match(preview, /estimateMotion/);
-  assert.match(preview, /appendTrackedKeyframe/);
-  assert.match(preview, /motion\.inliers/);
-  assert.match(preview, /MAX_VISUAL_POINTS = 7_200/);
-  assert.match(preview, /FLOW PTS/);
-  assert.match(preview, /video\.style\.opacity = "0\.72"/);
+  assert.match(preview, /selectVisibleTracks/);
+  assert.match(preview, /drawTrackHistory/);
+  assert.match(preview, /MAX_VISIBLE_TRACKS = 72/);
+  assert.match(preview, /LIVE TRACKS/);
+  assert.match(preview, /video\.style\.opacity = "1"/);
   assert.match(preview, /VISUAL TRACK/);
   assert.match(preview, /capture\.disabled = true/);
   assert.match(preview, /seal\.disabled = true/);
   assert.match(preview, /send\.disabled = true/);
   assert.match(preview, /no Moment, seal, Rootprint, or transfer can be created/);
-  assert.doesNotMatch(preview, /const stride = 4/);
-  assert.doesNotMatch(preview, /1 - luminance/);
+  assert.doesNotMatch(preview, /VisualPoint|ordinalDepth|appendTrackedKeyframe|FLOW PTS/);
   assert.doesNotMatch(preview, /commitMoment|buildCell|rootprint\s*=|channel\.send/);
 });
