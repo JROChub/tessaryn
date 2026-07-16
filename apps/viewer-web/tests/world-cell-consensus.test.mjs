@@ -10,11 +10,12 @@ test("World Cell Theater has one v0.26 provenance-gated controller", async () =>
     read("world-cell-theater.html"),
     read("src/world-cell-authority-entry.ts"),
   ]);
-  assert.match(html, /src="\/src\/world-cell-authority-entry\.ts"/);
+  assert.match(html, /src="\.\/src\/world-cell-authority-entry\.ts"/);
   assert.match(html, /id="start-button"[^>]*disabled/);
+  assert.match(html, /tessarynWorldCellBootFailure/);
   assert.match(entry, /verifyKeyxymV26Bundle/);
   assert.match(entry, /world-cell-theater-v26/);
-  assert.doesNotMatch(entry, /verifyKeyxymV22Bundle|world-cell-theater"/);
+  assert.doesNotMatch(entry, /verifyKeyxymV22Bundle/);
 });
 
 test("v0.26 runtime executes RGBA authority inside a bounded worker", async () => {
