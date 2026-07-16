@@ -13,9 +13,12 @@ test("TESSARYN keeps keyxym_map, eform, and preview as separate authorities", as
 
   assert.match(entry, /dataset\.keyxymMapAuthority/);
   assert.match(entry, /dataset\.eformAuthority/);
-  assert.match(entry, /installWorldCellPreviewFallback/);
-  assert.match(entry, /verifyKeyxymV26Bundle/);
-  assert.match(entry, /installBrowserAssuranceBridge/);
+  assert.match(entry, /import\("\.\/keyxym-v26-provenance"\)/);
+  assert.match(entry, /import\("\.\/browser-assurance-runtime"\)/);
+  assert.match(entry, /import\("\.\/world-cell-preview-fallback"\)/);
+  assert.match(entry, /installEmergencyShell/);
+  assert.match(entry, /WORLD CELL \/ RECOVERY REQUIRED/);
+  assert.doesNotMatch(entry, /^import\s/m, "the boot entry must execute before dependent chunks load");
 
   assert.match(preview, /worldCellMode = "visual-preview"/);
   assert.match(preview, /capture\.disabled = true/);
