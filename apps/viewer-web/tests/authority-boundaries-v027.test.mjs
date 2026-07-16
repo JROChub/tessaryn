@@ -24,10 +24,11 @@ test("TESSARYN keeps keyxym_map, eform, and preview as separate authorities", as
   assert.doesNotMatch(entry, /^import\s/m, "the boot entry must execute before dependent chunks load");
 
   assert.match(theater, /worldCellMode = "boot-recovery"/);
-  assert.match(theater, /WORLD CELL BOOT DID NOT COMPLETE/);
-  assert.match(theater, /RETRY AUTHORITY/);
-  assert.match(theater, /window\.location\.reload\(\)/);
-  assert.match(theater, /No camera frame, Moment, seal, Rootprint, or transfer operation has executed/);
+  assert.match(theater, /WORLD CELL MODULE UNAVAILABLE/);
+  assert.match(theater, /START BASIC CAMERA/);
+  assert.match(theater, /window\.tessarynWorldCellBootFailure = recover/);
+  assert.match(theater, /navigator\.mediaDevices\.getUserMedia/);
+  assert.match(theater, /no geometry, Moment, seal, Rootprint, evidence, or transfer can be created/);
 
   assert.match(preview, /worldCellMode = "visual-preview"/);
   assert.match(preview, /tessaryn-visual-odometry-v1/);

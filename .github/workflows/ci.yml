@@ -135,8 +135,8 @@ jobs:
           name: viewer-build-diagnostics
           path: apps/viewer-web/viewer-build.log
           if-no-files-found: ignore
-      - run: npx playwright install --with-deps chromium
-      - name: Run Chromium end-to-end tests
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Run browser end-to-end tests
         shell: bash
         run: |
           set +e
@@ -144,7 +144,7 @@ jobs:
           status=$?
           cat playwright.log
           exit $status
-      - name: Upload Chromium diagnostics
+      - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

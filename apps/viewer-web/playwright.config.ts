@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -9,10 +9,21 @@ export default defineConfig({
   reporter: "line",
   use: {
     baseURL: "http://127.0.0.1:4180",
-    browserName: "chromium",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
+  projects: [
+    {
+      name: "chromium",
+      testIgnore: /world-cell-webkit-smoke\.spec\.ts/u,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "webkit-iphone",
+      testMatch: /world-cell-webkit-smoke\.spec\.ts/u,
+      use: { ...devices["iPhone 13"] },
+    },
+  ],
   webServer: {
     command: "npm run build && npm run preview -- --port 4180",
     url: "http://127.0.0.1:4180",
