@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("iPhone WebKit reaches camera-first preview without waiting for service-worker authority", async ({ page }) => {
+test("iPhone WebKit reaches World Cell Scan V4 without waiting for service-worker authority", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -10,9 +10,11 @@ test("iPhone WebKit reaches camera-first preview without waiting for service-wor
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview", {
     timeout: 15_000,
   });
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
   await expect(page.locator("#start-button")).toBeEnabled();
-  await expect(page.locator("#stage-message b")).toHaveText("CAMERA TRACKING READY");
+  await expect(page.locator("#start-button")).toHaveText("START WORLD CELL SCAN");
+  await expect(page.locator("#stage-message b")).toHaveText("WORLD CELL SCAN V4 READY");
 
   const builtResponse = await page.request.get("/world-cell-theater.html");
   expect(builtResponse.ok()).toBe(true);
