@@ -14,12 +14,8 @@ function installEmergencyShell(reason: unknown): void {
 
   document.documentElement.dataset.keyxymAuthority = "boot-failed";
   document.documentElement.dataset.worldCellMode = "recovery";
-  if (!document.documentElement.dataset.keyxymMapAuthority) {
-    document.documentElement.dataset.keyxymMapAuthority = "unavailable";
-  }
-  if (!document.documentElement.dataset.eformAuthority) {
-    document.documentElement.dataset.eformAuthority = "unavailable";
-  }
+  document.documentElement.dataset.keyxymMapAuthority ||= "unavailable";
+  document.documentElement.dataset.eformAuthority ||= "unavailable";
 
   setText("capture-state", "RECOVERY");
   setText("compute-state", "RUNTIME UNAVAILABLE");
@@ -95,9 +91,44 @@ async function enterPreview(error: unknown): Promise<void> {
   }
 }
 
+interface SpatialCalibrationProbe {
+  verified?: boolean;
+  scaleMetersPerUnit?: number;
+  receipt?: string;
+}
+
+async function hasVerifiedSpatialAdapter(): Promise<boolean> {
+  const bridge = (window as unknown as {
+    tessarynMetricSensor?: {
+      currentCalibration?: () => Promise<SpatialCalibrationProbe>;
+      currentSpatialFrame?: () => Promise<unknown>;
+    };
+  }).tessarynMetricSensor;
+  if (typeof bridge?.currentCalibration !== "function" ||
+      typeof bridge.currentSpatialFrame !== "function") return false;
+  const calibration = await bridge.currentCalibration().catch(() => null);
+  return calibration?.verified === true &&
+    Number.isFinite(calibration.scaleMetersPerUnit) &&
+    Number(calibration.scaleMetersPerUnit) > 0 &&
+    /^[0-9a-f]{64}$/u.test(calibration.receipt ?? "") &&
+    calibration.receipt !== "0".repeat(64);
+}
+
 async function boot(): Promise<void> {
   try {
     await refreshServiceWorker();
+
+    // v0.21's working spatial contract required calibrated depth and tracked 3D
+    // landmarks. Ordinary Safari camera RGB is therefore a responsive visual
+    // preview, not an authoritative reconstruction input.
+    if (!await hasVerifiedSpatialAdapter()) {
+      document.documentElement.dataset.keyxymMapAuthority = "adapter-required";
+      document.documentElement.dataset.eformAuthority = "not-requested";
+      document.documentElement.dataset.worldCellAssurance = "not-requested";
+      await enterPreview(new Error("Verified depth, intrinsics, pose, landmark, and calibration receipt adapter not present"));
+      return;
+    }
+
     const { verifyKeyxymV26Bundle } = await import("./keyxym-v26-provenance");
     const manifest = await verifyKeyxymV26Bundle();
     document.documentElement.dataset.keyxymMapAuthority = "verified";
@@ -117,9 +148,7 @@ async function boot(): Promise<void> {
     const start = document.getElementById("start-button");
     if (start instanceof HTMLButtonElement) start.disabled = false;
   } catch (error) {
-    if (!document.documentElement.dataset.keyxymMapAuthority) {
-      document.documentElement.dataset.keyxymMapAuthority = "rejected";
-    }
+    document.documentElement.dataset.keyxymMapAuthority ||= "rejected";
     if (!document.documentElement.dataset.eformAuthority) {
       document.documentElement.dataset.eformAuthority = "unavailable";
       document.documentElement.dataset.worldCellAssurance = "unavailable";

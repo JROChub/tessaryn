@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("the Origin exposes live World Cell capture and same-origin release evidence", async ({ page }) => {
+test("the Origin exposes live World Cell visual capture and same-origin release evidence", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
 
   const worldCell = page.locator("#world-cell-command");
@@ -21,5 +21,12 @@ test("the Origin exposes live World Cell capture and same-origin release evidenc
 
   await worldCell.click();
   await expect(page).toHaveURL(/\/world-cell-theater\.html$/u);
-  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "preview");
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-visual-pipeline",
+    "keyxym-v021-responsive-baseline",
+  );
+  await expect(page.locator("#start-button")).toBeEnabled();
+  await expect(page.locator("#capture-button")).toBeDisabled();
 });

@@ -17,6 +17,8 @@ test("TESSARYN keeps keyxym_map, eform, and preview as separate authorities", as
   assert.match(entry, /import\("\.\/keyxym-v26-provenance"\)/);
   assert.match(entry, /import\("\.\/browser-assurance-runtime"\)/);
   assert.match(entry, /import\("\.\/world-cell-preview-fallback"\)/);
+  assert.match(entry, /hasVerifiedSpatialAdapter/);
+  assert.match(entry, /currentSpatialFrame/);
   assert.match(entry, /installEmergencyShell/);
   assert.match(entry, /WORLD CELL \/ RECOVERY REQUIRED/);
   assert.doesNotMatch(entry, /^import\s/m, "the boot entry must execute before dependent chunks load");
@@ -28,9 +30,11 @@ test("TESSARYN keeps keyxym_map, eform, and preview as separate authorities", as
   assert.match(theater, /No camera frame, Moment, seal, Rootprint, or transfer operation has executed/);
 
   assert.match(preview, /worldCellMode = "visual-preview"/);
+  assert.match(preview, /keyxym-v021-responsive-baseline/);
+  assert.match(preview, /VISUAL TRACK/);
   assert.match(preview, /capture\.disabled = true/);
   assert.match(preview, /seal\.disabled = true/);
   assert.match(preview, /send\.disabled = true/);
-  assert.match(preview, /cannot become a Moment, seal, Rootprint, or transfer artifact/);
+  assert.match(preview, /no Moment, seal, Rootprint, or transfer can be created/);
   assert.doesNotMatch(preview, /commitMoment|buildCell|rootprint\s*=|channel\.send/);
 });
