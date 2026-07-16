@@ -95,6 +95,55 @@
 </dialog>
 <dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><b>DEPTH + EVENT CAMERA</b></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Browser multi-view reconstruction begins in relative scale. WebSerial, WebUSB, or WebXR transport does not activate metric status unless the installed adapter exposes a verified scale receipt.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
 <dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><b>WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
+<script>
+(() => {
+  const timeoutMs = 9000;
+  window.setTimeout(() => {
+    const root = document.documentElement;
+    if (root.dataset.worldCellMode || root.dataset.keyxymAuthority === "verified") return;
+
+    root.dataset.worldCellMode = "boot-recovery";
+    root.dataset.keyxymAuthority = "unavailable";
+    root.dataset.keyxymMapAuthority ||= "unavailable";
+    root.dataset.eformAuthority ||= "unavailable";
+    root.dataset.worldCellAssurance ||= "unavailable";
+
+    const setText = (id, text) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = text;
+    };
+    setText("capture-state", "RECOVERY");
+    setText("compute-state", "BOOT FAILED");
+    setText("pose-state", "AUTHORITY UNAVAILABLE");
+    setText("cell-state", "WORLD CELL / RETRY REQUIRED");
+    setText("gpu-badge", "BUNDLE UNAVAILABLE");
+    setText("backend-name", "KEYXYM V0.26 NOT LOADED");
+    setText("adapter-name", "RETRY REQUIRED");
+    setText("sensor-detail", "The authority bundle did not finish loading. No camera frame, Moment, seal, Rootprint, or transfer operation has executed.");
+
+    const message = document.getElementById("stage-message");
+    if (message) {
+      const heading = message.querySelector("b");
+      const detail = message.querySelector("span");
+      if (heading) heading.textContent = "WORLD CELL BOOT DID NOT COMPLETE";
+      if (detail) detail.textContent = "Retry the verified Keyxym and eform authority bundle. This recovery state creates no geometry or evidence.";
+      message.style.display = "";
+    }
+
+    for (const id of ["capture-button", "stop-button", "seal-button", "send-button", "host-button", "join-button", "answer-button"]) {
+      const control = document.getElementById(id);
+      if (control instanceof HTMLButtonElement) control.disabled = true;
+    }
+
+    const retry = document.getElementById("start-button");
+    if (retry instanceof HTMLButtonElement) {
+      retry.disabled = false;
+      retry.textContent = "RETRY AUTHORITY";
+      retry.onclick = () => window.location.reload();
+    }
+  }, timeoutMs);
+})();
+</script>
 <script type="module" src="/src/world-cell-authority-entry.ts"></script>
 </body>
 </html>
