@@ -91,12 +91,27 @@ async function enterPreview(error: unknown): Promise<void> {
   }
 }
 
-function hasVerifiedSpatialAdapter(): boolean {
+interface SpatialCalibrationProbe {
+  verified?: boolean;
+  scaleMetersPerUnit?: number;
+  receipt?: string;
+}
+
+async function hasVerifiedSpatialAdapter(): Promise<boolean> {
   const bridge = (window as unknown as {
-    tessarynMetricSensor?: { currentCalibration?: unknown; currentSpatialFrame?: unknown };
+    tessarynMetricSensor?: {
+      currentCalibration?: () => Promise<SpatialCalibrationProbe>;
+      currentSpatialFrame?: () => Promise<unknown>;
+    };
   }).tessarynMetricSensor;
-  return typeof bridge?.currentCalibration === "function" &&
-    typeof bridge?.currentSpatialFrame === "function";
+  if (typeof bridge?.currentCalibration !== "function" ||
+      typeof bridge.currentSpatialFrame !== "function") return false;
+  const calibration = await bridge.currentCalibration().catch(() => null);
+  return calibration?.verified === true &&
+    Number.isFinite(calibration.scaleMetersPerUnit) &&
+    Number(calibration.scaleMetersPerUnit) > 0 &&
+    /^[0-9a-f]{64}$/u.test(calibration.receipt ?? "") &&
+    calibration.receipt !== "0".repeat(64);
 }
 
 async function boot(): Promise<void> {
@@ -106,11 +121,11 @@ async function boot(): Promise<void> {
     // v0.21's working spatial contract required calibrated depth and tracked 3D
     // landmarks. Ordinary Safari camera RGB is therefore a responsive visual
     // preview, not an authoritative reconstruction input.
-    if (!hasVerifiedSpatialAdapter()) {
+    if (!await hasVerifiedSpatialAdapter()) {
       document.documentElement.dataset.keyxymMapAuthority = "adapter-required";
       document.documentElement.dataset.eformAuthority = "not-requested";
       document.documentElement.dataset.worldCellAssurance = "not-requested";
-      await enterPreview(new Error("Verified depth, intrinsics, pose, and landmark adapter not present"));
+      await enterPreview(new Error("Verified depth, intrinsics, pose, landmark, and calibration receipt adapter not present"));
       return;
     }
 
