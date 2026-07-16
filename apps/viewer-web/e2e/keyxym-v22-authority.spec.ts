@@ -20,9 +20,10 @@ test("ordinary browser camera input enters the measured visual odometry boundary
     "data-visual-pipeline",
     "tessaryn-visual-odometry-v1",
   );
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "sparse-ordinal-flow");
   await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN VISUAL ODOMETRY V1");
-  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / RELATIVE / NON-METRIC");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN TRACKED FLOW V2");
+  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / ORDINAL / NON-METRIC");
   await expect(page.locator("#gpu-badge")).toHaveText("VISUAL ONLY");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
@@ -54,6 +55,7 @@ test("a claimed adapter without executable spatial integration cannot open autho
   await expect.poll(async () => page.locator("html").getAttribute("data-keyxym-authority"))
     .toBe("preview");
   await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-visual-odometry-v1");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "sparse-ordinal-flow");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
