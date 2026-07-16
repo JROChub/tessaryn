@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("synthetic camera frames build measured sparse flow while authority stays locked", async ({ page }) => {
+test("synthetic camera frames produce a bounded live overlay while authority stays locked", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -78,7 +78,7 @@ test("synthetic camera frames build measured sparse flow while authority stays l
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
   await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-visual-odometry-v1");
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "sparse-ordinal-flow");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
   await page.locator("#start-button").click();
 
   await expect.poll(async () => Number(await page.locator("#frame-count").textContent() ?? 0), {
@@ -86,10 +86,13 @@ test("synthetic camera frames build measured sparse flow while authority stays l
   }).toBeGreaterThan(6);
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-points") ?? 0), {
     timeout: 20_000,
-  }).toBeGreaterThan(1_000);
+  }).toBeGreaterThan(5);
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-points") ?? 0), {
+    timeout: 20_000,
+  }).toBeLessThanOrEqual(72);
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-keyframes") ?? 0), {
     timeout: 20_000,
-  }).toBeGreaterThan(1);
+  }).toBeGreaterThan(0);
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-tracks") ?? 0), {
     timeout: 20_000,
   }).toBeGreaterThan(5);
@@ -97,11 +100,12 @@ test("synthetic camera frames build measured sparse flow while authority stays l
     timeout: 20_000,
   }).toBeGreaterThan(0.1);
   await expect(page.locator("#surfel-count")).toContainText("0 AUTH /");
-  await expect(page.locator("#surfel-count")).toContainText("FLOW PTS");
+  await expect(page.locator("#surfel-count")).toContainText("LIVE TRACKS");
   await expect(page.locator("#pose-state")).toContainText("VISUAL TRACK");
-  await expect(page.locator("#capture-state")).toHaveText(/TRACKED FLOW|FIND TEXTURE \/ MOVE SLOWLY/u);
-  await expect(page.locator("#dispatch-time")).toContainText("TRACKS /");
-  await expect(page.locator("#dispatch-time")).toContainText("° ORD");
+  await expect(page.locator("#capture-state")).toHaveText(/LIVE TRACKING|FIND TEXTURE \/ MOVE SLOWLY/u);
+  await expect(page.locator("#dispatch-time")).toContainText("LIVE TRACKS /");
+  await expect(page.locator("#dispatch-time")).toContainText("° REL");
+  await expect(page.locator("#camera")).toHaveCSS("opacity", "1");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
