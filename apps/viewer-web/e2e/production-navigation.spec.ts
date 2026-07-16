@@ -27,8 +27,9 @@ test("the Origin exposes live World Cell visual odometry and same-origin release
     "data-visual-pipeline",
     "tessaryn-visual-odometry-v1",
   );
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "sparse-ordinal-flow");
   await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN VISUAL ODOMETRY V1");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN TRACKED FLOW V2");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
 });
