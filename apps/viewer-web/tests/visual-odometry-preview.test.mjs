@@ -2,26 +2,35 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const sourceUrl = new URL("../src/world-cell-preview-fallback.ts", import.meta.url);
+const root = new URL("../", import.meta.url);
+const read = (path) => readFile(new URL(path, root), "utf8");
 
-test("RGB preview keeps the camera primary with bounded live tracks", async () => {
-  const source = await readFile(sourceUrl, "utf8");
-  assert.match(source, /function detectFeatures/);
-  assert.match(source, /function trackFeatures/);
-  assert.match(source, /function estimateMotion/);
-  assert.match(source, /function selectVisibleTracks/);
-  assert.match(source, /function drawTrackHistory/);
-  assert.match(source, /MAX_VISIBLE_TRACKS = 72/);
-  assert.match(source, /MAX_TRACK_HISTORY = 2/);
-  assert.match(source, /dataset\.visualRenderer = "camera-first-live-tracks"/);
-  assert.match(source, /0 AUTH \/ \$\{visibleTracks\.length\} LIVE TRACKS/);
-  assert.match(source, /video\.style\.opacity = "1"/);
-  assert.match(source, /canvas\.style\.mixBlendMode = "screen"/);
-  assert.match(source, /capture\.disabled = true/);
-  assert.match(source, /seal\.disabled = true/);
-  assert.match(source, /send\.disabled = true/);
-  assert.doesNotMatch(source, /from "three"/);
-  assert.doesNotMatch(source, /VisualPoint|ordinalDepth|appendTrackedKeyframe|MAX_VISUAL_POINTS/);
-  assert.doesNotMatch(source, /FLOW PTS|point cloud.*active/i);
-  assert.doesNotMatch(source, /commitMoment|buildCell|channel\.send/);
+test("World Cell Scan V4 gates relative geometry on measured multi-view evidence", async () => {
+  const [runtime, worker] = await Promise.all([
+    read("src/world-cell-preview-fallback.ts"),
+    read("src/world-cell-scan-v4-worker.ts"),
+  ]);
+
+  assert.match(runtime, /tessaryn-world-cell-scan-v4/);
+  assert.match(runtime, /dataset\.visualRenderer = "world-cell-scan-v4"/);
+  assert.match(runtime, /dataset\.scanState = "capturing"/);
+  assert.match(runtime, /FINISH & SOLVE/);
+  assert.match(runtime, /new Worker\(new URL\("\.\/world-cell-scan-v4-worker\.ts"/);
+  assert.match(runtime, /NO DEFENSIBLE GEOMETRY/);
+  assert.match(runtime, /relative-sparse-reconstruction/);
+  assert.match(runtime, /video\.style\.opacity = "1"/);
+  assert.match(runtime, /seal\.disabled = true/);
+  assert.match(runtime, /send\.disabled = true/);
+  assert.doesNotMatch(runtime, /FLOW PTS|18_000|camera-first-live-tracks/);
+  assert.doesNotMatch(runtime, /commitMoment|buildCell|channel\.send/);
+
+  assert.match(worker, /estimateEssentialRansac/);
+  assert.match(worker, /decomposeEssential/);
+  assert.match(worker, /triangulate/);
+  assert.match(worker, /positiveDepthRatio/);
+  assert.match(worker, /reprojectionErrorPixels/);
+  assert.match(worker, /triangulationAngleDegrees/);
+  assert.match(worker, /selected\.coverage < 0\.24/);
+  assert.match(worker, /MIN_RECONSTRUCTED_POINTS = 16/);
+  assert.doesNotMatch(worker, /luminance.*depth|radial.*depth|ordinalDepth/iu);
 });

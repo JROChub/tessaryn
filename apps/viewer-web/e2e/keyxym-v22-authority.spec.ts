@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("ordinary browser camera input enters the camera-first visual boundary", async ({ page }) => {
+test("ordinary browser camera input enters the evidence-gated Scan V4 boundary", async ({ page }) => {
   const authorityRequests: string[] = [];
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -18,14 +18,16 @@ test("ordinary browser camera input enters the camera-first visual boundary", as
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
   await expect(page.locator("html")).toHaveAttribute(
     "data-visual-pipeline",
-    "tessaryn-visual-odometry-v1",
+    "tessaryn-world-cell-scan-v4",
   );
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
   await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN CAMERA TRACK OVERLAY V3");
-  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / LIVE TRACKS / NON-METRIC");
-  await expect(page.locator("#gpu-badge")).toHaveText("VISUAL ONLY");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN MULTI-VIEW SOLVER V4");
+  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / SCALE-FREE / NON-AUTH");
+  await expect(page.locator("#gpu-badge")).toHaveText("RELATIVE ONLY");
   await expect(page.locator("#start-button")).toBeEnabled();
+  await expect(page.locator("#start-button")).toHaveText("START WORLD CELL SCAN");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
@@ -54,8 +56,8 @@ test("a claimed adapter without executable spatial integration cannot open autho
   await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
   await expect.poll(async () => page.locator("html").getAttribute("data-keyxym-authority"))
     .toBe("preview");
-  await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-visual-odometry-v1");
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-world-cell-scan-v4");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
