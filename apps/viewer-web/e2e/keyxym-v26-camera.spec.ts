@@ -28,37 +28,19 @@ test("synthetic translated views produce accepted relative geometry while author
       seed = (seed * 1664525 + 1013904223) >>> 0;
       return seed / 2 ** 32;
     };
-    const points = Array.from({ length: 150 }, (_, index) => ({
+    const points = Array.from({ length: 180 }, (_, index) => ({
       x: (random() - 0.5) * 4.2,
       y: (random() - 0.5) * 3.1,
-      z: 3.2 + random() * 4.4,
+      z: 3 + random() * 4.8,
       value: 48 + Math.floor(random() * 198),
       size: 1 + index % 3,
     }));
 
     const draw = (phase: number): void => {
-      const background = context.createLinearGradient(0, 0, width, height);
-      background.addColorStop(0, "rgb(13 19 27)");
-      background.addColorStop(1, "rgb(38 45 55)");
-      context.fillStyle = background;
+      context.fillStyle = "rgb(13 19 27)";
       context.fillRect(0, 0, width, height);
-      context.strokeStyle = "rgba(120,150,175,.12)";
-      context.lineWidth = 1;
-      for (let x = 0; x < width; x += 32) {
-        context.beginPath();
-        context.moveTo(x, 0);
-        context.lineTo(x, height);
-        context.stroke();
-      }
-      for (let y = 0; y < height; y += 32) {
-        context.beginPath();
-        context.moveTo(0, y);
-        context.lineTo(width, y);
-        context.stroke();
-      }
-
-      const translation = phase * 0.018;
-      const yaw = phase * 0.0025;
+      const translation = phase * 0.022;
+      const yaw = phase * 0.002;
       const cosine = Math.cos(yaw);
       const sine = Math.sin(yaw);
       for (const point of points) {
@@ -81,7 +63,7 @@ test("synthetic translated views produce accepted relative geometry while author
     const sendSequence = async (): Promise<void> => {
       const writer = track.writable.getWriter();
       try {
-        for (let index = 0; index < 60; index += 1) {
+        for (let index = 0; index < 80; index += 1) {
           draw(index);
           const frame = new VideoFrame(canvas, {
             timestamp: (index + 1) * 100_000,
@@ -105,7 +87,7 @@ test("synthetic translated views produce accepted relative geometry while author
         getUserMedia: async () => {
           if (!sequenceStarted) {
             sequenceStarted = true;
-            void sendSequence();
+            void sendSequence().catch(() => undefined);
           }
           return stream;
         },
