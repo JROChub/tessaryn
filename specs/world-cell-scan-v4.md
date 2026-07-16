@@ -42,7 +42,7 @@ The reference implementation requires:
 - at least 24 stable pair matches;
 - at least 24 essential-matrix inliers;
 - at least 16 accepted triangulated points after spatial trimming;
-- positive-depth ratio of at least 0.65;
+- a majority positive-depth solution, with positive-depth ratio of at least 0.50;
 - median reprojection error no greater than 3.5 pixels;
 - median triangulation angle of at least 0.35 degrees; and
 - image coverage of at least 0.24 over a 6 by 4 grid.
