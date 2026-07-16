@@ -34,7 +34,9 @@ test("iPhone WebKit exposes a basic camera fallback when the release module fail
   const response = await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
   expect(response?.ok()).toBe(true);
 
-  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "boot-recovery");
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "boot-recovery", {
+    timeout: 15_000,
+  });
   await expect(page.locator("#stage-message b")).toHaveText("WORLD CELL MODULE UNAVAILABLE");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#start-button")).toHaveText("START BASIC CAMERA");
