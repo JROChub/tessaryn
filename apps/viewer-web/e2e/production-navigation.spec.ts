@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("the Origin exposes live World Cell visual odometry and same-origin release evidence", async ({ page }) => {
+test("the Origin exposes camera-first World Cell tracking and release evidence", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
 
   const worldCell = page.locator("#world-cell-command");
@@ -27,9 +27,9 @@ test("the Origin exposes live World Cell visual odometry and same-origin release
     "data-visual-pipeline",
     "tessaryn-visual-odometry-v1",
   );
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "sparse-ordinal-flow");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
   await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN TRACKED FLOW V2");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN CAMERA TRACK OVERLAY V3");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
 });
