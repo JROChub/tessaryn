@@ -97,10 +97,12 @@
 <dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><b>WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
 <script>
 (() => {
-  const timeoutMs = 9000;
+  const root = document.documentElement;
+  root.dataset.worldCellMode = "booting";
+  root.dataset.worldCellBoot = "html-ready";
+  const timeoutMs = 30000;
   window.setTimeout(() => {
-    const root = document.documentElement;
-    if (root.dataset.worldCellMode || root.dataset.keyxymAuthority === "verified") return;
+    if (root.dataset.worldCellMode !== "booting") return;
 
     root.dataset.worldCellMode = "boot-recovery";
     root.dataset.keyxymAuthority = "unavailable";
@@ -144,6 +146,6 @@
   }, timeoutMs);
 })();
 </script>
-<script type="module" src="/src/world-cell-authority-entry.ts"></script>
+<script type="module" src="/src/world-cell-authority-entry.ts" onerror="document.documentElement.dataset.worldCellMode='boot-error'"></script>
 </body>
 </html>
