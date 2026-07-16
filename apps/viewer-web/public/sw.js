@@ -1,10 +1,10 @@
-// World Cell Theater route extends the stable TESSARYN offline contract.
-const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r5";
+// Stable TESSARYN offline contract. The live World Cell instrument is deliberately
+// excluded: its HTML and executable graph must arrive as one network release.
+const CACHE = "tessaryn-origin-v0-5-0-world-cell-v26-exact-r6";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
   "./personal-weave.html",
-  "./world-cell-theater.html",
   "./release.json",
   "./world/archviz-tiny-house-locus.json",
   "./world/vesper-court.json",
@@ -22,6 +22,7 @@ const CORE = [
 const AUTHORITY_PREFIXES = ["./keyxym-v26/", "./assurance/"]
   .map((path) => new URL(path, self.registration.scope).pathname);
 const RELEASE_ATTESTATION_PATH = new URL("./release.json", self.registration.scope).pathname;
+const WORLD_CELL_PATH = new URL("./world-cell-theater.html", self.registration.scope).pathname;
 
 function isAuthorityRequest(url) {
   return AUTHORITY_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
@@ -107,6 +108,16 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Never serve the World Cell instrument from CacheStorage. A cached HTML shell
+  // paired with chunks from another deployment caused intermittent VERIFYING and
+  // RETRY AUTHORITY states on Safari. Network failure must be visible, not masked
+  // by a different release.
+  if (url.pathname === WORLD_CELL_PATH) {
+    event.respondWith(fetch(new Request(event.request, { cache: "no-store" })));
+    return;
+  }
+
   if (url.pathname === "/mansion" || url.pathname === "/mansion/" || url.pathname === "/mansion.html") {
     event.respondWith(Response.redirect(new URL("./", self.location.href), 302));
     return;
@@ -116,9 +127,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (isAuthorityRequest(url) || url.pathname === RELEASE_ATTESTATION_PATH) {
-    // Mutable manifests, unversioned authority paths, and release evidence are
-    // always refreshed. Executable bytes used by the runtime are requested
-    // separately with source-and-digest cache keys above.
     event.respondWith(networkFirst(event.request));
     return;
   }
@@ -128,11 +136,6 @@ self.addEventListener("fetch", (event) => {
       event.request.destination === "worker" ||
       url.pathname.endsWith("/world/archviz-tiny-house-locus.json") ||
       url.pathname.endsWith("/world/vesper-court.json")) {
-    // Application shells and executable chunks must never be cache-first. A
-    // stale JS chunk can pair an obsolete preview controller with a new HTML
-    // shell and falsely expose geometry or Moment controls while authority is
-    // offline. Network-first keeps the release atomic, with cache only as a
-    // true offline fallback.
     event.respondWith(networkFirst(event.request, event.request.mode === "navigate" ? "./" : null));
     return;
   }
