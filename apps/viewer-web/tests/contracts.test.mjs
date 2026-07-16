@@ -119,7 +119,7 @@ test("the offline cache separates mutable release state from immutable authority
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r5";`),
+    worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r6";`),
   );
   for (const asset of [
     "./release.json",
@@ -135,6 +135,9 @@ test("the offline cache separates mutable release state from immutable authority
   ]) {
     assert.ok(worker.includes(`"${asset}"`), `offline cache omits ${asset}`);
   }
+  const core = worker.match(/const CORE = \[([\s\S]*?)\];/u)?.[1] ?? "";
+  assert.doesNotMatch(core, /world-cell-theater\.html/u);
+  assert.match(worker, /WORLD_CELL_PATH/);
   assert.doesNotMatch(worker, /keyxym\/keyxym-v22|build-closure\.json/);
   assert.match(worker, /AUTHORITY_PREFIXES/);
   assert.match(worker, /RELEASE_ATTESTATION_PATH/);
