@@ -9,6 +9,14 @@ async function refreshServiceWorker(): Promise<void> {
   try {
     const registration = await navigator.serviceWorker.register(script, { updateViaCache: "none" });
     await registration.update();
+    if (registration.installing || registration.waiting) {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), { once: true });
+        }),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 3_000)),
+      ]);
+    }
     document.documentElement.dataset.serviceWorker = "current";
   } catch (error) {
     document.documentElement.dataset.serviceWorker = "unavailable";
@@ -50,6 +58,10 @@ try {
 } catch (error) {
   if (!document.documentElement.dataset.keyxymMapAuthority) {
     document.documentElement.dataset.keyxymMapAuthority = "rejected";
+  }
+  if (!document.documentElement.dataset.eformAuthority) {
+    document.documentElement.dataset.eformAuthority = "unavailable";
+    document.documentElement.dataset.worldCellAssurance = "unavailable";
   }
   console.error("World Cell authoritative path unavailable; entering visual preview", error);
   installWorldCellPreviewFallback(error);
