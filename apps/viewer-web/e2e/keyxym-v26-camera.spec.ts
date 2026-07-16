@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("synthetic camera frames produce a bounded live overlay while authority stays locked", async ({ page }) => {
+test("synthetic translated views produce accepted relative geometry while authority stays locked", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -14,6 +14,7 @@ test("synthetic camera frames produce a bounded live overlay while authority sta
 
     const width = 320;
     const height = 240;
+    const focal = width * 0.9;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -22,39 +23,76 @@ test("synthetic camera frames produce a bounded live overlay while authority sta
     const track = new Generator({ kind: "video" });
     const stream = new MediaStream([track]);
     let sequenceStarted = false;
+    let seed = 7;
+    const random = (): number => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 2 ** 32;
+    };
+    const points = Array.from({ length: 150 }, (_, index) => ({
+      x: (random() - 0.5) * 4.2,
+      y: (random() - 0.5) * 3.1,
+      z: 3.2 + random() * 4.4,
+      value: 48 + Math.floor(random() * 198),
+      size: 1 + index % 3,
+    }));
 
     const draw = (phase: number): void => {
-      const gradient = context.createLinearGradient(0, 0, width, height);
-      gradient.addColorStop(0, `hsl(${(phase * 17) % 360} 70% 24%)`);
-      gradient.addColorStop(1, `hsl(${(phase * 17 + 130) % 360} 80% 72%)`);
-      context.fillStyle = gradient;
+      const background = context.createLinearGradient(0, 0, width, height);
+      background.addColorStop(0, "rgb(13 19 27)");
+      background.addColorStop(1, "rgb(38 45 55)");
+      context.fillStyle = background;
       context.fillRect(0, 0, width, height);
-      context.fillStyle = "rgba(245,245,245,0.95)";
-      for (let y = 12; y < height; y += 24) {
-        for (let x = 12; x < width; x += 24) {
-          context.fillRect(x + (phase % 7), y + ((phase * 2) % 5), 8, 8);
-        }
+      context.strokeStyle = "rgba(120,150,175,.12)";
+      context.lineWidth = 1;
+      for (let x = 0; x < width; x += 32) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
+        context.stroke();
       }
-      context.fillStyle = "rgba(10,18,30,0.9)";
-      context.fillRect(40 + phase * 2, 55, 74, 112);
-      context.fillRect(190 - phase, 90, 88, 54);
+      for (let y = 0; y < height; y += 32) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y);
+        context.stroke();
+      }
+
+      const translation = phase * 0.018;
+      const yaw = phase * 0.0025;
+      const cosine = Math.cos(yaw);
+      const sine = Math.sin(yaw);
+      for (const point of points) {
+        const translatedX = point.x - translation;
+        const cameraX = cosine * translatedX + sine * point.z;
+        const cameraZ = -sine * translatedX + cosine * point.z;
+        const x = Math.round(focal * cameraX / cameraZ + width / 2);
+        const y = Math.round(focal * point.y / cameraZ + height / 2);
+        if (x < 5 || y < 5 || x >= width - 5 || y >= height - 5) continue;
+        const red = point.value;
+        const green = (point.value * 3 + point.size * 17) % 256;
+        const blue = 255 - point.value;
+        context.fillStyle = `rgb(${red} ${green} ${blue})`;
+        context.fillRect(x - point.size, y - point.size, point.size * 2 + 1, point.size * 2 + 1);
+        context.fillStyle = `rgb(${255 - red} ${blue} ${green})`;
+        context.fillRect(x, y, 1, 1);
+      }
     };
 
     const sendSequence = async (): Promise<void> => {
       const writer = track.writable.getWriter();
       try {
-        for (let index = 0; index < 30; index += 1) {
+        for (let index = 0; index < 60; index += 1) {
           draw(index);
           const frame = new VideoFrame(canvas, {
-            timestamp: (index + 1) * 120_000,
-            duration: 120_000,
+            timestamp: (index + 1) * 100_000,
+            duration: 100_000,
           });
           try {
             await writer.write(frame);
           } finally {
             frame.close();
           }
-          await new Promise((resolve) => window.setTimeout(resolve, 120));
+          await new Promise((resolve) => window.setTimeout(resolve, 100));
         }
       } finally {
         writer.releaseLock();
@@ -77,41 +115,40 @@ test("synthetic camera frames produce a bounded live overlay while authority sta
 
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
-  await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-visual-odometry-v1");
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-visual-pipeline",
+    "tessaryn-world-cell-scan-v4",
+  );
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
   await page.locator("#start-button").click();
 
-  await expect.poll(async () => Number(await page.locator("#frame-count").textContent() ?? 0), {
-    timeout: 20_000,
-  }).toBeGreaterThan(6);
-  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-points") ?? 0), {
-    timeout: 20_000,
-  }).toBeGreaterThan(5);
-  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-points") ?? 0), {
-    timeout: 20_000,
-  }).toBeLessThanOrEqual(72);
-  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-keyframes") ?? 0), {
-    timeout: 20_000,
-  }).toBeGreaterThan(0);
-  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-tracks") ?? 0), {
-    timeout: 20_000,
-  }).toBeGreaterThan(5);
-  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-tracking") ?? 0), {
-    timeout: 20_000,
-  }).toBeGreaterThan(0.1);
-  await expect(page.locator("#surfel-count")).toContainText("0 AUTH /");
-  await expect(page.locator("#surfel-count")).toContainText("LIVE TRACKS");
-  await expect(page.locator("#pose-state")).toContainText("VISUAL TRACK");
-  await expect(page.locator("#capture-state")).toHaveText(/LIVE TRACKING|FIND TEXTURE \/ MOVE SLOWLY/u);
-  await expect(page.locator("#dispatch-time")).toContainText("LIVE TRACKS /");
-  await expect(page.locator("#dispatch-time")).toContainText("° REL");
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-views") ?? 0), {
+    timeout: 25_000,
+  }).toBeGreaterThanOrEqual(4);
+  await expect(page.locator("#capture-button")).toBeEnabled();
   await expect(page.locator("#camera")).toHaveCSS("opacity", "1");
-  await expect(page.locator("#capture-button")).toBeDisabled();
+  await page.locator("#capture-button").click();
+
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "reconstructed", {
+    timeout: 30_000,
+  });
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-points") ?? 0), {
+    timeout: 10_000,
+  }).toBeGreaterThanOrEqual(16);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-scan-result",
+    "relative-sparse-reconstruction",
+  );
+  await expect(page.locator("#surfel-count")).toContainText("0 AUTH /");
+  await expect(page.locator("#surfel-count")).toContainText("REL PTS");
+  await expect(page.locator("#pose-state")).toHaveText("RELATIVE SOLVE");
+  await expect(page.locator("#capture-state")).toHaveText("RELATIVE SCAN COMPLETE");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN TWO-VIEW SFM V4");
+  await expect(page.locator("#rootprint")).toHaveText("UNSEALED");
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
-  await expect(page.locator("#stop-button")).toBeEnabled();
-
-  await page.locator("#stop-button").click();
-  await expect(page.locator("#start-button")).toBeEnabled();
+  await expect(page.locator("#capture-button")).toBeDisabled();
+  await expect(page.locator("#start-button")).toHaveText("NEW SCAN");
   expect(pageErrors).toEqual([]);
 });
