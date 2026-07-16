@@ -30,7 +30,10 @@ test("TESSARYN keeps keyxym_map, eform, and preview as separate authorities", as
   assert.match(theater, /No camera frame, Moment, seal, Rootprint, or transfer operation has executed/);
 
   assert.match(preview, /worldCellMode = "visual-preview"/);
-  assert.match(preview, /keyxym-v021-responsive-baseline/);
+  assert.match(preview, /tessaryn-visual-odometry-v1/);
+  assert.match(preview, /detectFeatures/);
+  assert.match(preview, /trackFeatures/);
+  assert.match(preview, /estimateMotion/);
   assert.match(preview, /VISUAL TRACK/);
   assert.match(preview, /capture\.disabled = true/);
   assert.match(preview, /seal\.disabled = true/);
