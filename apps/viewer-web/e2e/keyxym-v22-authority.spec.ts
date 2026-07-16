@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("ordinary browser camera input enters the responsive v0.21 visual boundary", async ({ page }) => {
+test("ordinary browser camera input enters the measured visual odometry boundary", async ({ page }) => {
   const authorityRequests: string[] = [];
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -18,10 +18,11 @@ test("ordinary browser camera input enters the responsive v0.21 visual boundary"
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
   await expect(page.locator("html")).toHaveAttribute(
     "data-visual-pipeline",
-    "keyxym-v021-responsive-baseline",
+    "tessaryn-visual-odometry-v1",
   );
-  await expect(page.locator("#backend-name")).toHaveText("KEYXYM V0.21 VISUAL BASELINE");
-  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / NON-METRIC");
+  await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN VISUAL ODOMETRY V1");
+  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / RELATIVE / NON-METRIC");
   await expect(page.locator("#gpu-badge")).toHaveText("VISUAL ONLY");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
@@ -52,6 +53,7 @@ test("a claimed adapter without executable spatial integration cannot open autho
   await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
   await expect.poll(async () => page.locator("html").getAttribute("data-keyxym-authority"))
     .toBe("preview");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-visual-odometry-v1");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();

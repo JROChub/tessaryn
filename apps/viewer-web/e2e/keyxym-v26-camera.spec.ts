@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("synthetic camera frames form responsive visual points while authority stays locked", async ({ page }) => {
+test("synthetic camera frames build measured visual odometry while authority stays locked", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -77,18 +77,29 @@ test("synthetic camera frames form responsive visual points while authority stay
 
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-pipeline", "tessaryn-visual-odometry-v1");
   await page.locator("#start-button").click();
 
   await expect.poll(async () => Number(await page.locator("#frame-count").textContent() ?? 0), {
     timeout: 20_000,
-  }).toBeGreaterThan(2);
+  }).toBeGreaterThan(6);
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-points") ?? 0), {
     timeout: 20_000,
   }).toBeGreaterThan(1_000);
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-keyframes") ?? 0), {
+    timeout: 20_000,
+  }).toBeGreaterThan(1);
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-tracks") ?? 0), {
+    timeout: 20_000,
+  }).toBeGreaterThan(5);
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-visual-tracking") ?? 0), {
+    timeout: 20_000,
+  }).toBeGreaterThan(0.1);
   await expect(page.locator("#surfel-count")).toContainText("0 AUTH /");
   await expect(page.locator("#pose-state")).toContainText("VISUAL TRACK");
-  await expect(page.locator("#capture-state")).toHaveText("VISUAL FORMING");
-  await expect(page.locator("#dispatch-time")).toHaveText("RGB VISUAL / NON-AUTH");
+  await expect(page.locator("#capture-state")).toHaveText(/VISUAL MAPPING|FIND TEXTURE \/ MOVE SLOWLY/u);
+  await expect(page.locator("#dispatch-time")).toContainText("TRACKS /");
+  await expect(page.locator("#dispatch-time")).toContainText("° REL");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();

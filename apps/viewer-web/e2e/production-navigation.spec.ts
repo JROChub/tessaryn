@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("the Origin exposes live World Cell visual capture and same-origin release evidence", async ({ page }) => {
+test("the Origin exposes live World Cell visual odometry and same-origin release evidence", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
 
   const worldCell = page.locator("#world-cell-command");
@@ -25,8 +25,10 @@ test("the Origin exposes live World Cell visual capture and same-origin release 
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
   await expect(page.locator("html")).toHaveAttribute(
     "data-visual-pipeline",
-    "keyxym-v021-responsive-baseline",
+    "tessaryn-visual-odometry-v1",
   );
+  await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN VISUAL ODOMETRY V1");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
 });
