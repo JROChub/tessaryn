@@ -26,6 +26,8 @@ test("verified v0.26 worker authority and assurance instantiate before capture",
 
   await expect.poll(async () => page.locator("html").getAttribute("data-keyxym-authority"))
     .toBe("verified");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-map-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-eform-authority", "verified");
   await expect(page.locator("html")).toHaveAttribute("data-keyxym-source", KEYXYM_SOURCE);
   await expect(page.locator("html")).toHaveAttribute(
     "data-keyxym-abi",
@@ -78,7 +80,7 @@ test("verified v0.26 worker authority and assurance instantiate before capture",
   expect(consoleErrors).toEqual([]);
 });
 
-test("browser assurance rejection disables the complete authority boundary", async ({ page }) => {
+test("eform outage preserves verified Keyxym provenance while every authority gate stays closed", async ({ page }) => {
   await page.addInitScript(() => {
     const nativeFetch = window.fetch.bind(window);
     window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -93,11 +95,17 @@ test("browser assurance rejection disables the complete authority boundary", asy
 
   await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
   await expect.poll(async () => page.locator("html").getAttribute("data-keyxym-authority"))
-    .toBe("rejected");
+    .toBe("preview");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-map-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-eform-authority", "rejected");
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-assurance", "rejected");
-  await expect(page.locator("#cell-state")).toHaveText("WORLD CELL / AUTHORITY REJECTED");
-  await expect(page.locator("#start-button")).toBeDisabled();
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
+  await expect(page.locator("#cell-state")).toHaveText("WORLD CELL / VISUAL PREVIEW / UNSEALED");
+  await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
+  await expect(page.locator("#rootprint")).toHaveText("UNSEALED");
+  await expect(page.locator("#surfel-count")).toHaveText("0");
+  await expect(page.locator("#sensor-detail")).toContainText("Preview pixels cannot become a Moment");
 });
