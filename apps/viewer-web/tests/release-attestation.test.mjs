@@ -10,6 +10,7 @@ import test from "node:test";
 const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)));
 const script = join(appDirectory, "scripts", "write-release-attestation.mjs");
 const sourceCommit = "0123456789abcdef0123456789abcdef01234567";
+const packageManifest = JSON.parse(await readFile(join(appDirectory, "package.json"), "utf8"));
 
 async function write(path, content) {
   await mkdir(dirname(path), { recursive: true });
@@ -81,7 +82,7 @@ test("release attestation binds the qualified commit and every deployed file det
   const release = JSON.parse(firstBytes.toString("utf8"));
 
   assert.equal(release.schema, "tessaryn/deployment-attestation/v1");
-  assert.equal(release.version, "0.5.0");
+  assert.equal(release.version, packageManifest.version);
   assert.equal(release.source.commit, sourceCommit);
   assert.equal(release.qualification.head_commit, sourceCommit);
   assert.equal(release.qualification.run_id, 301);
