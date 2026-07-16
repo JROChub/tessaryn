@@ -100,52 +100,105 @@
   const root = document.documentElement;
   root.dataset.worldCellMode = "booting";
   root.dataset.worldCellBoot = "html-ready";
+  const startupModes = new Set(["booting", "initializing", "boot-error"]);
   const timeoutMs = 30000;
-  window.setTimeout(() => {
-    if (root.dataset.worldCellMode !== "booting") return;
+  let basicStream = null;
 
+  const setText = (id, text) => {
+    const node = document.getElementById(id);
+    if (node) node.textContent = text;
+  };
+
+  const stopBasicCamera = () => {
+    basicStream?.getTracks().forEach((track) => track.stop());
+    basicStream = null;
+    const video = document.getElementById("camera");
+    if (video instanceof HTMLVideoElement) video.srcObject = null;
+    const start = document.getElementById("start-button");
+    const stop = document.getElementById("stop-button");
+    if (start instanceof HTMLButtonElement) start.disabled = !navigator.mediaDevices?.getUserMedia;
+    if (stop instanceof HTMLButtonElement) stop.disabled = true;
+    setText("capture-state", "BASIC CAMERA READY");
+  };
+
+  const installBasicCamera = () => {
+    const start = document.getElementById("start-button");
+    const stop = document.getElementById("stop-button");
+    const video = document.getElementById("camera");
+    const message = document.getElementById("stage-message");
+    if (!(start instanceof HTMLButtonElement) || !(stop instanceof HTMLButtonElement) ||
+        !(video instanceof HTMLVideoElement)) return;
+
+    start.disabled = !navigator.mediaDevices?.getUserMedia;
+    start.textContent = start.disabled ? "CAMERA UNAVAILABLE" : "START BASIC CAMERA";
+    start.onclick = async () => {
+      start.disabled = true;
+      setText("capture-state", "REQUESTING CAMERA");
+      try {
+        basicStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+        video.srcObject = basicStream;
+        video.style.opacity = "1";
+        await video.play();
+        stop.disabled = false;
+        setText("capture-state", "BASIC CAMERA / NO MAPPING");
+        if (message) message.style.display = "none";
+      } catch (error) {
+        stopBasicCamera();
+        const detail = error instanceof Error ? error.message : String(error);
+        const heading = message?.querySelector("b");
+        const body = message?.querySelector("span");
+        if (heading) heading.textContent = "CAMERA UNAVAILABLE";
+        if (body) body.textContent = `${detail}. No evidence or geometry was created.`;
+        if (message) message.style.display = "";
+      }
+    };
+    stop.onclick = stopBasicCamera;
+  };
+
+  const recover = (reason = "The World Cell release module did not start.") => {
+    if (!startupModes.has(root.dataset.worldCellMode || "")) return;
     root.dataset.worldCellMode = "boot-recovery";
     root.dataset.keyxymAuthority = "unavailable";
     root.dataset.keyxymMapAuthority ||= "unavailable";
     root.dataset.eformAuthority ||= "unavailable";
     root.dataset.worldCellAssurance ||= "unavailable";
 
-    const setText = (id, text) => {
-      const node = document.getElementById(id);
-      if (node) node.textContent = text;
-    };
-    setText("capture-state", "RECOVERY");
-    setText("compute-state", "BOOT FAILED");
-    setText("pose-state", "AUTHORITY UNAVAILABLE");
-    setText("cell-state", "WORLD CELL / RETRY REQUIRED");
-    setText("gpu-badge", "BUNDLE UNAVAILABLE");
-    setText("backend-name", "KEYXYM V0.26 NOT LOADED");
-    setText("adapter-name", "RETRY REQUIRED");
-    setText("sensor-detail", "The authority bundle did not finish loading. No camera frame, Moment, seal, Rootprint, or transfer operation has executed.");
+    setText("capture-state", "BASIC CAMERA READY");
+    setText("compute-state", "RELEASE MODULE OFFLINE");
+    setText("pose-state", "NO MAPPING AUTHORITY");
+    setText("cell-state", "WORLD CELL / BASIC CAMERA ONLY");
+    setText("gpu-badge", "MODULE UNAVAILABLE");
+    setText("backend-name", "BASIC CAMERA FALLBACK");
+    setText("adapter-name", "NO EXECUTABLE AUTHORITY");
+    setText("sensor-detail", "The release module did not load. Basic camera viewing remains available, but no geometry, Moment, seal, Rootprint, evidence, or transfer can be created.");
 
     const message = document.getElementById("stage-message");
     if (message) {
       const heading = message.querySelector("b");
       const detail = message.querySelector("span");
-      if (heading) heading.textContent = "WORLD CELL BOOT DID NOT COMPLETE";
-      if (detail) detail.textContent = "Retry the verified Keyxym and eform authority bundle. This recovery state creates no geometry or evidence.";
+      if (heading) heading.textContent = "WORLD CELL MODULE UNAVAILABLE";
+      if (detail) detail.textContent = `${reason} Basic camera viewing is available without authority.`;
       message.style.display = "";
     }
 
-    for (const id of ["capture-button", "stop-button", "seal-button", "send-button", "host-button", "join-button", "answer-button"]) {
+    for (const id of ["capture-button", "seal-button", "send-button", "host-button", "join-button", "answer-button"]) {
       const control = document.getElementById(id);
       if (control instanceof HTMLButtonElement) control.disabled = true;
     }
+    installBasicCamera();
+  };
 
-    const retry = document.getElementById("start-button");
-    if (retry instanceof HTMLButtonElement) {
-      retry.disabled = false;
-      retry.textContent = "RETRY AUTHORITY";
-      retry.onclick = () => window.location.reload();
-    }
+  window.tessarynWorldCellBootFailure = recover;
+  window.addEventListener("beforeunload", stopBasicCamera, { once: true });
+  window.setTimeout(() => {
+    if (!startupModes.has(root.dataset.worldCellMode || "")) return;
+    recover(`World Cell startup did not complete within ${timeoutMs}ms.`);
   }, timeoutMs);
 })();
 </script>
-<script type="module" src="/src/world-cell-authority-entry.ts" onerror="document.documentElement.dataset.worldCellMode='boot-error'"></script>
+<script type="module" src="./src/world-cell-authority-entry.ts" onerror="window.tessarynWorldCellBootFailure?.('The World Cell release module could not load.')"></script>
 </body>
 </html>
