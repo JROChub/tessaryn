@@ -793,7 +793,7 @@ function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
   if (valid.length < MIN_RECONSTRUCTED_POINTS) {
     return fail("Too few points passed positive-depth and reprojection checks.", partialMetrics);
   }
-  if (positiveDepthRatio < 0.65 || reprojectionErrorPixels > 3.5 ||
+  if (positiveDepthRatio < 0.5 || reprojectionErrorPixels > 3.5 ||
       triangulationAngleDegrees < 0.35 || selected.coverage < 0.24) {
     return fail("The scan did not meet the geometric acceptance thresholds.", partialMetrics);
   }
