@@ -160,20 +160,22 @@ async function hasVerifiedSpatialAdapter(): Promise<boolean> {
 }
 
 async function boot(): Promise<void> {
+  const serviceWorkerRefresh = refreshServiceWorker();
   try {
-    await refreshServiceWorker();
-
-    // v0.21's working spatial contract required calibrated depth and tracked 3D
-    // landmarks. Ordinary Safari camera RGB is therefore a responsive visual
-    // preview, not an authoritative reconstruction input.
+    // Ordinary browser camera input does not need to wait for a service-worker
+    // update before the honest visual preview becomes usable. The service worker
+    // refresh continues in the background and is awaited only by the authoritative
+    // Keyxym/eform path.
     if (!await hasVerifiedSpatialAdapter()) {
       document.documentElement.dataset.keyxymMapAuthority = "adapter-required";
       document.documentElement.dataset.eformAuthority = "not-requested";
       document.documentElement.dataset.worldCellAssurance = "not-requested";
       await enterPreview(new Error("Verified depth, intrinsics, pose, landmark, and calibration receipt adapter not present"));
+      void serviceWorkerRefresh;
       return;
     }
 
+    await serviceWorkerRefresh;
     const { verifyKeyxymV26Bundle } = await withTimeout(
       import("./keyxym-v26-provenance"),
       BOOT_PHASE_TIMEOUT_MS,
