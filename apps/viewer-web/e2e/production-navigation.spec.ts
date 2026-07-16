@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("the Origin exposes camera-first World Cell tracking and release evidence", async ({ page }) => {
+test("the Origin exposes World Cell Scan V4 and same-origin release evidence", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
 
   const worldCell = page.locator("#world-cell-command");
@@ -25,11 +25,12 @@ test("the Origin exposes camera-first World Cell tracking and release evidence",
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
   await expect(page.locator("html")).toHaveAttribute(
     "data-visual-pipeline",
-    "tessaryn-visual-odometry-v1",
+    "tessaryn-world-cell-scan-v4",
   );
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "camera-first-live-tracks");
+  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
   await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN CAMERA TRACK OVERLAY V3");
+  await expect(page.locator("#backend-name")).toHaveText("TESSARYN MULTI-VIEW SOLVER V4");
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#capture-button")).toBeDisabled();
 });
