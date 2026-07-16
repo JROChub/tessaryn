@@ -14,6 +14,7 @@ test("mobile boot always leaves VERIFYING through preview or visible recovery", 
   assert.match(theater, /dataset\.worldCellMode = "booting"/);
   assert.match(theater, /dataset\.worldCellBoot = "html-ready"/);
   assert.match(theater, /new Set\(\["booting", "initializing", "boot-error"\]\)/);
+  assert.match(theater, /const timeoutMs = 8000/);
   assert.match(theater, /window\.tessarynWorldCellBootFailure = recover/);
   assert.match(theater, /WORLD CELL MODULE UNAVAILABLE/);
   assert.match(theater, /START BASIC CAMERA/);
