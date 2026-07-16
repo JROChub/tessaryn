@@ -77,4 +77,36 @@ if (!/type="module"[^>]+src="\.\/assets\//u.test(theater) ||
     theater.includes("/src/world-cell-authority-entry.ts")) {
   throw new Error("live World Cell Theater is not the built application entry");
 }
+
+const javascriptAssets = [...inventory.keys()].filter((path) =>
+  /^assets\/.+\.js$/u.test(path));
+if (javascriptAssets.length === 0) {
+  throw new Error("release inventory contains no built JavaScript assets");
+}
+let applicationBytes = "";
+for (const path of javascriptAssets) {
+  const record = inventory.get(path);
+  const result = await fetchBytes(path);
+  if (!record || result.bytes.byteLength !== record.bytes || digest(result.bytes) !== record.sha256) {
+    throw new Error(`live ${path} does not match release.json`);
+  }
+  applicationBytes += result.bytes.toString("utf8");
+}
+for (const marker of [
+  "tessaryn-world-cell-scan-v4",
+  "world-cell-scan-v4",
+  "START WORLD CELL SCAN",
+  "NO DEFENSIBLE GEOMETRY",
+  "relative-sparse-reconstruction",
+]) {
+  if (!applicationBytes.includes(marker)) {
+    throw new Error(`live release omits required Scan V4 marker: ${marker}`);
+  }
+}
+for (const forbidden of ["camera-first-live-tracks", "FLOW PTS", "18,000 VIS"]) {
+  if (applicationBytes.includes(forbidden)) {
+    throw new Error(`live release still contains retired World Cell renderer marker: ${forbidden}`);
+  }
+}
+
 console.log(`verified live TESSARYN deployment ${expectedCommit} at ${origin.href}`);
