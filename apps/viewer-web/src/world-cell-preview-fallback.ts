@@ -22,30 +22,38 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
   let frame = 0;
   let animation = 0;
   const sourceReason = reason instanceof Error ? reason.message : String(reason);
+  const keyxymState = document.documentElement.dataset.keyxymMapAuthority ?? "rejected";
+  const eformState = document.documentElement.dataset.eformAuthority ?? "unavailable";
 
-  document.documentElement.dataset.keyxymAuthority = "offline";
-  document.documentElement.dataset.eformAuthority = "offline";
+  document.documentElement.dataset.keyxymAuthority = "preview";
   document.documentElement.dataset.worldCellMode = "visual-preview";
 
-  byId("compute-state").textContent = "KEYXYM_MAP OFFLINE";
+  byId("compute-state").textContent = keyxymState === "verified"
+    ? "KEYXYM V0.26 VERIFIED / OUTPUT LOCKED"
+    : "KEYXYM_MAP UNAVAILABLE";
   byId("pose-state").textContent = "VISUAL PREVIEW / UNSEALED";
-  byId("cell-state").textContent = "VISUAL PREVIEW / NO AUTHORITY";
+  byId("cell-state").textContent = "WORLD CELL / VISUAL PREVIEW / UNSEALED";
   byId("backend-name").textContent = "TESSARYN VISUAL PREVIEW";
   byId("adapter-name").textContent = "CAMERA RGB / NON-METRIC";
   byId("gpu-badge").textContent = "PREVIEW ONLY";
+  byId("rootprint").textContent = "UNSEALED";
+  byId("surfel-count").textContent = "0";
   byId("sensor-detail").textContent =
-    "Camera visualization is available, but keyxym_map reconstruction and eform assurance are offline. Preview pixels cannot become a Moment, seal, Rootprint, or transfer artifact.";
+    `Camera visualization is available, but authoritative output is locked ` +
+    `(keyxym_map: ${keyxymState}; eform: ${eformState}). Preview pixels cannot become a Moment, seal, Rootprint, or transfer artifact.`;
 
   const heading = stageMessage.querySelector("b");
   const detail = stageMessage.querySelector("span");
   if (heading) heading.textContent = "VISUAL PREVIEW AVAILABLE";
-  if (detail) detail.textContent = `Independent authority unavailable: ${sourceReason}. Start camera for non-authoritative visualization only.`;
+  if (detail) detail.textContent =
+    `Independent authority unavailable: ${sourceReason}. Start camera for non-authoritative visualization only.`;
   stageMessage.style.display = "";
 
   capture.disabled = true;
   seal.disabled = true;
   send.disabled = true;
-  start.disabled = false;
+  stop.disabled = true;
+  start.disabled = !navigator.mediaDevices?.getUserMedia;
 
   const resize = (): void => {
     const bounds = canvas.getBoundingClientRect();
@@ -83,7 +91,6 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       }
       frame += 1;
       byId("frame-count").textContent = String(frame);
-      byId("surfel-count").textContent = String(columns * rows);
     }
     animation = requestAnimationFrame(draw);
   };
@@ -94,24 +101,38 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     stream?.getTracks().forEach((track) => track.stop());
     stream = null;
     video.srcObject = null;
-    start.disabled = false;
+    start.disabled = !navigator.mediaDevices?.getUserMedia;
     stop.disabled = true;
     byId("capture-state").textContent = "PREVIEW READY";
     stageMessage.style.display = "";
   };
 
   start.onclick = async () => {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false,
-    });
-    video.srcObject = stream;
-    await video.play();
     start.disabled = true;
-    stop.disabled = false;
-    stageMessage.style.display = "none";
-    byId("capture-state").textContent = "PREVIEWING";
-    draw();
+    byId("capture-state").textContent = "REQUESTING CAMERA";
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      });
+      video.srcObject = stream;
+      await video.play();
+      stop.disabled = false;
+      stageMessage.style.display = "none";
+      byId("capture-state").textContent = "PREVIEWING";
+      draw();
+    } catch (error) {
+      stopPreview();
+      const message = error instanceof Error ? error.message : String(error);
+      byId("capture-state").textContent = "CAMERA UNAVAILABLE";
+      if (heading) heading.textContent = "CAMERA PREVIEW UNAVAILABLE";
+      if (detail) detail.textContent = `${message}. Authority remains locked and no evidence was created.`;
+      stageMessage.style.display = "";
+    }
   };
   stop.onclick = stopPreview;
   window.addEventListener("beforeunload", stopPreview, { once: true });
