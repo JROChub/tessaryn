@@ -1,3 +1,7 @@
+const root = document.documentElement;
+root.dataset.worldCellBoot = "module-started";
+root.dataset.worldCellMode = "initializing";
+
 function setText(id: string, value: string): void {
   const node = document.getElementById(id);
   if (node) node.textContent = value;
