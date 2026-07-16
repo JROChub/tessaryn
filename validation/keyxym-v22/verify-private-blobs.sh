@@ -38,13 +38,13 @@ check tests/test_v022_browser_runtime.cpp 3550a35b3fe631c85a0d79f2944ae703b142c4
 check include/keyxym/v26.hpp c43c97e8efd86cad9dc915fe6d9ac9a1baab46e8
 check include/keyxym/v26_browser_runtime.h 4a97f93b2b4129b19dbf6786aed9719adefa5883
 check src/v26_internal.hpp 168f3be8c95de7e386620b161b8edf5cba90e3e1
-check src/v26_pose.cpp cd1cb0baed05f670e088244daf65b41fc0b39a3c
+check src/v26_pose.cpp d1b682bbe9867e602c3a6e3c939eea783b01ef27
 check src/v26_geometry.cpp 1f5ef8bb7c6aafe590afc0ce9e71f77001782670
 check src/v26_session.cpp f69334624317ab2c80a62011d1cdd716cc5a4de1
 check src/v26_browser_runtime.cpp bc480746168e29015cc9fb44a41eb16e5ea4adf8
-check tests/test_v026.cpp 7cbbc675528c0dd603c2f2f08ad54584fd865858
+check tests/test_v026.cpp bd91006377770abf98453ae751796c8b72ee14db
 check tests/test_v026_browser_runtime.cpp a07be0feffc45f11b5a5ade98f43d26a5178435b
 if [[ "$status" == 0 ]]; then
-  printf 'keyxym_private_blobs=proposed-v026-fix\n' | tee -a "$report"
+  printf 'keyxym_private_blobs=robust-mobile-pose-v027\n' | tee -a "$report"
 fi
 exit "$status"
