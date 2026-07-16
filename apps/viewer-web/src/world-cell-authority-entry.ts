@@ -2,9 +2,30 @@ const root = document.documentElement;
 root.dataset.worldCellBoot = "module-started";
 root.dataset.worldCellMode = "initializing";
 
+const BOOT_PHASE_TIMEOUT_MS = 8_000;
+const PREVIEW_LOAD_TIMEOUT_MS = 12_000;
+
 function setText(id: string, value: string): void {
   const node = document.getElementById(id);
   if (node) node.textContent = value;
+}
+
+function timeoutError(label: string, timeoutMs: number): Error {
+  return new Error(`${label} did not complete within ${timeoutMs}ms`);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer = 0;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = window.setTimeout(() => reject(timeoutError(label, timeoutMs)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) window.clearTimeout(timer);
+  }
 }
 
 function installEmergencyShell(reason: unknown): void {
@@ -52,8 +73,12 @@ async function refreshServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
   const script = new URL("./sw.js", document.baseURI);
   try {
-    const registration = await navigator.serviceWorker.register(script, { updateViaCache: "none" });
-    await registration.update();
+    const registration = await withTimeout(
+      navigator.serviceWorker.register(script, { updateViaCache: "none" }),
+      BOOT_PHASE_TIMEOUT_MS,
+      "Service worker registration",
+    );
+    await withTimeout(registration.update(), BOOT_PHASE_TIMEOUT_MS, "Service worker update");
     if (registration.installing || registration.waiting) {
       await Promise.race([
         new Promise<void>((resolve) => {
@@ -71,8 +96,16 @@ async function refreshServiceWorker(): Promise<void> {
 
 async function installEformAssurance(): Promise<void> {
   try {
-    const { installBrowserAssuranceBridge } = await import("./browser-assurance-runtime");
-    const manifest = await installBrowserAssuranceBridge();
+    const { installBrowserAssuranceBridge } = await withTimeout(
+      import("./browser-assurance-runtime"),
+      BOOT_PHASE_TIMEOUT_MS,
+      "eform assurance module load",
+    );
+    const manifest = await withTimeout(
+      installBrowserAssuranceBridge(),
+      BOOT_PHASE_TIMEOUT_MS,
+      "eform assurance verification",
+    );
     document.documentElement.dataset.eformAuthority = "verified";
     document.documentElement.dataset.eformSource = manifest.source_commit;
     document.documentElement.dataset.worldCellAssurance = "verified";
@@ -87,7 +120,11 @@ async function installEformAssurance(): Promise<void> {
 
 async function enterPreview(error: unknown): Promise<void> {
   try {
-    const { installWorldCellPreviewFallback } = await import("./world-cell-preview-fallback");
+    const { installWorldCellPreviewFallback } = await withTimeout(
+      import("./world-cell-preview-fallback"),
+      PREVIEW_LOAD_TIMEOUT_MS,
+      "World Cell preview module load",
+    );
     installWorldCellPreviewFallback(error);
   } catch (previewError) {
     console.error("World Cell preview path also failed", previewError);
@@ -110,7 +147,11 @@ async function hasVerifiedSpatialAdapter(): Promise<boolean> {
   }).tessarynMetricSensor;
   if (typeof bridge?.currentCalibration !== "function" ||
       typeof bridge.currentSpatialFrame !== "function") return false;
-  const calibration = await bridge.currentCalibration().catch(() => null);
+  const calibration = await withTimeout(
+    bridge.currentCalibration().catch(() => null),
+    BOOT_PHASE_TIMEOUT_MS,
+    "Spatial calibration probe",
+  ).catch(() => null);
   return calibration?.verified === true &&
     Number.isFinite(calibration.scaleMetersPerUnit) &&
     Number(calibration.scaleMetersPerUnit) > 0 &&
@@ -133,16 +174,32 @@ async function boot(): Promise<void> {
       return;
     }
 
-    const { verifyKeyxymV26Bundle } = await import("./keyxym-v26-provenance");
-    const manifest = await verifyKeyxymV26Bundle();
+    const { verifyKeyxymV26Bundle } = await withTimeout(
+      import("./keyxym-v26-provenance"),
+      BOOT_PHASE_TIMEOUT_MS,
+      "Keyxym provenance module load",
+    );
+    const manifest = await withTimeout(
+      verifyKeyxymV26Bundle(),
+      BOOT_PHASE_TIMEOUT_MS,
+      "Keyxym v0.26 bundle verification",
+    );
     document.documentElement.dataset.keyxymMapAuthority = "verified";
     document.documentElement.dataset.keyxymMapSource = manifest.source_commit;
     await installEformAssurance();
-    const [{ installWorldCellTheater }, { installWorldCellGuidance }] = await Promise.all([
-      import("./world-cell-theater-v26"),
-      import("./world-cell-guidance"),
-    ]);
-    await installWorldCellTheater(manifest);
+    const [{ installWorldCellTheater }, { installWorldCellGuidance }] = await withTimeout(
+      Promise.all([
+        import("./world-cell-theater-v26"),
+        import("./world-cell-guidance"),
+      ]),
+      BOOT_PHASE_TIMEOUT_MS,
+      "World Cell authoritative modules load",
+    );
+    await withTimeout(
+      installWorldCellTheater(manifest),
+      BOOT_PHASE_TIMEOUT_MS,
+      "World Cell authoritative runtime installation",
+    );
     installWorldCellGuidance();
     document.documentElement.dataset.keyxymAuthority = "verified";
     document.documentElement.dataset.keyxymSource = manifest.source_commit;
