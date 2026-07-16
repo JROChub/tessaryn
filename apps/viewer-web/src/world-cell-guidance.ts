@@ -7,6 +7,8 @@ const REJECT_CONTINUITY = 1 << 5;
 const REJECT_RECEIPT = 1 << 6;
 const REJECT_DEGENERATE = 1 << 7;
 
+const MOTION_REJECTIONS = REJECT_POSE | REJECT_TRACKING | REJECT_PARALLAX | REJECT_DEGENERATE;
+
 function numericAttribute(root: HTMLElement, name: string): number {
   const value = Number(root.dataset[name]);
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
@@ -33,18 +35,18 @@ export function installWorldCellGuidance(): () => void {
     if ((capture.textContent ?? "").trim() === "READY") return;
 
     const mask = numericAttribute(root, "authorityRejectionMask");
-    if (mask & REJECT_RECEIPT) {
-      heading.textContent = "AUTHORITY RECEIPT REJECTED";
-      detail.textContent = "Stop capture and restart the verified Keyxym authority. No Moment or seal can be created from an invalid receipt chain.";
-    } else if (mask & REJECT_REPROJECTION) {
+    if (mask & REJECT_REPROJECTION) {
       heading.textContent = "REDUCE MOTION BLUR";
       detail.textContent = "Move more slowly, keep textured edges sharp, and maintain the same objects in view until reprojection returns below the authority limit.";
-    } else if (mask & (REJECT_POSE | REJECT_TRACKING | REJECT_PARALLAX | REJECT_DEGENERATE)) {
+    } else if (mask & MOTION_REJECTIONS) {
       heading.textContent = establishedTracking ? "REACQUIRE TRACKING" : "CREATE 3D PARALLAX";
       detail.textContent = "Move slowly sideways around textured objects at different depths. Keep them in view; avoid flat walls, digital screens, blur, and repeating patterns.";
     } else if (mask & (REJECT_GEOMETRY | REJECT_CONTINUITY)) {
       heading.textContent = "BUILD VERIFIED GEOMETRY";
       detail.textContent = "Continue a slow arc, then revisit the same surfaces so Keyxym can confirm them across frames before enabling a Moment.";
+    } else if (mask & REJECT_RECEIPT) {
+      heading.textContent = "AUTHORITY RECEIPT REJECTED";
+      detail.textContent = "Stop capture and restart the verified Keyxym authority. No Moment or seal can be created from an invalid receipt chain.";
     } else {
       return;
     }
