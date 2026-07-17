@@ -8,7 +8,9 @@ The production Theater must never label browser-generated luminance depth, pass-
 
 Tessaryn owns acquisition, presentation, canonical Moment and Cell construction, replay, transfer, and verification. It does not implement a competing vision or geometry pipeline.
 
-The browser assurance module applies the `eform/world-cell-assurance/v1` envelope and uses Power House 0.3.24 for PHA, Rootprint, and deterministic replay. Native builds independently run the upstream strict Memory Capsule verifier. Browser builds execute the same deterministic capsule, artifact, lineage, replay, proof-digest, and critical-extension checks without the upstream wall-clock measurement, because `std::time::Instant` is unavailable on `wasm32-unknown-unknown`. Assurance work runs only when sealing or verifying a Cell, never in the frame-rate loop. Power House source is unchanged.
+The browser assurance module applies the `eform/world-cell-assurance/v1` envelope and uses Power House 0.3.24 for PHA, Rootprint, and deterministic replay. Native builds independently run the upstream strict Memory Capsule verifier.
+
+Browser builds execute the same deterministic capsule, artifact, lineage, replay, proof-digest, and critical-extension checks without the upstream wall-clock measurement, because `std::time::Instant` is unavailable on `wasm32-unknown-unknown`. Assurance work runs only when sealing or verifying a Cell, never in the frame-rate loop. Power House source is unchanged.
 
 ## Installed authority artifacts
 
