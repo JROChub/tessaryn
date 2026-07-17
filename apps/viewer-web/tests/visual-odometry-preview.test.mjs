@@ -19,6 +19,12 @@ test("World Cell Scan V4 gates relative geometry on measured multi-view evidence
   assert.match(runtime, /trackFeatures\(keyframeReference, current, keyframeReferenceFeatures, 18\)/);
   assert.match(runtime, /baselineMotion\.parallax >= 1\.2/);
   assert.match(runtime, /FINISH & SOLVE/);
+  assert.match(runtime, /if \(keyframes\.length >= MAX_KEYFRAMES\) keyframes\.shift\(\)/);
+  assert.match(runtime, /dataset\.scanAcceptedViews/);
+  assert.match(runtime, /requestPreviewSolve/);
+  assert.match(runtime, /accepted-live-relative-preview/);
+  assert.match(runtime, /LIVE RELATIVE GEOMETRY/);
+  assert.match(runtime, /relative-live-preview/);
   assert.match(runtime, /new Worker\(new URL\("\.\/world-cell-scan-v4-worker\.ts"/);
   assert.match(runtime, /NO DEFENSIBLE GEOMETRY/);
   assert.match(runtime, /relative-sparse-reconstruction/);

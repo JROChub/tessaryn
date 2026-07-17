@@ -110,6 +110,11 @@ test("slow translated views accumulate baseline and produce relative geometry wh
   }).toBeGreaterThanOrEqual(6);
   await expect(page.locator("#capture-button")).toBeEnabled();
   await expect(page.locator("#camera")).toHaveCSS("opacity", "1");
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-points") ?? 0), {
+    timeout: 30_000,
+  }).toBeGreaterThanOrEqual(16);
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "capturing");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-preview-status", "reconstructed");
   await page.locator("#capture-button").click();
 
   await expect(page.locator("html")).toHaveAttribute("data-scan-state", "reconstructed", {

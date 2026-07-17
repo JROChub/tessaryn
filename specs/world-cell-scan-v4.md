@@ -6,13 +6,19 @@ World Cell Scan V4 is the ordinary RGB-camera path used when no verified metric 
 
 ## Capture contract
 
-The browser samples camera evidence at 320 pixels wide and captures six to
-twelve bounded grayscale/RGBA keyframes while the user moves sideways around a
-textured subject. A view is admitted only when direct tracking from the last
-admitted keyframe has sufficient support, spatial coverage, and baseline. This
-makes slow subpixel motion observable over time without manufacturing motion
-from accumulated noise. The live display contains only the current bounded
-tracking overlay; it never accumulates decorative or pseudo-depth particles.
+The browser samples camera evidence at 320 pixels wide and maintains a rolling
+window of six to twelve bounded grayscale/RGBA keyframes while the user moves
+sideways around a textured subject. A view is admitted only when direct tracking
+from the last admitted keyframe has sufficient support, spatial coverage, and
+baseline. Once the window is full, newer measured views replace the oldest view
+so an early rotational segment cannot permanently prevent reconstruction.
+
+Starting at six views, bounded worker solves run without stopping capture. An
+accepted solve raises the relative-point counter and displays a labeled live
+point-cloud inset. A rejected preview keeps capture active, reports whether more
+translation or texture is needed, and retries after additional admitted views.
+`FINISH & SOLVE` promotes the latest accepted relative result to the completed
+scan; it never confers metric or protocol authority.
 
 ## Reconstruction contract
 
@@ -32,7 +38,9 @@ The worker:
 11. continues to the next ranked baseline when a candidate is degenerate or fails acceptance; and
 12. emits bounded scale-free points when at least one independently gated baseline passes the complete acceptance gate.
 
-If any gate fails, the result is `no-geometry`. The browser must display the failure measurements and create no point cloud.
+If every candidate in a completed scan fails, the result is `no-geometry`. A
+failed live preview must display actionable measurements, retain the rolling
+capture window, and create no new point cloud.
 
 ## Required runtime identity
 
@@ -43,6 +51,9 @@ data-scan-version=4
 ```
 
 Scan states are `ready`, `capturing`, `solving`, `reconstructed`, and `rejected`.
+During `capturing`, `data-scan-preview-status` exposes `solving`,
+`needs-translation`, or `reconstructed`; `data-scan-accepted-views` continues
+increasing when the active twelve-view window rolls.
 
 ## Acceptance thresholds
 
