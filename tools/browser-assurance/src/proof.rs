@@ -2,13 +2,84 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use power_house::provenance::{PhaArtifact, Rootprint, RootprintId};
-use power_house::{ChallengeSuite, MemoryCapsuleBuilder, MemoryVerificationPolicy};
+#[cfg(not(target_arch = "wasm32"))]
+use power_house::MemoryVerificationPolicy;
+use power_house::{ChallengeSuite, MemoryCapsule, MemoryCapsuleBuilder};
 use serde_json::json;
 
 use crate::model::{
     assurance_record, envelope_digest, sha256_hex, Evidence, ProofBundle, Seal,
     POWER_HOUSE_VERSION, PROFILE, PROTOCOL, PROVIDER, SEAL_SCHEMA,
 };
+
+fn verify_memory_capsule_portable(capsule: &MemoryCapsule) -> Result<(), String> {
+    if capsule.header.schema != power_house::memory::MEMORY_CAPSULE_SCHEMA_V1 {
+        return Err("unsupported Power House Memory Capsule schema".to_string());
+    }
+    if !capsule.header.critical_extensions.is_empty() {
+        return Err("unknown critical Power House Memory Capsule extension".to_string());
+    }
+    let capsule_digest = capsule
+        .calculate_capsule_digest()
+        .map_err(|error| error.to_string())?;
+    if capsule.header.capsule_digest.as_deref() != Some(capsule_digest.as_str()) {
+        return Err("Power House Memory Capsule digest mismatch".to_string());
+    }
+    capsule
+        .core
+        .pha
+        .verify()
+        .map_err(|error| error.to_string())?;
+    let core_digest = capsule
+        .calculate_core_digest()
+        .map_err(|error| error.to_string())?;
+    if capsule.core.core_digest != core_digest {
+        return Err("Power House Memory Capsule core digest mismatch".to_string());
+    }
+    for proof in &capsule.core.proofs {
+        power_house::memory::validate_sha256(&proof.digest).map_err(|error| error.to_string())?;
+    }
+    capsule
+        .lineage
+        .rootprint
+        .verify()
+        .map_err(|error| error.to_string())?;
+    if !capsule
+        .lineage
+        .rootprint
+        .branches
+        .values()
+        .any(|branch| branch.artifact.phx_fingerprint == capsule.core.pha.phx_fingerprint)
+    {
+        return Err("Power House core artifact is absent from Rootprint lineage".to_string());
+    }
+    let replay = capsule
+        .lineage
+        .rootprint
+        .replay()
+        .map_err(|error| error.to_string())?;
+    if replay.state_fingerprint != capsule.replay.replay.expected.replay_fingerprint {
+        return Err("Power House Memory Capsule replay fingerprint mismatch".to_string());
+    }
+    if capsule.semantics.is_some() || !capsule.witnesses.is_empty() {
+        return Err("browser assurance refuses unchecked semantic or witness layers".to_string());
+    }
+
+    // The upstream strict verifier currently reads std::time::Instant, which
+    // aborts on wasm32-unknown-unknown before checking any proof. Native builds
+    // retain it as an independent cross-check; browser builds execute every
+    // deterministic proof invariant above without requiring a wall clock.
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let report = capsule
+            .verify(MemoryVerificationPolicy::strict())
+            .map_err(|error| error.to_string())?;
+        if !report.core_valid || !report.rootprint_valid || !report.replay_valid {
+            return Err("Power House Memory Capsule strict verification failed".to_string());
+        }
+    }
+    Ok(())
+}
 
 fn build_proof_bundle(
     canonical_cell: &[u8],
@@ -81,12 +152,7 @@ fn build_proof_bundle(
         .map_err(|error| error.to_string())?;
     memory_capsule.header.capsule_digest = Some(capsule_digest.clone());
 
-    let report = memory_capsule
-        .verify(MemoryVerificationPolicy::strict())
-        .map_err(|error| error.to_string())?;
-    if !report.core_valid || !report.rootprint_valid || !report.replay_valid {
-        return Err("Power House Memory Capsule verification failed".to_string());
-    }
+    verify_memory_capsule_portable(&memory_capsule)?;
 
     let rootprint_id = rootprint.root_branch.clone();
     let pha_fingerprint = pha.phx_fingerprint.clone();
@@ -233,14 +299,7 @@ pub(crate) fn verify_seal(
         .rootprint
         .replay()
         .map_err(|error| error.to_string())?;
-    let memory_report = seal
-        .proof_bundle
-        .memory_capsule
-        .verify(MemoryVerificationPolicy::strict())
-        .map_err(|error| error.to_string())?;
-    if !memory_report.core_valid || !memory_report.rootprint_valid || !memory_report.replay_valid {
-        return Err("Power House Memory Capsule verification failed".to_string());
-    }
+    verify_memory_capsule_portable(&seal.proof_bundle.memory_capsule)?;
     let capsule_digest = seal
         .proof_bundle
         .memory_capsule

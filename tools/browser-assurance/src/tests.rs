@@ -32,6 +32,20 @@ fn seals_and_rejects_cell_mutation() {
 }
 
 #[test]
+fn seals_production_scale_canonical_cell() {
+    let cell = serde_json::to_vec(&serde_json::json!({
+        "schema": "tessaryn/world-cell/v26",
+        "payload": "x".repeat(1_000_000),
+    }))
+    .expect("serialize production-scale Cell");
+    let evidence = evidence(&cell);
+    let evidence_json = serde_json::to_vec(&evidence).expect("serialize evidence");
+    let seal = create_seal(&cell, &evidence_json, &[9_u8; 32]).expect("create large seal");
+    let seal_json = serde_json::to_vec(&seal).expect("serialize large seal");
+    verify_seal(&cell, &evidence_json, &seal_json).expect("verify large seal");
+}
+
+#[test]
 fn envelope_binds_scale_lineage_and_receipt() {
     let cell = b"world-cell";
     let original = evidence(cell);
