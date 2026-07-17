@@ -2,21 +2,21 @@ import { defineConfig } from "vite";
 
 const TOP_ACTIONS_MARKER = '        <div class="top-actions">\n';
 const PRODUCTION_NAVIGATION = `          <a
-            id="world-cell-command"
-            class="icon-command secondary"
-            href="./world-cell-theater.html"
-            title="Open live World Cell capture"
-          >
-            <i data-lucide="scan"></i><span>WORLD CELL</span>
-          </a>
-          <a
-            id="release-attestation-command"
-            class="icon-button"
-            href="./release.json"
-            type="application/json"
-            title="Inspect the deployed release attestation"
-            aria-label="Inspect deployed release attestation"
-          ><i data-lucide="shield-check"></i></a>
+             id="world-cell-command"
+             class="icon-command secondary"
+             href="./world-cell-theater/"
+             title="Open live World Cell capture"
+           >
+             <i data-lucide="scan"></i><span>WORLD CELL</span>
+           </a>
+           <a
+             id="release-attestation-command"
+             class="icon-button"
+             href="./release.json"
+             type="application/json"
+             title="Inspect the deployed release attestation"
+             aria-label="Inspect deployed release attestation"
+           ><i data-lucide="shield-check"></i></a>
 `;
 
 export function injectProductionNavigation(html: string): string {
