@@ -80,15 +80,16 @@ test("assurance binds the native pose, quality, and authority receipt triple", a
 
 test("v0.26 provenance pins the complete source-exact authority", async () => {
   const source = await read("src/keyxym-v26-provenance.ts");
-  assert.match(source, /keyxym\.browser-runtime-provenance\/v6/);
+  assert.match(source, /keyxym\.browser-runtime-provenance\/v7/);
   assert.match(source, /keyxym-v26-reality-authority-1/);
   assert.match(source, /keyxym-v26-calibrated-cpp-frontend-v1/);
-  assert.match(source, /c94d4db57d1db89e96cb7fd860da2d4c1617f516/);
+  assert.match(source, /3d8fff0e8fc61aa10d9b582ec43066d4f90bf387/);
   assert.match(source, /source_exact !== true/);
   assert.match(source, /pose_floats !== 27/);
   assert.match(source, /authority_floats !== 8/);
   assert.match(source, /receipt_bytes !== 96/);
-  assert.match(source, /exact_blob_matrix_run !== 29439226477/);
+  assert.match(source, /reproducible_builds !== 2/);
+  assert.match(source, /tartanair_maximum_surfels !== 451/);
   assert.match(source, /await WebAssembly\.compile\(wasmBytes\)/);
 });
 

@@ -2,16 +2,16 @@
   "abi": "keyxym-v26-reality-authority-1",
   "artifacts": {
     "keyxym-v26.mjs": {
-      "bytes": 9253,
-      "sha256": "0d9f9921b01546051eacf7d0cf79f9b70e8b206dc455b833437fd992a737c7e5"
+      "bytes": 8367,
+      "sha256": "e6d8e6511cb57b4a5049ae81ae7fee50268d94d08a80991d6005f2b5587589bf"
     },
     "keyxym-v26.wasm": {
-      "bytes": 65095,
-      "sha256": "89c66a4c8465ef8db10b6c40d4fdd3dc7d9c662d728cbd80d824a2ef27ea7d0e"
+      "bytes": 75123,
+      "sha256": "ae8184283c8e58bfc1c7da6690911ac8ba1fb1bdb40baaefde779524ea6be66a"
     }
   },
   "authority_floats": 8,
-  "derivation": "source-exact-external-validation-build",
+  "derivation": "source-exact-reproducible-local-build",
   "geometry_record_floats": 13,
   "maximum_analysis_height": 240,
   "maximum_analysis_width": 320,
@@ -23,8 +23,8 @@
   "preview_record_floats": 10,
   "quality_floats": 8,
   "receipt_bytes": 96,
-  "schema": "keyxym.browser-runtime-provenance/v6",
-  "source_commit": "c94d4db57d1db89e96cb7fd860da2d4c1617f516",
+  "schema": "keyxym.browser-runtime-provenance/v7",
+  "source_commit": "3d8fff0e8fc61aa10d9b582ec43066d4f90bf387",
   "source_exact": true,
   "source_repository": "JROChub/keyxym_map",
   "timestamp_abi": "wasm-bigint-i64",
@@ -35,11 +35,17 @@
     "version": "6.0.3"
   },
   "validation": {
-    "asan_ubsan": true,
-    "exact_blob_matrix_run": 29439226477,
-    "gcc": true,
-    "mobile_sdk": true,
-    "msvc": true,
+    "artifacts_identical": true,
+    "mobile_sdk_tests": 25,
+    "native_tests": 26,
+    "profile": "prxf/reproducible-browser-qualification/v1",
+    "reproducible_builds": 2,
+    "sanitizer_tests": 26,
+    "tartanair_maximum_inliers": 23,
+    "tartanair_maximum_matches": 169,
+    "tartanair_maximum_revision": 5,
+    "tartanair_maximum_surfels": 451,
+    "tartanair_rgb_sha256": "9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da",
     "wasm_runtime": true
   },
   "version": "0.26.0"
