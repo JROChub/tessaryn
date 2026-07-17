@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.use({ serviceWorkers: "block" });
 
-test("ordinary browser camera input initializes the provenance-gated Keyxym authority", async ({ page }) => {
+test("the canonical World Cell route initializes the provenance-gated Keyxym authority", async ({ page }) => {
   const authorityRequests: string[] = [];
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -12,7 +12,7 @@ test("ordinary browser camera input initializes the provenance-gated Keyxym auth
     }
   });
 
-  await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
+  await page.goto("/world-cell-theater/", { waitUntil: "networkidle" });
 
   await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
   await expect(page.locator("html")).toHaveAttribute("data-keyxym-map-authority", "verified");
