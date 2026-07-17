@@ -1,7 +1,7 @@
 {
   "schema": "tessaryn/deployment-attestation/v1",
   "product": "TESSARYN Origin",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "mode": "development",
   "source": {
     "repository": "JROChub/tessaryn",

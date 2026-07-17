@@ -15,6 +15,9 @@ test("World Cell Scan V4 gates relative geometry on measured multi-view evidence
   assert.match(runtime, /dataset\.visualRenderer = "world-cell-scan-v4"/);
   assert.match(runtime, /dataset\.scanState = "capturing"/);
   assert.match(runtime, /MIN_KEYFRAMES = 6/);
+  assert.match(runtime, /SAMPLE_WIDTH = 320/);
+  assert.match(runtime, /trackFeatures\(keyframeReference, current, keyframeReferenceFeatures, 18\)/);
+  assert.match(runtime, /baselineMotion\.parallax >= 1\.2/);
   assert.match(runtime, /FINISH & SOLVE/);
   assert.match(runtime, /new Worker\(new URL\("\.\/world-cell-scan-v4-worker\.ts"/);
   assert.match(runtime, /NO DEFENSIBLE GEOMETRY/);
@@ -27,6 +30,8 @@ test("World Cell Scan V4 gates relative geometry on measured multi-view evidence
 
   assert.match(worker, /estimateEssentialRansac/);
   assert.match(worker, /choosePairs/);
+  assert.match(worker, /maximum = 420/);
+  assert.match(worker, /for \(let gap = 1; gap <= 3; gap \+= 1\)/);
   assert.match(worker, /for \(let index = 0; index < selections\.length; index \+= 1\)/);
   assert.match(worker, /failureProgress/);
   assert.match(worker, /decomposeEssential/);
