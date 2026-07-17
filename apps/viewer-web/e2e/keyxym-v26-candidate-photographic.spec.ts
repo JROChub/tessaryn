@@ -74,6 +74,9 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
     let maximumRevision = 0n;
     let maximumParallax = 0;
     let recoveredFrames = 0;
+    let maximumConfirmed = 0;
+    let momentReadyFrames = 0;
+    let sealReadyFrames = 0;
     const observations: Array<Record<string, number | string | boolean>> = [];
     try {
       for (const index of indices) {
@@ -83,7 +86,7 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
         bitmap.close();
         const rgba = new Uint8Array(context.getImageData(0, 0, 320, 240).data.buffer.slice(0));
         const sourceCommitment = new Uint8Array(await crypto.subtle.digest("SHA-256", rgba));
-        for (let repeat = 0; repeat < 7; repeat += 1) {
+        for (let repeat = 0; repeat < 1; repeat += 1) {
           timestamp += 100_000_000n;
           const focal = 320 / (2 * Math.tan(Math.PI / 6));
           const snapshot = runtime.ingest({
@@ -107,6 +110,9 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
             ? snapshot.geometryRevision : maximumRevision;
           maximumParallax = Math.max(maximumParallax, snapshot.pose.parallaxDegrees);
           if (snapshot.pose.recovered) recoveredFrames += 1;
+          maximumConfirmed = Math.max(maximumConfirmed, snapshot.quality.confirmed);
+          if (snapshot.authority.momentAllowed) momentReadyFrames += 1;
+          if (snapshot.authority.sealAllowed) sealReadyFrames += 1;
           if (repeat === 0 || snapshot.pose.recovered || snapshot.geometry) {
             observations.push({
               index,
@@ -117,7 +123,16 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
               degenerate: snapshot.pose.degenerate,
               tracking: snapshot.pose.tracking,
               parallax: snapshot.pose.parallaxDegrees,
+              rotation: snapshot.pose.rotationDegrees,
+              observability: snapshot.pose.translationObservability,
+              reprojection: snapshot.pose.reprojectionErrorPixels,
               rejectionMask: snapshot.authority.rejectionMask,
+              authorityScore: snapshot.authority.score,
+              continuity: snapshot.authority.continuityFrames,
+              momentAllowed: snapshot.authority.momentAllowed,
+              sealAllowed: snapshot.authority.sealAllowed,
+              confirmed: snapshot.quality.confirmed,
+              uncertain: snapshot.quality.uncertain,
               surfels: currentSurfels,
               revision: snapshot.geometryRevision.toString(),
             });
@@ -133,6 +148,9 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
       maximumRevision: maximumRevision.toString(),
       maximumParallax,
       recoveredFrames,
+      maximumConfirmed,
+      momentReadyFrames,
+      sealReadyFrames,
       observations,
     };
   }, captureIndices);
@@ -140,7 +158,10 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
   console.log("KEYXYM_CANDIDATE_PHOTOGRAPHIC", JSON.stringify(result));
   expect(result.maximumParallax).toBeGreaterThanOrEqual(0.6);
   expect(result.recoveredFrames).toBeGreaterThanOrEqual(3);
-  expect(result.maximumSurfels).toBeGreaterThanOrEqual(64);
-  expect(result.terminalSurfels).toBeGreaterThanOrEqual(64);
+  expect(result.maximumSurfels).toBeGreaterThanOrEqual(2_000);
+  expect(result.terminalSurfels).toBeGreaterThanOrEqual(2_000);
+  expect(result.maximumConfirmed).toBeGreaterThanOrEqual(512);
+  expect(result.momentReadyFrames).toBeGreaterThanOrEqual(1);
+  expect(result.sealReadyFrames).toBeGreaterThanOrEqual(1);
   expect(Number(result.maximumRevision)).toBeGreaterThanOrEqual(3);
 });

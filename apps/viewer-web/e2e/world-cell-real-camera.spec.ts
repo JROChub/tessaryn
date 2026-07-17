@@ -100,6 +100,10 @@ test("official photographic views sustain authoritative World Cell geometry", as
   let maximumSurfels = 0;
   let maximumRevision = 0;
   let maximumParallax = 0;
+  let maximumConfirmed = 0;
+  let observedMomentReady = false;
+  let observedSealReady = false;
+  let observedSealedRootprint = false;
   const observations: Array<Record<string, string | null>> = [];
   for (let sample = 0; sample < 80; sample += 1) {
     await page.waitForTimeout(250);
@@ -110,19 +114,28 @@ test("official photographic views sustain authoritative World Cell geometry", as
       fixtureError: node.dataset.fixtureError ?? null,
       pose: document.querySelector("#pose-state")?.textContent ?? null,
       parallax: document.querySelector("#parallax-value")?.textContent ?? null,
+      confirmed: document.querySelector("#confirmed-value")?.textContent ?? null,
+      rootprint: document.querySelector("#rootprint")?.textContent ?? null,
+      momentAllowed: node.dataset.momentAllowed ?? null,
+      sealAllowed: node.dataset.sealAllowed ?? null,
     }));
     const surfels = Number(observation.surfels ?? 0);
     const revision = Number(observation.revision ?? 0);
     const parallax = Number.parseFloat(observation.parallax ?? "0");
+    const confirmed = Number((observation.confirmed ?? "0").replaceAll(",", ""));
     maximumSurfels = Math.max(maximumSurfels, Number.isFinite(surfels) ? surfels : 0);
     maximumRevision = Math.max(maximumRevision, Number.isFinite(revision) ? revision : 0);
     maximumParallax = Math.max(maximumParallax, Number.isFinite(parallax) ? parallax : 0);
+    maximumConfirmed = Math.max(maximumConfirmed, Number.isFinite(confirmed) ? confirmed : 0);
+    observedMomentReady ||= observation.momentAllowed === "true";
+    observedSealReady ||= observation.sealAllowed === "true";
+    observedSealedRootprint ||= observation.rootprint !== null && observation.rootprint !== "UNSEALED";
     if (sample % 8 === 0 || surfels > maximumSurfels || observation.fixtureError) {
       observations.push(observation);
     }
     if (observation.done || observation.fixtureError) break;
   }
-  await page.waitForTimeout(1_000);
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-sealed", "true", { timeout: 15_000 });
 
   const terminal = await page.locator("html").evaluate((node) => ({
     surfels: Number(node.dataset.authoritativeSurfels ?? 0),
@@ -131,9 +144,16 @@ test("official photographic views sustain authoritative World Cell geometry", as
     fixtureError: node.dataset.fixtureError,
     authority: node.dataset.keyxymAuthority,
     mode: node.dataset.worldCellMode,
+    rootprint: document.querySelector("#rootprint")?.textContent,
+    cellState: document.querySelector("#cell-state")?.textContent,
+    everMomentReady: node.dataset.everMomentReady,
+    everSealReady: node.dataset.everSealReady,
+    sealed: node.dataset.worldCellSealed,
   }));
   console.log("PHOTOGRAPHIC_WORLD_CELL", JSON.stringify({
-    maximumSurfels, maximumRevision, maximumParallax, observations, terminal,
+    maximumSurfels, maximumRevision, maximumParallax, maximumConfirmed,
+    observedMomentReady, observedSealReady, observedSealedRootprint,
+    observations, terminal,
   }));
 
   expect(terminal.mode).toBe("authoritative");
@@ -141,9 +161,15 @@ test("official photographic views sustain authoritative World Cell geometry", as
   expect(terminal.done).toBe("true");
   expect(terminal.fixtureError).toBeUndefined();
   expect(maximumParallax).toBeGreaterThanOrEqual(0.6);
-  expect(maximumSurfels).toBeGreaterThanOrEqual(64);
+  expect(maximumSurfels).toBeGreaterThanOrEqual(2_000);
+  expect(maximumConfirmed).toBeGreaterThanOrEqual(512);
+  expect(observedMomentReady).toBe(true);
+  expect(terminal.everMomentReady).toBe("true");
+  expect(terminal.everSealReady).toBe("true");
+  expect(terminal.sealed).toBe("true");
   expect(maximumRevision).toBeGreaterThanOrEqual(3);
-  expect(terminal.surfels).toBeGreaterThanOrEqual(64);
+  expect(terminal.surfels).toBeGreaterThanOrEqual(2_000);
   expect(terminal.revision).toBeGreaterThanOrEqual(3);
+  expect(terminal.rootprint).toMatch(/^[0-9A-F]{16}$/u);
   expect(pageErrors).toEqual([]);
 });

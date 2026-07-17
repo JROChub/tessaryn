@@ -52,8 +52,8 @@ interface Allocation {
   length: number;
 }
 
-const APPROVED_SOURCE_COMMIT = "ecfa0f6584f8890afd4a3a44b4aa972b2768a62e";
-const APPROVED_WASM_SHA256 = "74308022cd03f93ba5e73077f8a725c844cb1945290e5c8cd4a4f7ee99a8516b";
+const APPROVED_SOURCE_COMMIT = "1b527ae9b97e242bc4bd1c54166db9d77f830b70";
+const APPROVED_WASM_SHA256 = "2f0d7a2fff6bf5c44f0c58648d787ecad59d65b0cb7fb94465fac7eb4ced991d";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const HEX = /^[0-9a-f]{64}$/;

@@ -8,7 +8,7 @@ The production Theater must never label browser-generated luminance depth, pass-
 
 Tessaryn owns acquisition, presentation, canonical Moment and Cell construction, replay, transfer, and verification. It does not implement a competing vision or geometry pipeline.
 
-The browser assurance module applies the `eform/world-cell-assurance/v1` envelope and uses Power House 0.3.24 for PHA, Rootprint, deterministic replay, and strict Memory Capsule verification. Assurance work runs only when sealing or verifying a Cell, never in the frame-rate loop. Power House source is unchanged.
+The browser assurance module applies the `eform/world-cell-assurance/v1` envelope and uses Power House 0.3.24 for PHA, Rootprint, and deterministic replay. Native builds independently run the upstream strict Memory Capsule verifier. Browser builds execute the same deterministic capsule, artifact, lineage, replay, proof-digest, and critical-extension checks without the upstream wall-clock measurement, because `std::time::Instant` is unavailable on `wasm32-unknown-unknown`. Assurance work runs only when sealing or verifying a Cell, never in the frame-rate loop. Power House source is unchanged.
 
 ## Installed authority artifacts
 
@@ -26,7 +26,7 @@ The retained merged-source bundle was installed by run `29413453432`, which reve
 
 The installed assurance artifact is:
 
-- `tessaryn-browser-assurance-v1.wasm` — 561,270 bytes, SHA-256 `74308022cd03f93ba5e73077f8a725c844cb1945290e5c8cd4a4f7ee99a8516b`
+- `tessaryn-browser-assurance-v1.wasm` — 570,653 bytes, SHA-256 `2f0d7a2fff6bf5c44f0c58648d787ecad59d65b0cb7fb94465fac7eb4ced991d`
 
 Its only permitted import is `tessaryn.random_fill`, backed by `crypto.getRandomValues` in a secure context.
 

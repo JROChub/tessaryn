@@ -48,6 +48,7 @@ export class KeyxymV26WorkerClient {
     sourceHeight: number;
     scaleMetersPerUnit: number;
     metricScale: boolean;
+    intrinsics?: { width: number; height: number; fx: number; fy: number; cx: number; cy: number };
   }): Promise<KeyxymV26WorkerFrameResult> {
     if (this.destroyed) {
       input.bitmap.close();
@@ -70,6 +71,7 @@ export class KeyxymV26WorkerClient {
       sourceHeight: input.sourceHeight,
       scaleMetersPerUnit: input.scaleMetersPerUnit,
       metricScale: input.metricScale,
+      intrinsics: input.intrinsics,
     };
     this.worker.postMessage(request, [input.bitmap]);
     return promise;

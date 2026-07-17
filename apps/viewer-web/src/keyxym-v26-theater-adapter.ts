@@ -88,6 +88,7 @@ export class KeyxymV26TheaterRuntime {
     sourceHeight: number;
     scaleMetersPerUnit: number;
     metricScale: boolean;
+    intrinsics?: { width: number; height: number; fx: number; fy: number; cx: number; cy: number };
   }): Promise<KeyxymTheaterFrame> {
     const result = await this.client.processFrame(input);
     return {
