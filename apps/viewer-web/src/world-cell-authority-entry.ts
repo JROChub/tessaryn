@@ -132,49 +132,13 @@ async function enterPreview(error: unknown): Promise<void> {
   }
 }
 
-interface SpatialCalibrationProbe {
-  verified?: boolean;
-  scaleMetersPerUnit?: number;
-  receipt?: string;
-}
-
-async function hasVerifiedSpatialAdapter(): Promise<boolean> {
-  const bridge = (window as unknown as {
-    tessarynMetricSensor?: {
-      currentCalibration?: () => Promise<SpatialCalibrationProbe>;
-      currentSpatialFrame?: () => Promise<unknown>;
-    };
-  }).tessarynMetricSensor;
-  if (typeof bridge?.currentCalibration !== "function" ||
-      typeof bridge.currentSpatialFrame !== "function") return false;
-  const calibration = await withTimeout(
-    bridge.currentCalibration().catch(() => null),
-    BOOT_PHASE_TIMEOUT_MS,
-    "Spatial calibration probe",
-  ).catch(() => null);
-  return calibration?.verified === true &&
-    Number.isFinite(calibration.scaleMetersPerUnit) &&
-    Number(calibration.scaleMetersPerUnit) > 0 &&
-    /^[0-9a-f]{64}$/u.test(calibration.receipt ?? "") &&
-    calibration.receipt !== "0".repeat(64);
-}
-
 async function boot(): Promise<void> {
   const serviceWorkerRefresh = refreshServiceWorker();
   try {
-    // Ordinary browser camera input does not need to wait for a service-worker
-    // update before the honest visual preview becomes usable. The service worker
-    // refresh continues in the background and is awaited only by the authoritative
-    // Keyxym/eform path.
-    if (!await hasVerifiedSpatialAdapter()) {
-      document.documentElement.dataset.keyxymMapAuthority = "adapter-required";
-      document.documentElement.dataset.eformAuthority = "not-requested";
-      document.documentElement.dataset.worldCellAssurance = "not-requested";
-      await enterPreview(new Error("Verified depth, intrinsics, pose, landmark, and calibration receipt adapter not present"));
-      void serviceWorkerRefresh;
-      return;
-    }
-
+    // Keyxym v0.26 owns monocular RGBA feature tracking, relative pose recovery,
+    // forming output, geometry, quality, and receipts. A verified spatial sensor
+    // is optional evidence that promotes scale from relative to metric; it is not
+    // a prerequisite for loading or executing the reconstruction authority.
     await serviceWorkerRefresh;
     const { verifyKeyxymV26Bundle } = await withTimeout(
       import("./keyxym-v26-provenance"),

@@ -18,8 +18,9 @@ test("TESSARYN keeps keyxym_map, eform, and relative scan geometry as separate a
   assert.match(entry, /import\("\.\/keyxym-v26-provenance"\)/);
   assert.match(entry, /import\("\.\/browser-assurance-runtime"\)/);
   assert.match(entry, /import\("\.\/world-cell-preview-fallback"\)/);
-  assert.match(entry, /hasVerifiedSpatialAdapter/);
-  assert.match(entry, /currentSpatialFrame/);
+  assert.doesNotMatch(entry, /hasVerifiedSpatialAdapter/);
+  assert.doesNotMatch(entry, /currentSpatialFrame/);
+  assert.match(entry, /spatial sensor[\s\S]*optional evidence/);
   assert.match(entry, /installEmergencyShell/);
   assert.doesNotMatch(entry, /^import\s/m, "the boot entry must execute before dependent chunks load");
 

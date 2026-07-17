@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("ordinary browser camera input enters the evidence-gated Scan V4 boundary", async ({ page }) => {
+test.use({ serviceWorkers: "block" });
+
+test("ordinary browser camera input initializes the provenance-gated Keyxym authority", async ({ page }) => {
   const authorityRequests: string[] = [];
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -12,31 +14,26 @@ test("ordinary browser camera input enters the evidence-gated Scan V4 boundary",
 
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
 
-  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "preview");
-  await expect(page.locator("html")).toHaveAttribute("data-keyxym-map-authority", "adapter-required");
-  await expect(page.locator("html")).toHaveAttribute("data-eform-authority", "not-requested");
-  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-visual-pipeline",
-    "tessaryn-world-cell-scan-v4",
-  );
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
-  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
-  await expect(page.locator("html")).toHaveAttribute("data-authoritative-surfels", "0");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN MULTI-VIEW SOLVER V4");
-  await expect(page.locator("#adapter-name")).toHaveText("CAMERA RGB / SCALE-FREE / NON-AUTH");
-  await expect(page.locator("#gpu-badge")).toHaveText("RELATIVE ONLY");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-map-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-eform-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "authoritative");
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-controller", "keyxym-v026-worker-v1");
+  await expect(page.locator("#backend-name")).toHaveText("KEYXYM V0.26 / REALITY");
+  await expect(page.locator("#gpu-badge")).toHaveText("WORKER WASM READY");
   await expect(page.locator("#start-button")).toBeEnabled();
-  await expect(page.locator("#start-button")).toHaveText("START WORLD CELL SCAN");
+  await expect(page.locator("#start-button")).toHaveText("START CAMERA");
   await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
   await expect(page.locator("#rootprint")).toHaveText("UNSEALED");
-  expect(authorityRequests).toEqual([]);
+  expect(authorityRequests.some((url) => url.includes("keyxym-v26.mjs"))).toBe(true);
+  expect(authorityRequests.some((url) => url.includes("keyxym-v26.wasm"))).toBe(true);
+  expect(authorityRequests.some((url) => url.includes("browser-assurance"))).toBe(true);
   expect(pageErrors).toEqual([]);
 });
 
-test("a claimed adapter without executable spatial integration cannot open authority gates", async ({ page }) => {
+test("an unavailable Keyxym artifact cannot open authority gates", async ({ page }) => {
   await page.addInitScript(() => {
     (window as unknown as {
       tessarynMetricSensor: {
@@ -49,8 +46,8 @@ test("a claimed adapter without executable spatial integration cannot open autho
     };
   });
 
-  await page.route("**/assurance/tessaryn-browser-assurance-v1.wasm**", async (route) => {
-    await route.fulfill({ status: 503, body: "assurance unavailable" });
+  await page.route("**/keyxym-v26/keyxym-v26.wasm**", async (route) => {
+    await route.fulfill({ status: 503, body: "Keyxym authority unavailable" });
   });
 
   await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
