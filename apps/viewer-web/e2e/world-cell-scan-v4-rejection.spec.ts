@@ -97,7 +97,7 @@ test("pure camera rotation is rejected instead of producing fake geometry", asyn
 
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-views") ?? 0), {
     timeout: 25_000,
-  }).toBeGreaterThanOrEqual(4);
+  }).toBeGreaterThanOrEqual(6);
   await page.locator("#capture-button").click();
 
   await expect(page.locator("html")).toHaveAttribute("data-scan-state", "rejected", {

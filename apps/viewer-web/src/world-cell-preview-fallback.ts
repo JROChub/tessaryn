@@ -79,7 +79,7 @@ type SolveResult = SolveSuccess | SolveFailure;
 const SAMPLE_WIDTH = 192;
 const SAMPLE_INTERVAL_MS = 100;
 const MAX_KEYFRAMES = 12;
-const MIN_KEYFRAMES = 4;
+const MIN_KEYFRAMES = 6;
 const MAX_LIVE_TRACKS = 36;
 
 const byId = <T extends HTMLElement>(id: string): T => {
@@ -426,7 +426,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
   setText("scale-value", "RELATIVE");
   setText("dispatch-time", "NO SCAN");
   setText("sensor-detail",
-    `Capture four to twelve translated views. Geometry appears only after essential-matrix, positive-depth, ` +
+    `Capture six to twelve translated views. Geometry appears only after multiple baseline candidates, essential-matrix, positive-depth, ` +
     `triangulation-angle, coverage, and reprojection checks pass. Authority remains locked ` +
     `(keyxym_map: ${keyxymState}; eform: ${eformState}).`);
   setStageMessage(
@@ -618,7 +618,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     setMeter("compute-meter", 0);
     if (message) setStageMessage(
       "WORLD CELL SCAN V4 READY",
-      "Move sideways around a textured subject. Finish only after at least four distinct views are captured.",
+      "Move sideways around a textured subject. Finish only after at least six distinct views are captured.",
       true,
     );
   };
@@ -662,9 +662,9 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       timeout = window.setTimeout(() => finish({
         type: "result",
         ok: false,
-        reason: "The scan worker exceeded the 20 second processing limit.",
-        metrics: { keyframes: frames.length, processingMs: 20_000 },
-      }), 20_000);
+        reason: "The scan worker exceeded the 30 second processing limit.",
+        metrics: { keyframes: frames.length, processingMs: 30_000 },
+      }), 30_000);
       const transfers: Transferable[] = [];
       for (const frame of frames) transfers.push(frame.luma.buffer, frame.rgba.buffer);
       worker.postMessage({ type: "solve", frames }, transfers);

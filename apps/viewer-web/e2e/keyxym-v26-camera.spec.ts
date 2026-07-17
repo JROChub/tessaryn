@@ -107,7 +107,7 @@ test("synthetic translated views produce accepted relative geometry while author
 
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-views") ?? 0), {
     timeout: 25_000,
-  }).toBeGreaterThanOrEqual(4);
+  }).toBeGreaterThanOrEqual(6);
   await expect(page.locator("#capture-button")).toBeEnabled();
   await expect(page.locator("#camera")).toHaveCSS("opacity", "1");
   await page.locator("#capture-button").click();
