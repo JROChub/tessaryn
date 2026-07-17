@@ -6,7 +6,7 @@ test("the Origin exposes World Cell Scan V4 and same-origin release evidence", a
   const worldCell = page.locator("#world-cell-command");
   const release = page.locator("#release-attestation-command");
   await expect(worldCell).toBeVisible();
-  await expect(worldCell).toHaveAttribute("href", "./world-cell-theater.html");
+  await expect(worldCell).toHaveAttribute("href", "./world-cell-theater/");
   await expect(release).toBeVisible();
   await expect(release).toHaveAttribute("href", "./release.json");
   await expect(release).toHaveAttribute("type", "application/json");
@@ -20,7 +20,7 @@ test("the Origin exposes World Cell Scan V4 and same-origin release evidence", a
   expect(attestation.authority.keyxym.source_exact).toBe(true);
 
   await worldCell.click();
-  await expect(page).toHaveURL(/\/world-cell-theater\.html$/u);
+  await expect(page).toHaveURL(/\/world-cell-theater\/$/u);
   await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "preview");
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
   await expect(page.locator("html")).toHaveAttribute(

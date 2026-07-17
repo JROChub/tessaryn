@@ -16,12 +16,14 @@ The worker:
 2. performs mean-normalized patch matching with ratio and forward/backward consistency checks;
 3. estimates an essential matrix with deterministic RANSAC and the calibrated eight-point form using a declared approximate browser focal model;
 4. enforces the essential-matrix singular-value constraint;
-5. evaluates all four relative-pose decompositions;
-6. triangulates correspondences using homogeneous least squares;
-7. requires positive depth in both cameras;
-8. rejects points exceeding the reprojection-error limit;
-9. requires spatial coverage and a minimum triangulation angle; and
-10. emits bounded scale-free points only when the complete acceptance gate passes.
+5. fits a calibrated rotation-only competing model and rejects a scan when that
+   simpler model explains the correspondence field without observable translation;
+6. evaluates all four relative-pose decompositions;
+7. triangulates correspondences using homogeneous least squares;
+8. requires positive depth in both cameras;
+9. rejects points exceeding the reprojection-error limit;
+10. requires spatial coverage and a minimum triangulation angle; and
+11. emits bounded scale-free points only when the complete acceptance gate passes.
 
 If any gate fails, the result is `no-geometry`. The browser must display the failure measurements and create no point cloud.
 
@@ -41,6 +43,10 @@ The reference implementation requires:
 
 - at least 24 stable pair matches;
 - at least 24 essential-matrix inliers;
+- the rotation-only competing model must fail at least one degeneracy condition:
+  median residual no greater than 1.25 pixels, at least 16 rotation-consistent
+  correspondences, inlier support of at least 0.60 at the 1.5-pixel threshold,
+  and calibrated-homography orthogonality error no greater than 0.12;
 - at least 16 accepted triangulated points after spatial trimming;
 - a majority positive-depth solution, with positive-depth ratio of at least 0.50;
 - median reprojection error no greater than 3.5 pixels;
