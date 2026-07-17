@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("slow translated views accumulate baseline and produce relative geometry while authority stays locked", async ({ page }) => {
+test.use({ serviceWorkers: "block" });
+
+test("the visual fallback reconstructs slow translated views when Keyxym is unavailable", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -93,6 +95,10 @@ test("slow translated views accumulate baseline and produce relative geometry wh
         },
       },
     });
+  });
+
+  await page.route("**/keyxym-v26/keyxym-v26.wasm**", async (route) => {
+    await route.fulfill({ status: 503, body: "Keyxym authority unavailable" });
   });
 
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });

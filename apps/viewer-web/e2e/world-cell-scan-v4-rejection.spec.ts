@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("pure camera rotation is rejected instead of producing fake geometry", async ({ page }) => {
+test.use({ serviceWorkers: "block" });
+
+test("the visual fallback rejects pure camera rotation instead of producing fake geometry", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -89,6 +91,10 @@ test("pure camera rotation is rejected instead of producing fake geometry", asyn
         },
       },
     });
+  });
+
+  await page.route("**/keyxym-v26/keyxym-v26.wasm**", async (route) => {
+    await route.fulfill({ status: 503, body: "Keyxym authority unavailable" });
   });
 
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });

@@ -5,7 +5,7 @@ import test from "node:test";
 const theaterUrl = new URL("../world-cell-theater.html", import.meta.url);
 const entryUrl = new URL("../src/world-cell-authority-entry.ts", import.meta.url);
 
-test("mobile boot always leaves VERIFYING through preview or visible recovery", async () => {
+test("mobile boot always leaves VERIFYING through authority, preview, or visible recovery", async () => {
   const [theater, entry] = await Promise.all([
     readFile(theaterUrl, "utf8"),
     readFile(entryUrl, "utf8"),
@@ -37,14 +37,10 @@ test("mobile boot always leaves VERIFYING through preview or visible recovery", 
   assert.match(entry, /"World Cell preview module load"/);
   assert.match(entry, /installEmergencyShell\(previewError\)/);
 
-  const adapterCheck = entry.indexOf("if (!await hasVerifiedSpatialAdapter())");
-  const preview = entry.indexOf("await enterPreview", adapterCheck);
-  const authoritativeServiceWorkerWait = entry.indexOf("await serviceWorkerRefresh", preview);
-  assert.ok(adapterCheck >= 0 && preview > adapterCheck);
-  assert.ok(
-    authoritativeServiceWorkerWait > preview,
-    "ordinary camera preview must become usable before service-worker refresh is awaited",
-  );
+  assert.doesNotMatch(entry, /hasVerifiedSpatialAdapter/);
+  const authoritativeServiceWorkerWait = entry.indexOf("await serviceWorkerRefresh");
+  const provenanceVerification = entry.indexOf("verifyKeyxymV26Bundle");
+  assert.ok(authoritativeServiceWorkerWait >= 0 && provenanceVerification > authoritativeServiceWorkerWait);
   assert.ok(
     entry.indexOf('dataset.worldCellMode = "initializing"') < entry.indexOf("async function boot"),
     "module startup state must be visible before asynchronous work",

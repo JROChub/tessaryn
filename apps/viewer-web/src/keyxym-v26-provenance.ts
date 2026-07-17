@@ -1,14 +1,14 @@
 export interface KeyxymV26ArtifactRecord { bytes: number; sha256: string }
 
 export interface KeyxymV26Manifest {
-  schema: "keyxym.browser-runtime-provenance/v6";
+  schema: "keyxym.browser-runtime-provenance/v7";
   version: "0.26.0";
   abi: "keyxym-v26-reality-authority-1";
   perception_abi: "keyxym-v26-calibrated-cpp-frontend-v1";
   source_repository: "JROChub/keyxym_map";
   source_commit: string;
   source_exact: true;
-  derivation: "source-exact-external-validation-build";
+  derivation: "source-exact-reproducible-local-build";
   maximum_surfels: 48000;
   maximum_analysis_width: 320;
   maximum_analysis_height: 240;
@@ -28,12 +28,18 @@ export interface KeyxymV26Manifest {
     official_package_sha256: string;
   };
   validation: {
-    exact_blob_matrix_run: 29439226477;
-    gcc: true;
-    asan_ubsan: true;
-    msvc: true;
-    mobile_sdk: true;
+    profile: "prxf/reproducible-browser-qualification/v1";
+    reproducible_builds: 2;
+    artifacts_identical: true;
+    native_tests: 26;
+    sanitizer_tests: 26;
+    mobile_sdk_tests: 25;
     wasm_runtime: true;
+    tartanair_rgb_sha256: string;
+    tartanair_maximum_matches: 169;
+    tartanair_maximum_inliers: 23;
+    tartanair_maximum_surfels: 451;
+    tartanair_maximum_revision: 5;
   };
   artifacts: {
     "keyxym-v26.mjs": KeyxymV26ArtifactRecord;
@@ -47,9 +53,9 @@ export interface KeyxymV26AssetUrls {
   wasm: string;
 }
 
-const SOURCE = "c94d4db57d1db89e96cb7fd860da2d4c1617f516";
-const MODULE_SHA256 = "0d9f9921b01546051eacf7d0cf79f9b70e8b206dc455b833437fd992a737c7e5";
-const WASM_SHA256 = "89c66a4c8465ef8db10b6c40d4fdd3dc7d9c662d728cbd80d824a2ef27ea7d0e";
+const SOURCE = "3d8fff0e8fc61aa10d9b582ec43066d4f90bf387";
+const MODULE_SHA256 = "e6d8e6511cb57b4a5049ae81ae7fee50268d94d08a80991d6005f2b5587589bf";
+const WASM_SHA256 = "ae8184283c8e58bfc1c7da6690911ac8ba1fb1bdb40baaefde779524ea6be66a";
 const EMSCRIPTEN_RELEASE = "9074aa513b501925adb1361e208932ad32a29a5f";
 const EMSCRIPTEN_PACKAGE = "3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3";
 const HASH = /^[0-9a-f]{64}$/;
@@ -99,17 +105,23 @@ export async function verifyKeyxymV26Bundle(): Promise<KeyxymV26Manifest> {
   const response = await fetch(urls.manifest, { cache: "no-store", credentials: "same-origin", redirect: "error" });
   if (!response.ok) throw new Error(`Keyxym v0.26 manifest unavailable (${response.status})`);
   const manifest = await response.json() as KeyxymV26Manifest;
-  if (manifest.schema !== "keyxym.browser-runtime-provenance/v6" || manifest.version !== "0.26.0" ||
+  if (manifest.schema !== "keyxym.browser-runtime-provenance/v7" || manifest.version !== "0.26.0" ||
       manifest.abi !== "keyxym-v26-reality-authority-1" || manifest.perception_abi !== "keyxym-v26-calibrated-cpp-frontend-v1" ||
       manifest.source_repository !== "JROChub/keyxym_map" || manifest.source_commit !== SOURCE || manifest.source_exact !== true ||
-      manifest.derivation !== "source-exact-external-validation-build" || manifest.maximum_surfels !== 48_000 ||
+      manifest.derivation !== "source-exact-reproducible-local-build" || manifest.maximum_surfels !== 48_000 ||
       manifest.maximum_analysis_width !== 320 || manifest.maximum_analysis_height !== 240 || manifest.maximum_tracks !== 384 ||
       manifest.maximum_preview_samples !== 8_192 || manifest.timestamp_abi !== "wasm-bigint-i64" || manifest.pose_floats !== 27 ||
       manifest.quality_floats !== 8 || manifest.authority_floats !== 8 || manifest.preview_record_floats !== 10 ||
       manifest.geometry_record_floats !== 13 || manifest.receipt_bytes !== 96 || manifest.toolchain.name !== "Emscripten" ||
       manifest.toolchain.version !== "6.0.3" || manifest.toolchain.release_commit !== EMSCRIPTEN_RELEASE ||
-      manifest.toolchain.official_package_sha256 !== EMSCRIPTEN_PACKAGE || manifest.validation.exact_blob_matrix_run !== 29439226477 ||
-      !manifest.validation.gcc || !manifest.validation.asan_ubsan || !manifest.validation.msvc || !manifest.validation.mobile_sdk || !manifest.validation.wasm_runtime ||
+      manifest.toolchain.official_package_sha256 !== EMSCRIPTEN_PACKAGE ||
+      manifest.validation.profile !== "prxf/reproducible-browser-qualification/v1" ||
+      manifest.validation.reproducible_builds !== 2 || !manifest.validation.artifacts_identical ||
+      manifest.validation.native_tests !== 26 || manifest.validation.sanitizer_tests !== 26 ||
+      manifest.validation.mobile_sdk_tests !== 25 || !manifest.validation.wasm_runtime ||
+      manifest.validation.tartanair_rgb_sha256 !== "9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da" ||
+      manifest.validation.tartanair_maximum_matches !== 169 || manifest.validation.tartanair_maximum_inliers !== 23 ||
+      manifest.validation.tartanair_maximum_surfels !== 451 || manifest.validation.tartanair_maximum_revision !== 5 ||
       Object.keys(manifest.artifacts).sort().join(",") !== "keyxym-v26.mjs,keyxym-v26.wasm") {
     throw new Error("Keyxym v0.26 provenance violates the reality-authority contract");
   }
