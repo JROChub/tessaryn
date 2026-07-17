@@ -81,6 +81,8 @@ const SAMPLE_INTERVAL_MS = 100;
 const MAX_KEYFRAMES = 12;
 const MIN_KEYFRAMES = 6;
 const MAX_LIVE_TRACKS = 36;
+const PREVIEW_SOLVE_STRIDE = 2;
+const PREVIEW_SOLVE_TIMEOUT_MS = 20_000;
 
 const byId = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
@@ -335,6 +337,59 @@ function drawLiveTracks(canvas: HTMLCanvasElement, frame: GrayFrame, tracks: Tra
   }
 }
 
+function drawLiveGeometryPreview(
+  canvas: HTMLCanvasElement,
+  points: RelativePoint[],
+  timestamp: number,
+): void {
+  if (points.length === 0) return;
+  const context = resizeCanvas(canvas);
+  if (!context) return;
+  const bounds = canvas.getBoundingClientRect();
+  const width = Math.min(250, Math.max(150, bounds.width * 0.34));
+  const height = Math.min(190, Math.max(116, bounds.height * 0.3));
+  const left = bounds.width - width - 14;
+  const top = 14;
+  context.save();
+  context.fillStyle = "rgba(2,7,12,.82)";
+  context.strokeStyle = "rgba(118,224,255,.62)";
+  context.lineWidth = 1;
+  context.fillRect(left, top, width, height);
+  context.strokeRect(left, top, width, height);
+  context.beginPath();
+  context.rect(left + 4, top + 22, width - 8, height - 26);
+  context.clip();
+  const yaw = timestamp * 0.00022;
+  const cosine = Math.cos(yaw);
+  const sine = Math.sin(yaw);
+  const projected = points.map((point) => {
+    const x = cosine * point.x - sine * point.z;
+    const z = sine * point.x + cosine * point.z;
+    const depth = z + 4.4;
+    const scale = Math.min(width, height) * 0.54 / Math.max(1.2, depth);
+    return {
+      x: left + width / 2 + x * scale,
+      y: top + height * 0.56 - point.y * scale,
+      depth,
+      point,
+    };
+  }).sort((leftPoint, rightPoint) => rightPoint.depth - leftPoint.depth);
+  for (const item of projected) {
+    if (item.depth <= 0.4) continue;
+    const red = Math.round(clamp(item.point.r, 0, 1) * 255);
+    const green = Math.round(clamp(item.point.g, 0, 1) * 255);
+    const blue = Math.round(clamp(item.point.b, 0, 1) * 255);
+    context.beginPath();
+    context.arc(item.x, item.y, 1.35, 0, Math.PI * 2);
+    context.fillStyle = `rgba(${red},${green},${blue},.88)`;
+    context.fill();
+  }
+  context.restore();
+  context.fillStyle = "rgba(207,242,252,.92)";
+  context.font = "700 9px ui-monospace, monospace";
+  context.fillText(`LIVE RELATIVE GEOMETRY / ${points.length} PTS`, left + 9, top + 15);
+}
+
 function clearCanvas(canvas: HTMLCanvasElement): void {
   const context = resizeCanvas(canvas);
   if (!context) return;
@@ -390,9 +445,16 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
   let previous: GrayFrame | null = null;
   let previousFeatures: Feature[] = [];
   let keyframes: KeyframePayload[] = [];
+  let acceptedViews = 0;
+  let keyframeRevision = 0;
+  let lastPreviewRevision = 0;
   let lastKeyframeFrame = -100;
   let keyframeReference: GrayFrame | null = null;
   let keyframeReferenceFeatures: Feature[] = [];
+  let previewWorker: Worker | null = null;
+  let previewTimeout = 0;
+  let previewSolving = false;
+  let previewSuccess: SolveSuccess | null = null;
   let resultAnimation = 0;
   let resultPoints: RelativePoint[] = [];
   let evidence: Record<string, unknown> = {};
@@ -475,6 +537,14 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     resultAnimation = 0;
   };
 
+  const stopPreviewSolve = (): void => {
+    if (previewTimeout) window.clearTimeout(previewTimeout);
+    previewTimeout = 0;
+    previewWorker?.terminate();
+    previewWorker = null;
+    previewSolving = false;
+  };
+
   const renderResult = (timestamp: number): void => {
     const context = resizeCanvas(canvas);
     if (!context) return;
@@ -536,7 +606,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
   };
 
   const captureKeyframe = (frame: GrayFrame, features: Feature[]): void => {
-    if (keyframes.length >= MAX_KEYFRAMES) return;
+    if (keyframes.length >= MAX_KEYFRAMES) keyframes.shift();
     keyframes.push({
       index: frameNumber,
       width: frame.width,
@@ -544,15 +614,124 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       luma: new Float32Array(frame.luma),
       rgba: new Uint8ClampedArray(frame.rgba),
     });
+    acceptedViews += 1;
+    keyframeRevision += 1;
     lastKeyframeFrame = frameNumber;
     keyframeReference = frame;
     keyframeReferenceFeatures = features;
     solveButton.disabled = keyframes.length < MIN_KEYFRAMES;
     solveButton.textContent = keyframes.length >= MIN_KEYFRAMES ?
-      `FINISH & SOLVE ${keyframes.length} VIEWS` :
+      `FINISH & SOLVE ${keyframes.length} ACTIVE / ${acceptedViews} SEEN` :
       `CAPTURE ${MIN_KEYFRAMES - keyframes.length} MORE VIEWS`;
-    setText("pose-state", `CAPTURING ${keyframes.length}/${MAX_KEYFRAMES} VIEWS`);
+    setText("pose-state", `CAPTURING ${keyframes.length} ACTIVE / ${acceptedViews} SEEN`);
     document.documentElement.dataset.scanViews = String(keyframes.length);
+    document.documentElement.dataset.scanAcceptedViews = String(acceptedViews);
+    if (keyframes.length >= MIN_KEYFRAMES &&
+        (acceptedViews === MIN_KEYFRAMES || keyframeRevision - lastPreviewRevision >= PREVIEW_SOLVE_STRIDE)) {
+      void requestPreviewSolve();
+    }
+  };
+
+  const requestPreviewSolve = async (): Promise<void> => {
+    if (!running || solving || previewSolving || keyframes.length < MIN_KEYFRAMES) return;
+    const revision = keyframeRevision;
+    lastPreviewRevision = revision;
+    previewSolving = true;
+    document.documentElement.dataset.scanPreviewStatus = "solving";
+    setText("compute-state", "LIVE GEOMETRY SOLVE");
+    setText("gpu-badge", "PREVIEW WORKER");
+    const frames = keyframes.map((frame) => ({
+      index: frame.index,
+      width: frame.width,
+      height: frame.height,
+      luma: new Float32Array(frame.luma),
+      rgba: new Uint8ClampedArray(frame.rgba),
+    }));
+    const worker = new Worker(new URL("./world-cell-scan-v4-worker.ts", import.meta.url), { type: "module" });
+    previewWorker = worker;
+    const finish = (result: SolveResult): void => {
+      if (previewWorker !== worker) return;
+      if (previewTimeout) window.clearTimeout(previewTimeout);
+      previewTimeout = 0;
+      worker.terminate();
+      previewWorker = null;
+      previewSolving = false;
+      if (!running || solving) return;
+      if (result.ok) {
+        const improvesPointCount = !previewSuccess || result.points.length > previewSuccess.points.length;
+        const improvesEqualReconstruction = previewSuccess &&
+          result.points.length === previewSuccess.points.length &&
+          result.metrics.reprojectionErrorPixels < previewSuccess.metrics.reprojectionErrorPixels;
+        if (improvesPointCount || improvesEqualReconstruction) previewSuccess = result;
+        const liveResult = previewSuccess ?? result;
+        resultPoints = liveResult.points;
+        document.documentElement.dataset.scanPreviewStatus = "reconstructed";
+        delete document.documentElement.dataset.scanPreviewReason;
+        document.documentElement.dataset.scanResult = "relative-live-preview";
+        document.documentElement.dataset.scanPoints = String(liveResult.points.length);
+        document.documentElement.dataset.scanInliers = String(liveResult.metrics.inliers);
+        document.documentElement.dataset.scanReprojectionError =
+          liveResult.metrics.reprojectionErrorPixels.toFixed(4);
+        setText("capture-state", "GEOMETRY FOUND / KEEP SCANNING");
+        setText("compute-state", "LIVE GEOMETRY VERIFIED");
+        setText("gpu-badge", "LIVE RELATIVE");
+        setText("surfel-count", `0 AUTH / ${liveResult.points.length.toLocaleString()} REL PTS`);
+        setText("confirmed-value", "0");
+        setText("uncertain-value", liveResult.points.length.toLocaleString());
+        setText("error-value", `${liveResult.metrics.reprojectionErrorPixels.toFixed(2)} px`);
+        setText("dispatch-time", `${result.metrics.processingMs.toFixed(1)} ms / live worker`);
+        setMeter("compute-meter", Math.max(54, keyframes.length / MAX_KEYFRAMES * 100));
+        updateEvidence({
+          state: "accepted-live-relative-preview",
+          renderer: "world-cell-scan-v4",
+          metrics: liveResult.metrics,
+          relativePointCount: liveResult.points.length,
+          acceptedViews,
+        });
+      } else {
+        if (previewSuccess) {
+          document.documentElement.dataset.scanPreviewStatus = "reconstructed";
+          delete document.documentElement.dataset.scanPreviewReason;
+          setText("compute-state", "LIVE GEOMETRY VERIFIED");
+          setText("gpu-badge", "LIVE RELATIVE");
+          if (keyframeRevision - revision >= PREVIEW_SOLVE_STRIDE) void requestPreviewSolve();
+          return;
+        }
+        document.documentElement.dataset.scanPreviewStatus = "needs-translation";
+        document.documentElement.dataset.scanPreviewReason = result.reason;
+        setText("compute-state", "NEED BETTER BASELINE");
+        setText("gpu-badge", "KEEP SCANNING");
+        setText("dispatch-time", `${result.metrics.processingMs.toFixed(1)} ms / preview`);
+        if (result.reason.includes("rotation")) {
+          setText("capture-state", "ROTATION DETECTED / STEP SIDEWAYS");
+          setText("pose-state", "STEP SIDEWAYS / KEEP SUBJECT FRAMED");
+        }
+        updateEvidence({
+          state: "live-preview-needs-more-baseline",
+          renderer: "world-cell-scan-v4",
+          reason: result.reason,
+          metrics: result.metrics,
+          acceptedViews,
+        });
+      }
+      if (keyframeRevision - revision >= PREVIEW_SOLVE_STRIDE) void requestPreviewSolve();
+    };
+    worker.onmessage = (event: MessageEvent<SolveResult>) => finish(event.data);
+    worker.onerror = (event) => finish({
+      type: "result",
+      ok: false,
+      reason: event.message || "The live geometry worker did not complete.",
+      metrics: { keyframes: frames.length, processingMs: 0 },
+    });
+    previewTimeout = window.setTimeout(() => finish({
+      type: "result",
+      ok: false,
+      reason: "The live geometry preview exceeded its processing limit.",
+      metrics: { keyframes: frames.length, processingMs: PREVIEW_SOLVE_TIMEOUT_MS },
+    }), PREVIEW_SOLVE_TIMEOUT_MS);
+    const transfers: Transferable[] = [];
+    for (const frame of frames) transfers.push(frame.luma.buffer, frame.rgba.buffer);
+    worker.postMessage({ type: "solve", frames }, transfers);
   };
 
   const sampleFrame = (): void => {
@@ -570,6 +749,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     const coverage = spatialCoverage(motion.inliers, current.width, current.height);
     const baselineCoverage = spatialCoverage(baselineMotion.inliers, current.width, current.height);
     drawLiveTracks(canvas, current, motion.inliers);
+    drawLiveGeometryPreview(canvas, resultPoints, performance.now());
     const usefulView = baselineMotion.quality >= 0.16 && baselineMotion.inliers.length >= 12 &&
       baselineMotion.parallax >= 1.2 && baselineMotion.parallax <= 20 && baselineCoverage >= 0.2;
     if (keyframes.length === 0 || (enoughTime && usefulView)) captureKeyframe(current, features);
@@ -583,12 +763,15 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     setText("parallax-value", `${parallaxDegrees.toFixed(2)}°`);
     setText("coverage-value", `${Math.round(coverage * 100)}%`);
     setText("confirmed-value", "0");
-    setText("uncertain-value", String(motion.inliers.length));
+    setText("uncertain-value", resultPoints.length > 0 ?
+      resultPoints.length.toLocaleString() : String(motion.inliers.length));
     setText("rejected-value", String(Math.max(0, previousFeatures.length - motion.inliers.length)));
-    setText("capture-state", usefulView ? "CAPTURING VIEWS" : "MOVE SIDEWAYS / FIND TEXTURE");
-    setText("compute-state", "KEYFRAME SELECTION");
-    setText("dispatch-time", `${motion.inliers.length} TRACKS / ${keyframes.length} VIEWS`);
-    setText("surfel-count", `0 AUTH / 0 REL PTS / ${motion.inliers.length} TRACKS`);
+    if (!previewSolving && !previewSuccess) {
+      setText("capture-state", usefulView ? "CAPTURING VIEWS" : "MOVE SIDEWAYS / FIND TEXTURE");
+      setText("compute-state", "KEYFRAME SELECTION");
+    }
+    setText("dispatch-time", `${motion.inliers.length} TRACKS / ${keyframes.length} ACTIVE / ${acceptedViews} SEEN`);
+    setText("surfel-count", `0 AUTH / ${resultPoints.length} REL PTS / ${motion.inliers.length} TRACKS`);
     setMeter("quality-meter", qualityPercent);
     setMeter("compute-meter", keyframes.length / MAX_KEYFRAMES * 100);
     document.documentElement.dataset.visualTracking = motion.quality.toFixed(4);
@@ -598,10 +781,15 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
 
   const resetReadyState = (message = true): void => {
     stopSampling();
+    stopPreviewSolve();
     stopStream();
     stopResultAnimation();
     resultPoints = [];
     keyframes = [];
+    acceptedViews = 0;
+    keyframeRevision = 0;
+    lastPreviewRevision = 0;
+    previewSuccess = null;
     previous = null;
     previousFeatures = [];
     frameNumber = 0;
@@ -616,6 +804,10 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     document.documentElement.dataset.scanState = "ready";
     document.documentElement.dataset.scanPoints = "0";
     document.documentElement.dataset.scanViews = "0";
+    document.documentElement.dataset.scanAcceptedViews = "0";
+    delete document.documentElement.dataset.scanPreviewStatus;
+    delete document.documentElement.dataset.scanPreviewReason;
+    delete document.documentElement.dataset.scanResult;
     delete document.documentElement.dataset.scanRotationError;
     delete document.documentElement.dataset.scanRotationSupport;
     start.textContent = "START WORLD CELL SCAN";
@@ -644,6 +836,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     if (solving || keyframes.length < MIN_KEYFRAMES) return;
     solving = true;
     stopSampling();
+    stopPreviewSolve();
     solveButton.disabled = true;
     stop.disabled = true;
     start.disabled = true;
@@ -661,9 +854,9 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     );
     const frames = keyframes;
     keyframes = [];
-    const worker = new Worker(new URL("./world-cell-scan-v4-worker.ts", import.meta.url), { type: "module" });
-    let timeout = 0;
-    const result = await new Promise<SolveResult>((resolve) => {
+    const result = previewSuccess ?? await new Promise<SolveResult>((resolve) => {
+      const worker = new Worker(new URL("./world-cell-scan-v4-worker.ts", import.meta.url), { type: "module" });
+      let timeout = 0;
       const finish = (value: SolveResult): void => {
         if (timeout) window.clearTimeout(timeout);
         worker.terminate();
@@ -737,6 +930,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
         renderer: "world-cell-scan-v4",
         metrics: result.metrics,
         relativePointCount: result.points.length,
+        acceptedViews,
       });
       resultAnimation = requestAnimationFrame(renderResult);
     } else {
@@ -810,6 +1004,11 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       previous = null;
       previousFeatures = [];
       keyframes = [];
+      acceptedViews = 0;
+      keyframeRevision = 0;
+      lastPreviewRevision = 0;
+      previewSuccess = null;
+      stopPreviewSolve();
       lastKeyframeFrame = -100;
       keyframeReference = null;
       keyframeReferenceFeatures = [];
@@ -821,6 +1020,10 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       document.documentElement.dataset.scanState = "capturing";
       document.documentElement.dataset.scanPoints = "0";
       document.documentElement.dataset.scanViews = "0";
+      document.documentElement.dataset.scanAcceptedViews = "0";
+      delete document.documentElement.dataset.scanPreviewStatus;
+      delete document.documentElement.dataset.scanPreviewReason;
+      delete document.documentElement.dataset.scanResult;
       solveButton.textContent = `CAPTURE ${MIN_KEYFRAMES} MORE VIEWS`;
       stop.disabled = false;
       setText("capture-state", "CAPTURING VIEWS");
@@ -875,6 +1078,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
 
   window.addEventListener("beforeunload", () => {
     stopSampling();
+    stopPreviewSolve();
     stopStream();
     stopResultAnimation();
     resizeObserver.disconnect();
