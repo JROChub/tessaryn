@@ -1,6 +1,6 @@
 // Stable TESSARYN offline contract. The live World Cell instrument is deliberately
 // excluded: its HTML and executable graph must arrive as one network release.
-const CACHE = "tessaryn-origin-v0-5-4-world-cell-v26-exact-r11";
+const CACHE = "tessaryn-origin-v0-5-4-world-cell-v26-exact-r12";
 const CORE = [
   "./",
   "./keyxym-mobile.html",

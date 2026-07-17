@@ -6,8 +6,8 @@
       "sha256": "e6d8e6511cb57b4a5049ae81ae7fee50268d94d08a80991d6005f2b5587589bf"
     },
     "keyxym-v26.wasm": {
-      "bytes": 75123,
-      "sha256": "ae8184283c8e58bfc1c7da6690911ac8ba1fb1bdb40baaefde779524ea6be66a"
+      "bytes": 81024,
+      "sha256": "b14dfbb6369eaaa707b96d39147166d7c659e6817a2b41e3106a3a97197967bf"
     }
   },
   "authority_floats": 8,
@@ -23,8 +23,8 @@
   "preview_record_floats": 10,
   "quality_floats": 8,
   "receipt_bytes": 96,
-  "schema": "keyxym.browser-runtime-provenance/v7",
-  "source_commit": "3d8fff0e8fc61aa10d9b582ec43066d4f90bf387",
+  "schema": "keyxym.browser-runtime-provenance/v8",
+  "source_commit": "82fd76af0e502e48e7700144f33ca267e7929215",
   "source_exact": true,
   "source_repository": "JROChub/keyxym_map",
   "timestamp_abi": "wasm-bigint-i64",
@@ -38,13 +38,20 @@
     "artifacts_identical": true,
     "mobile_sdk_tests": 25,
     "native_tests": 26,
-    "profile": "prxf/reproducible-browser-qualification/v1",
+    "duplicate_geometry_suppressed": true,
+    "middlebury_maximum_revision": 5,
+    "middlebury_maximum_surfels": 198,
+    "middlebury_recovered_frames": 6,
+    "middlebury_temple_ring_sha256": "5f871fe96d25f510eac026c66c3a4c38229326260986e9926cba8a64e88c8359",
+    "middlebury_terminal_surfels": 198,
+    "middlebury_views": 18,
+    "profile": "prxf/photographic-reconstruction-qualification/v2",
     "reproducible_builds": 2,
     "sanitizer_tests": 26,
-    "tartanair_maximum_inliers": 23,
-    "tartanair_maximum_matches": 169,
-    "tartanair_maximum_revision": 5,
-    "tartanair_maximum_surfels": 451,
+    "tartanair_maximum_inliers": 16,
+    "tartanair_maximum_matches": 194,
+    "tartanair_maximum_revision": 14,
+    "tartanair_maximum_surfels": 1000,
     "tartanair_rgb_sha256": "9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da",
     "wasm_runtime": true
   },

@@ -119,7 +119,7 @@ test("the offline cache separates mutable release state from immutable authority
   const packageManifest = JSON.parse(await readFile(packageManifestUrl, "utf8"));
   const release = packageManifest.version.replaceAll(".", "-");
   assert.ok(
-      worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r11";`),
+      worker.includes(`const CACHE = "tessaryn-origin-v${release}-world-cell-v26-exact-r12";`),
   );
   for (const asset of [
     "./release.json",
