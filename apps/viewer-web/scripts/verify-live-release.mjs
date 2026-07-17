@@ -21,6 +21,7 @@ async function fetchBytes(path) {
   return {
     bytes: Buffer.from(await response.arrayBuffer()),
     contentType: response.headers.get("content-type") ?? "",
+    finalUrl: response.url,
   };
 }
 
@@ -55,6 +56,7 @@ const inventory = new Map(release.distribution?.files?.map((entry) => [entry.pat
 for (const path of [
   "index.html",
   "world-cell-theater.html",
+  "world-cell-theater/index.html",
   "sw.js",
   "keyxym-v26/manifest.json",
   "keyxym-v26/keyxym-v26.mjs",
@@ -72,9 +74,54 @@ for (const path of [
   }
 }
 
-const theater = (await fetchBytes("world-cell-theater.html")).bytes.toString("utf8");
-if (!/type="module"[^>]+src="\.\/assets\//u.test(theater) ||
-    theater.includes("/src/world-cell-authority-entry.ts")) {
-  throw new Error("live World Cell Theater is not the built application entry");
+const legacyTheater = (await fetchBytes("world-cell-theater.html")).bytes.toString("utf8");
+if (!/type="module"[^>]+src="\.\/assets\//u.test(legacyTheater) ||
+    legacyTheater.includes("/src/world-cell-authority-entry.ts")) {
+  throw new Error("live legacy World Cell Theater route is not the built application entry");
 }
+const canonicalRoute = await fetchBytes("world-cell-theater/");
+const canonicalTheater = canonicalRoute.bytes.toString("utf8");
+const canonicalInventory = inventory.get("world-cell-theater/index.html");
+const canonicalPath = new URL(canonicalRoute.finalUrl).pathname;
+if (!canonicalInventory || canonicalRoute.bytes.byteLength !== canonicalInventory.bytes ||
+    digest(canonicalRoute.bytes) !== canonicalInventory.sha256 ||
+    !canonicalPath.endsWith("/world-cell-theater/")) {
+  throw new Error("live canonical World Cell route does not resolve to its attested directory artifact");
+}
+if (!/type="module"[^>]+src="\.\.\/assets\//u.test(canonicalTheater) ||
+    canonicalTheater.includes("/src/world-cell-authority-entry.ts")) {
+  throw new Error("live extensionless World Cell Theater route is not the built application entry");
+}
+
+const javascriptAssets = [...inventory.keys()].filter((path) =>
+  /^assets\/.+\.js$/u.test(path));
+if (javascriptAssets.length === 0) {
+  throw new Error("release inventory contains no built JavaScript assets");
+}
+let applicationBytes = "";
+for (const path of javascriptAssets) {
+  const record = inventory.get(path);
+  const result = await fetchBytes(path);
+  if (!record || result.bytes.byteLength !== record.bytes || digest(result.bytes) !== record.sha256) {
+    throw new Error(`live ${path} does not match release.json`);
+  }
+  applicationBytes += result.bytes.toString("utf8");
+}
+for (const marker of [
+  "tessaryn-world-cell-scan-v4",
+  "world-cell-scan-v4",
+  "START WORLD CELL SCAN",
+  "NO DEFENSIBLE GEOMETRY",
+  "relative-sparse-reconstruction",
+]) {
+  if (!applicationBytes.includes(marker)) {
+    throw new Error(`live release omits required Scan V4 marker: ${marker}`);
+  }
+}
+for (const forbidden of ["camera-first-live-tracks", "FLOW PTS", "18,000 VIS"]) {
+  if (applicationBytes.includes(forbidden)) {
+    throw new Error(`live release still contains retired World Cell renderer marker: ${forbidden}`);
+  }
+}
+
 console.log(`verified live TESSARYN deployment ${expectedCommit} at ${origin.href}`);

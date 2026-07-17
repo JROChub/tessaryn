@@ -1,10 +1,10 @@
-// World Cell Theater route extends the stable TESSARYN offline contract.
-const CACHE = "tessaryn-origin-v0-5-1-world-cell-v26-exact-r4";
+// Stable TESSARYN offline contract. The live World Cell instrument is deliberately
+// excluded: its HTML and executable graph must arrive as one network release.
+const CACHE = "tessaryn-origin-v0-5-1-world-cell-v26-exact-r7";
 const CORE = [
   "./",
   "./keyxym-mobile.html",
   "./personal-weave.html",
-  "./world-cell-theater.html",
   "./release.json",
   "./world/archviz-tiny-house-locus.json",
   "./world/vesper-court.json",
@@ -22,6 +22,9 @@ const CORE = [
 const AUTHORITY_PREFIXES = ["./keyxym-v26/", "./assurance/"]
   .map((path) => new URL(path, self.registration.scope).pathname);
 const RELEASE_ATTESTATION_PATH = new URL("./release.json", self.registration.scope).pathname;
+const WORLD_CELL_PATH = new URL("./world-cell-theater.html", self.registration.scope).pathname;
+const CANONICAL_WORLD_CELL_PATH =
+  new URL("./world-cell-theater/", self.registration.scope).pathname;
 
 function isAuthorityRequest(url) {
   return AUTHORITY_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
@@ -107,6 +110,16 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Never serve the World Cell instrument from CacheStorage. A cached HTML shell
+  // paired with chunks from another deployment caused intermittent VERIFYING and
+  // RETRY AUTHORITY states on Safari. Network failure must be visible, not masked
+  // by a different release.
+  if (url.pathname === WORLD_CELL_PATH || url.pathname === CANONICAL_WORLD_CELL_PATH) {
+    event.respondWith(fetch(new Request(event.request, { cache: "no-store" })));
+    return;
+  }
+
   if (url.pathname === "/mansion" || url.pathname === "/mansion/" || url.pathname === "/mansion.html") {
     event.respondWith(Response.redirect(new URL("./", self.location.href), 302));
     return;

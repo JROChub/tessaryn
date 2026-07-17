@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("synthetic translated views produce accepted relative geometry while authority stays locked", async ({ page }) => {
+test("pure camera rotation is rejected instead of producing fake geometry", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -23,7 +23,7 @@ test("synthetic translated views produce accepted relative geometry while author
     const track = new Generator({ kind: "video" });
     const stream = new MediaStream([track]);
     let sequenceStarted = false;
-    let seed = 7;
+    let seed = 11;
     const random = (): number => {
       seed = (seed * 1664525 + 1013904223) >>> 0;
       return seed / 2 ** 32;
@@ -39,14 +39,12 @@ test("synthetic translated views produce accepted relative geometry while author
     const draw = (phase: number): void => {
       context.fillStyle = "rgb(13 19 27)";
       context.fillRect(0, 0, width, height);
-      const translation = phase * 0.022;
-      const yaw = phase * 0.002;
+      const yaw = phase * 0.007;
       const cosine = Math.cos(yaw);
       const sine = Math.sin(yaw);
       for (const point of points) {
-        const translatedX = point.x - translation;
-        const cameraX = cosine * translatedX + sine * point.z;
-        const cameraZ = -sine * translatedX + cosine * point.z;
+        const cameraX = cosine * point.x + sine * point.z;
+        const cameraZ = -sine * point.x + cosine * point.z;
         const x = Math.round(focal * cameraX / cameraZ + width / 2);
         const y = Math.round(focal * point.y / cameraZ + height / 2);
         if (x < 5 || y < 5 || x >= width - 5 || y >= height - 5) continue;
@@ -55,8 +53,6 @@ test("synthetic translated views produce accepted relative geometry while author
         const blue = 255 - point.value;
         context.fillStyle = `rgb(${red} ${green} ${blue})`;
         context.fillRect(x - point.size, y - point.size, point.size * 2 + 1, point.size * 2 + 1);
-        context.fillStyle = `rgb(${255 - red} ${blue} ${green})`;
-        context.fillRect(x, y, 1, 1);
       }
     };
 
@@ -96,41 +92,24 @@ test("synthetic translated views produce accepted relative geometry while author
   });
 
   await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
-  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview");
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-visual-pipeline",
-    "tessaryn-world-cell-scan-v4",
-  );
   await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
-  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
   await page.locator("#start-button").click();
 
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-views") ?? 0), {
     timeout: 25_000,
   }).toBeGreaterThanOrEqual(4);
-  await expect(page.locator("#capture-button")).toBeEnabled();
-  await expect(page.locator("#camera")).toHaveCSS("opacity", "1");
   await page.locator("#capture-button").click();
 
-  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "reconstructed", {
+  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "rejected", {
     timeout: 30_000,
   });
-  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-scan-points") ?? 0), {
-    timeout: 10_000,
-  }).toBeGreaterThanOrEqual(16);
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-scan-result",
-    "relative-sparse-reconstruction",
-  );
-  await expect(page.locator("#surfel-count")).toContainText("0 AUTH /");
-  await expect(page.locator("#surfel-count")).toContainText("REL PTS");
-  await expect(page.locator("#pose-state")).toHaveText("RELATIVE SOLVE");
-  await expect(page.locator("#capture-state")).toHaveText("RELATIVE SCAN COMPLETE");
-  await expect(page.locator("#backend-name")).toHaveText("TESSARYN TWO-VIEW SFM V4");
-  await expect(page.locator("#rootprint")).toHaveText("UNSEALED");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-result", "no-geometry");
+  await expect(page.locator("html")).toHaveAttribute("data-scan-points", "0");
+  await expect(page.locator("#stage-message b")).toHaveText("NO DEFENSIBLE GEOMETRY");
+  await expect(page.locator("#surfel-count")).toHaveText("0 AUTH / 0 REL PTS");
+  await expect(page.locator("#capture-button")).toBeDisabled();
   await expect(page.locator("#seal-button")).toBeDisabled();
   await expect(page.locator("#send-button")).toBeDisabled();
-  await expect(page.locator("#capture-button")).toBeDisabled();
-  await expect(page.locator("#start-button")).toHaveText("NEW SCAN");
+  await expect(page.locator("#rootprint")).toHaveText("UNSEALED");
   expect(pageErrors).toEqual([]);
 });
