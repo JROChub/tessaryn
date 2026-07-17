@@ -6,7 +6,7 @@ const workerUrl = new URL("../public/sw.js", import.meta.url);
 
 test("World Cell network failure cannot silently restore another release", async () => {
   const worker = await readFile(workerUrl, "utf8");
-  const start = worker.indexOf("if (url.pathname === WORLD_CELL_PATH)");
+  const start = worker.indexOf("if (url.pathname === WORLD_CELL_PATH");
   const end = worker.indexOf("if (url.pathname === \"/mansion\"", start);
   assert.ok(start >= 0 && end > start);
   const handler = worker.slice(start, end);
