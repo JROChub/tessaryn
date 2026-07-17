@@ -6,13 +6,19 @@ World Cell Scan V4 is the ordinary RGB-camera path used when no verified metric 
 
 ## Capture contract
 
-The browser captures six to twelve bounded grayscale/RGBA keyframes while the user moves sideways around a textured subject. A view is admitted only when measured feature tracking has sufficient support, spatial coverage, and inter-frame motion. The live display contains only the current bounded tracking overlay; it never accumulates decorative or pseudo-depth particles.
+The browser samples camera evidence at 320 pixels wide and captures six to
+twelve bounded grayscale/RGBA keyframes while the user moves sideways around a
+textured subject. A view is admitted only when direct tracking from the last
+admitted keyframe has sufficient support, spatial coverage, and baseline. This
+makes slow subpixel motion observable over time without manufacturing motion
+from accumulated noise. The live display contains only the current bounded
+tracking overlay; it never accumulates decorative or pseudo-depth particles.
 
 ## Reconstruction contract
 
 The worker:
 
-1. generates bounded, separated keyframe-pair candidates across the scan timeline;
+1. generates bounded adjacent, near-adjacent, and strategic long-baseline keyframe-pair candidates across the scan timeline;
 2. performs mean-normalized patch matching with ratio and forward/backward consistency checks;
 3. ranks several independent temporal baselines, then estimates an essential matrix for each candidate with deterministic RANSAC and the calibrated eight-point form using a declared approximate browser focal model;
 4. enforces the essential-matrix singular-value constraint;

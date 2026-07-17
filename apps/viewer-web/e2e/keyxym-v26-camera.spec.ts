@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("synthetic translated views produce accepted relative geometry while authority stays locked", async ({ page }) => {
+test("slow translated views accumulate baseline and produce relative geometry while authority stays locked", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -39,7 +39,7 @@ test("synthetic translated views produce accepted relative geometry while author
     const draw = (phase: number): void => {
       context.fillStyle = "rgb(13 19 27)";
       context.fillRect(0, 0, width, height);
-      const translation = phase * 0.022;
+      const translation = phase * 0.006;
       const yaw = phase * 0.002;
       const cosine = Math.cos(yaw);
       const sine = Math.sin(yaw);

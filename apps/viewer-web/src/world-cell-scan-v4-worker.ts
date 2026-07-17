@@ -599,7 +599,7 @@ function triangulate(
   };
 }
 
-function detectFeatures(frame: ScanFramePayload, maximum = 220): Feature[] {
+function detectFeatures(frame: ScanFramePayload, maximum = 420): Feature[] {
   const candidates: Feature[] = [];
   const { width, height, luma } = frame;
   for (let y = 6; y < height - 6; y += 3) {
@@ -628,7 +628,7 @@ function detectFeatures(frame: ScanFramePayload, maximum = 220): Feature[] {
     if (selected.every((feature) => {
       const deltaX = feature.x - candidate.x;
       const deltaY = feature.y - candidate.y;
-      return deltaX * deltaX + deltaY * deltaY > 42;
+      return deltaX * deltaX + deltaY * deltaY > 64;
     })) selected.push(candidate);
     if (selected.length >= maximum) break;
   }
@@ -732,27 +732,30 @@ function spatialCoverage(matches: PixelMatch[], width: number, height: number): 
 }
 
 function candidatePairs(frames: ScanFramePayload[]): [number, number][] {
+  const candidates = new Map<string, [number, number]>();
+  const add = (first: number, second: number): void => {
+    if (first < 0 || second >= frames.length || first >= second) return;
+    candidates.set(`${first}:${second}`, [first, second]);
+  };
+  for (let gap = 1; gap <= 3; gap += 1) {
+    for (let first = 0; first + gap < frames.length; first += 1) {
+      add(first, first + gap);
+    }
+  }
   const last = frames.length - 1;
   const middle = Math.floor(last / 2);
   const lowerThird = Math.floor(last / 3);
   const upperThird = Math.ceil(last * 2 / 3);
-  const candidates: [number, number][] = [
-    [0, last],
-    [0, Math.max(1, last - 1)],
-    [Math.min(1, last - 1), last],
-    [0, middle],
-    [middle, last],
-    [Math.min(1, last - 1), Math.max(2, last - 1)],
-    [0, upperThird],
-    [lowerThird, last],
-    [lowerThird, upperThird],
-  ];
-  const unique = new Map<string, [number, number]>();
-  for (const pair of candidates) {
-    if (pair[1] - pair[0] < 2 || pair[0] < 0 || pair[1] >= frames.length) continue;
-    unique.set(`${pair[0]}:${pair[1]}`, pair);
-  }
-  return [...unique.values()];
+  add(0, last);
+  add(0, last - 1);
+  add(1, last);
+  add(0, middle);
+  add(middle, last);
+  add(1, last - 1);
+  add(0, upperThird);
+  add(lowerThird, last);
+  add(lowerThird, upperThird);
+  return [...candidates.values()];
 }
 
 function choosePairs(frames: ScanFramePayload[]): PairSelection[] {

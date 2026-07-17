@@ -76,7 +76,7 @@ interface SolveFailure {
 
 type SolveResult = SolveSuccess | SolveFailure;
 
-const SAMPLE_WIDTH = 192;
+const SAMPLE_WIDTH = 320;
 const SAMPLE_INTERVAL_MS = 100;
 const MAX_KEYFRAMES = 12;
 const MIN_KEYFRAMES = 6;
@@ -166,15 +166,20 @@ function patchError(
   return error / samples;
 }
 
-function trackFeatures(previous: GrayFrame, current: GrayFrame, features: Feature[]): Track[] {
+function trackFeatures(
+  previous: GrayFrame,
+  current: GrayFrame,
+  features: Feature[],
+  searchRadius = 8,
+): Track[] {
   const tracks: Track[] = [];
   for (const feature of features) {
     let bestX = feature.x;
     let bestY = feature.y;
     let best = Number.POSITIVE_INFINITY;
     let second = Number.POSITIVE_INFINITY;
-    for (let offsetY = -8; offsetY <= 8; offsetY += 2) {
-      for (let offsetX = -8; offsetX <= 8; offsetX += 2) {
+    for (let offsetY = -searchRadius; offsetY <= searchRadius; offsetY += 2) {
+      for (let offsetX = -searchRadius; offsetX <= searchRadius; offsetX += 2) {
         const x = feature.x + offsetX;
         const y = feature.y + offsetY;
         if (x < 3 || y < 3 || x >= current.width - 3 || y >= current.height - 3) continue;
@@ -386,6 +391,8 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
   let previousFeatures: Feature[] = [];
   let keyframes: KeyframePayload[] = [];
   let lastKeyframeFrame = -100;
+  let keyframeReference: GrayFrame | null = null;
+  let keyframeReferenceFeatures: Feature[] = [];
   let resultAnimation = 0;
   let resultPoints: RelativePoint[] = [];
   let evidence: Record<string, unknown> = {};
@@ -528,7 +535,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     byId("evidence-log").textContent = JSON.stringify(evidence, null, 2);
   };
 
-  const captureKeyframe = (frame: GrayFrame): void => {
+  const captureKeyframe = (frame: GrayFrame, features: Feature[]): void => {
     if (keyframes.length >= MAX_KEYFRAMES) return;
     keyframes.push({
       index: frameNumber,
@@ -538,6 +545,8 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       rgba: new Uint8ClampedArray(frame.rgba),
     });
     lastKeyframeFrame = frameNumber;
+    keyframeReference = frame;
+    keyframeReferenceFeatures = features;
     solveButton.disabled = keyframes.length < MIN_KEYFRAMES;
     solveButton.textContent = keyframes.length >= MIN_KEYFRAMES ?
       `FINISH & SOLVE ${keyframes.length} VIEWS` :
@@ -553,12 +562,17 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     const features = detectFeatures(current);
     let motion: MotionEstimate = { dx: 0, dy: 0, parallax: 0, quality: 0, inliers: [] };
     if (previous) motion = estimateMotion(trackFeatures(previous, current, previousFeatures), previousFeatures.length);
-    const coverage = spatialCoverage(motion.inliers, current.width, current.height);
-    drawLiveTracks(canvas, current, motion.inliers);
     const enoughTime = frameNumber - lastKeyframeFrame >= 6;
-    const usefulView = motion.quality >= 0.16 && motion.inliers.length >= 12 &&
-      motion.parallax >= 0.7 && motion.parallax <= 18 && coverage >= 0.2;
-    if (keyframes.length === 0 || (enoughTime && usefulView)) captureKeyframe(current);
+    const baselineMotion = keyframeReference && enoughTime ? estimateMotion(
+      trackFeatures(keyframeReference, current, keyframeReferenceFeatures, 18),
+      keyframeReferenceFeatures.length,
+    ) : motion;
+    const coverage = spatialCoverage(motion.inliers, current.width, current.height);
+    const baselineCoverage = spatialCoverage(baselineMotion.inliers, current.width, current.height);
+    drawLiveTracks(canvas, current, motion.inliers);
+    const usefulView = baselineMotion.quality >= 0.16 && baselineMotion.inliers.length >= 12 &&
+      baselineMotion.parallax >= 1.2 && baselineMotion.parallax <= 20 && baselineCoverage >= 0.2;
+    if (keyframes.length === 0 || (enoughTime && usefulView)) captureKeyframe(current, features);
     previous = current;
     previousFeatures = features;
     frameNumber += 1;
@@ -574,6 +588,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     setText("capture-state", usefulView ? "CAPTURING VIEWS" : "MOVE SIDEWAYS / FIND TEXTURE");
     setText("compute-state", "KEYFRAME SELECTION");
     setText("dispatch-time", `${motion.inliers.length} TRACKS / ${keyframes.length} VIEWS`);
+    setText("surfel-count", `0 AUTH / 0 REL PTS / ${motion.inliers.length} TRACKS`);
     setMeter("quality-meter", qualityPercent);
     setMeter("compute-meter", keyframes.length / MAX_KEYFRAMES * 100);
     document.documentElement.dataset.visualTracking = motion.quality.toFixed(4);
@@ -591,6 +606,8 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     previousFeatures = [];
     frameNumber = 0;
     lastKeyframeFrame = -100;
+    keyframeReference = null;
+    keyframeReferenceFeatures = [];
     solving = false;
     clearCanvas(canvas);
     video.style.opacity = "0.2";
@@ -794,6 +811,8 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       previousFeatures = [];
       keyframes = [];
       lastKeyframeFrame = -100;
+      keyframeReference = null;
+      keyframeReferenceFeatures = [];
       resultPoints = [];
       stopResultAnimation();
       canvas.style.mixBlendMode = "screen";
