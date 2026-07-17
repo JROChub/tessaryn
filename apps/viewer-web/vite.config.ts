@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 
 const TOP_ACTIONS_MARKER = '        <div class="top-actions">\n';
+// Backward-compatible artifact remains available at href="./world-cell-theater.html".
 const PRODUCTION_NAVIGATION = `          <a
              id="world-cell-command"
              class="icon-command secondary"
