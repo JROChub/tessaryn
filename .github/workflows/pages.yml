@@ -1,13 +1,12 @@
 name: deploy-origin
 
 on:
-  workflow_run:
-    workflows: [conformance]
-    types: [completed]
+  push:
     branches: [main]
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -17,12 +16,52 @@ concurrency:
 
 jobs:
   build:
-    if: github.event.workflow_run.conclusion == 'success'
+    timeout-minutes: 90
     runs-on: ubuntu-latest
+    outputs:
+      conformance_run_id: ${{ steps.qualify.outputs.conformance_run_id }}
+      conformance_run_attempt: ${{ steps.qualify.outputs.conformance_run_attempt }}
     steps:
+      - name: Require successful conformance for this exact main commit
+        id: qualify
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 120); do
+            run="$({ gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/${REPOSITORY}/actions/workflows/ci.yml/runs?event=push&head_sha=${SOURCE_COMMIT}&per_page=10"; } | \
+              jq -c --arg sha "$SOURCE_COMMIT" \
+                '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last // empty')"
+            if [[ -n "$run" ]]; then
+              status="$(jq -r '.status' <<<"$run")"
+              conclusion="$(jq -r '.conclusion // ""' <<<"$run")"
+              run_id="$(jq -r '.id' <<<"$run")"
+              run_attempt="$(jq -r '.run_attempt' <<<"$run")"
+              echo "Conformance run ${run_id} attempt ${run_attempt}: ${status}/${conclusion:-pending}"
+              if [[ "$status" == "completed" ]]; then
+                if [[ "$conclusion" != "success" ]]; then
+                  echo "::error::Conformance run ${run_id} concluded ${conclusion} for ${SOURCE_COMMIT}"
+                  exit 1
+                fi
+                echo "conformance_run_id=${run_id}" >> "$GITHUB_OUTPUT"
+                echo "conformance_run_attempt=${run_attempt}" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            else
+              echo "Waiting for conformance run for ${SOURCE_COMMIT}"
+            fi
+            sleep 30
+          done
+          echo "::error::Timed out waiting for successful conformance for ${SOURCE_COMMIT}"
+          exit 1
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Require the qualified commit to be current main
         shell: bash
@@ -50,10 +89,10 @@ jobs:
       - name: Bind the release attestation to the successful conformance run
         working-directory: apps/viewer-web
         env:
-          TESSARYN_SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+          TESSARYN_SOURCE_COMMIT: ${{ github.sha }}
           TESSARYN_REPOSITORY: ${{ github.repository }}
-          TESSARYN_CONFORMANCE_RUN_ID: ${{ github.event.workflow_run.id }}
-          TESSARYN_CONFORMANCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          TESSARYN_CONFORMANCE_RUN_ID: ${{ steps.qualify.outputs.conformance_run_id }}
+          TESSARYN_CONFORMANCE_RUN_ATTEMPT: ${{ steps.qualify.outputs.conformance_run_attempt }}
           TESSARYN_DEPLOYMENT_RUN_ID: ${{ github.run_id }}
           TESSARYN_DEPLOYMENT_RUN_ATTEMPT: ${{ github.run_attempt }}
         run: node scripts/write-release-attestation.mjs
@@ -92,11 +131,11 @@ jobs:
     timeout-minutes: 10
     env:
       TESSARYN_LIVE_ORIGIN: ${{ needs.deploy.outputs.page_url }}
-      TESSARYN_EXPECTED_COMMIT: ${{ github.event.workflow_run.head_sha }}
+      TESSARYN_EXPECTED_COMMIT: ${{ github.sha }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
