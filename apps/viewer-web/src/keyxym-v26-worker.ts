@@ -42,6 +42,9 @@ async function initialize(request: Extract<KeyxymV26WorkerRequest, { type: "init
 async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "frame" }>): Promise<void> {
   const started = performance.now();
   if (!runtime || !canvas || !context) throw new Error("Keyxym worker is not initialized");
+  if (request.metricScale !== (request.spatial !== undefined)) {
+    throw new Error("Metric authority requires a synchronized calibrated depth and spatial-pose frame");
+  }
   const scale = Math.min(1, maximumWidth / request.sourceWidth, maximumHeight / request.sourceHeight);
   const width = Math.max(16, Math.floor(request.sourceWidth * scale));
   const height = Math.max(16, Math.floor(request.sourceHeight * scale));
@@ -54,7 +57,6 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
   }
   const image = context.getImageData(0, 0, width, height);
   const rgba = new Uint8Array(image.data.buffer.slice(0));
-  const sourceCommitment = new Uint8Array(await crypto.subtle.digest("SHA-256", rgba));
   const supplied = request.intrinsics;
   const suppliedValid = supplied !== undefined &&
     [supplied.width, supplied.height, supplied.fx, supplied.fy, supplied.cx, supplied.cy].every(Number.isFinite) &&
@@ -62,6 +64,52 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
   const scaleX = suppliedValid ? width / supplied.width : 1;
   const scaleY = suppliedValid ? height / supplied.height : 1;
   const focal = width / (2 * Math.tan(Math.PI / 6));
+  let spatial: {
+    depthMeters: Float32Array;
+    worldFromCamera: Float32Array;
+    calibrationReceipt: Uint8Array;
+  } | undefined;
+  if (request.spatial) {
+    const source = request.spatial;
+    const sourcePixels = source.width * source.height;
+    if (!suppliedValid || supplied!.width !== source.width || supplied!.height !== source.height ||
+        !Number.isSafeInteger(sourcePixels) || sourcePixels <= 0 ||
+        source.depthMeters.length !== sourcePixels || source.worldFromCamera.length !== 16 ||
+        source.calibrationReceipt.byteLength !== 32 ||
+        !source.depthMeters.every((depth) => Number.isFinite(depth) && depth >= 0) ||
+        !source.worldFromCamera.every(Number.isFinite)) {
+      throw new Error("Verified spatial frame is not aligned with its calibration");
+    }
+    const depthMeters = new Float32Array(width * height);
+    for (let y = 0; y < height; y += 1) {
+      const sourceY = Math.min(source.height - 1, Math.floor(y * source.height / height));
+      for (let x = 0; x < width; x += 1) {
+        const sourceX = Math.min(source.width - 1, Math.floor(x * source.width / width));
+        depthMeters[y * width + x] = source.depthMeters[sourceY * source.width + sourceX]!;
+      }
+    }
+    spatial = {
+      depthMeters,
+      worldFromCamera: source.worldFromCamera,
+      calibrationReceipt: source.calibrationReceipt,
+    };
+  }
+  const commitmentBytes = spatial
+    ? new Uint8Array(rgba.byteLength + spatial.depthMeters.byteLength +
+      spatial.worldFromCamera.byteLength + spatial.calibrationReceipt.byteLength)
+    : rgba;
+  if (spatial) {
+    let offset = 0;
+    commitmentBytes.set(rgba, offset); offset += rgba.byteLength;
+    commitmentBytes.set(new Uint8Array(spatial.depthMeters.buffer,
+      spatial.depthMeters.byteOffset, spatial.depthMeters.byteLength), offset);
+    offset += spatial.depthMeters.byteLength;
+    commitmentBytes.set(new Uint8Array(spatial.worldFromCamera.buffer,
+      spatial.worldFromCamera.byteOffset, spatial.worldFromCamera.byteLength), offset);
+    offset += spatial.worldFromCamera.byteLength;
+    commitmentBytes.set(spatial.calibrationReceipt, offset);
+  }
+  const sourceCommitment = new Uint8Array(await crypto.subtle.digest("SHA-256", commitmentBytes));
   const snapshot = runtime.ingest({
     timestampNs: BigInt(request.timestampNs),
     width,
@@ -70,10 +118,11 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
     fy: suppliedValid ? supplied.fy * scaleY : focal,
     cx: suppliedValid ? supplied.cx * scaleX : width / 2,
     cy: suppliedValid ? supplied.cy * scaleY : height / 2,
-    scaleMetersPerUnit: request.scaleMetersPerUnit,
-    metricScale: request.metricScale,
+    scaleMetersPerUnit: spatial ? 1 : request.scaleMetersPerUnit,
+    metricScale: spatial !== undefined,
     rgba,
     sourceCommitment,
+    spatial,
   });
   const transfer: Transferable[] = [
     snapshot.pose.worldFromCamera.buffer,
@@ -84,6 +133,7 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
     sourceCommitment.buffer,
   ];
   if (snapshot.geometry) transfer.push(snapshot.geometry.buffer);
+  if (snapshot.surface) transfer.push(snapshot.surface.buffer);
   post({
     type: "frame",
     id: request.id,
@@ -92,6 +142,7 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
     authority: snapshot.authority,
     forming: snapshot.forming,
     geometry: snapshot.geometry,
+    surface: snapshot.surface,
     geometryRevision: snapshot.geometryRevision.toString(),
     poseReceipt: snapshot.receipts.pose,
     qualityReceipt: snapshot.receipts.quality,

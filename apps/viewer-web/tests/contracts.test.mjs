@@ -94,7 +94,7 @@ test("production navigation makes World Cell capture and release evidence discov
   const release = JSON.parse(await readFile(releaseUrl, "utf8"));
   assert.equal(release.schema, "tessaryn/deployment-attestation/v1");
   assert.equal(release.mode, "development");
-  assert.equal(release.authority.keyxym.version, "0.26.0");
+  assert.equal(release.authority.keyxym.version, "0.26.1");
   assert.equal(release.authority.keyxym.source_exact, true);
 });
 

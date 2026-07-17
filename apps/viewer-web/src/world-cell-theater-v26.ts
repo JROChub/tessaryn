@@ -11,6 +11,8 @@ import {
   type KeyxymPoseEstimate,
   type KeyxymQuality,
   type KeyxymReceipts,
+  type KeyxymSurfaceSnapshot,
+  type KeyxymSurfaceVertex,
   type KeyxymSurfel,
 } from "./keyxym-v26-theater-adapter";
 import {
@@ -26,6 +28,11 @@ import {
   type NativeWorldCellSeal,
   type WorldCellEvidenceRequest,
 } from "./world-cell-assurance";
+import {
+  assertValidSpatialFrame,
+  isValidSpatialCalibration,
+  type TessarynSpatialCalibration,
+} from "./tessaryn-spatial-sensor";
 
 interface RuntimeEvidence {
   time: number;
@@ -79,33 +86,15 @@ interface SealedWorldCell extends WorldCellDraft {
   seal: NativeWorldCellSeal;
 }
 
-interface MetricSensorCalibration {
-  verified: boolean;
-  scaleMetersPerUnit: number;
-  device: string;
-  receipt: string;
-  intrinsics?: {
-    width: number;
-    height: number;
-    fx: number;
-    fy: number;
-    cx: number;
-    cy: number;
-  };
-}
-
-declare global {
-  interface Window {
-    tessarynMetricSensor?: {
-      currentCalibration(): Promise<MetricSensorCalibration>;
-    };
-  }
-}
-
 type VideoWithFrameCallback = HTMLVideoElement & {
-  requestVideoFrameCallback?: (callback: (now: number) => void) => number;
+  requestVideoFrameCallback?: (callback: (now: number, metadata: VideoFrameIdentity) => void) => number;
   cancelVideoFrameCallback?: (handle: number) => void;
 };
+
+interface VideoFrameIdentity {
+  mediaTime: number;
+  presentedFrames: number;
+}
 
 const ZERO_DIGEST = "0".repeat(64);
 const MAX_MOMENTS = 48;
@@ -130,6 +119,10 @@ function nonzeroDigest(value: string): boolean {
 }
 function nonzeroBytes(value: Uint8Array): boolean {
   return value.byteLength === 32 && value.some((item) => item !== 0);
+}
+function digestBytesFromHex(value: string): Uint8Array {
+  if (!nonzeroDigest(value)) throw new Error("Spatial calibration receipt is invalid");
+  return Uint8Array.from(value.match(/.{2}/gu)!, (pair) => Number.parseInt(pair, 16));
 }
 function rootprintLabel(value: string): string {
   const digest = value.startsWith("sha256:") ? value.slice(7) : value;
@@ -180,6 +173,18 @@ function setPointGeometry(
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geometry.setAttribute("aAlpha", new THREE.BufferAttribute(alpha, 1));
   geometry.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
+  geometry.computeBoundingSphere();
+}
+
+function setSurfaceGeometry(
+  geometry: THREE.BufferGeometry,
+  positions: Float32Array,
+  normals: Float32Array,
+  colors: Float32Array,
+): void {
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geometry.computeBoundingSphere();
 }
 
@@ -250,8 +255,20 @@ class TheaterController {
   private readonly controls = new OrbitControls(this.camera, this.canvas);
   private readonly formingGeometry = new THREE.BufferGeometry();
   private readonly authorityGeometry = new THREE.BufferGeometry();
+  private readonly authoritySurfaceGeometry = new THREE.BufferGeometry();
   private readonly formingCloud = new THREE.Points(this.formingGeometry, createPointMaterial(true));
   private readonly authorityCloud = new THREE.Points(this.authorityGeometry, createPointMaterial(false));
+  private readonly authoritySurface = new THREE.Mesh(
+    this.authoritySurfaceGeometry,
+    new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.92,
+      metalness: 0,
+      side: THREE.DoubleSide,
+      depthTest: true,
+      depthWrite: true,
+    }),
+  );
   private readonly runtimeCommitmentValue: string;
 
   private runtime: KeyxymV26TheaterRuntime | null = null;
@@ -265,6 +282,7 @@ class TheaterController {
   private analysisIntervalMs = 50;
   private frameNumber = 0;
   private geometrySnapshot: KeyxymGeometrySnapshot = { revision: 0n, surfels: [] };
+  private surfaceSnapshot: KeyxymSurfaceSnapshot = { revision: 0n, vertices: [] };
   private pose: KeyxymPoseEstimate | null = null;
   private quality: KeyxymQuality | null = null;
   private authority: KeyxymAuthorityDecision | null = null;
@@ -276,7 +294,7 @@ class TheaterController {
   private currentMoment = 0;
   private playTimer = 0;
   private sealedCell: SealedWorldCell | null = null;
-  private metricCalibration: MetricSensorCalibration | null = null;
+  private spatialCalibration: TessarynSpatialCalibration | null = null;
   private requestedReferenceMeters: number | null = null;
   private peer: RTCPeerConnection | null = null;
   private channel: RTCDataChannel | null = null;
@@ -301,14 +319,17 @@ class TheaterController {
     this.controls.minDistance = 0.05;
     this.controls.maxDistance = 40;
     this.controls.zoomToCursor = true;
-    this.scene.add(this.formingCloud, this.authorityCloud);
+    this.scene.add(this.formingCloud, this.authorityCloud, this.authoritySurface);
     const grid = new THREE.GridHelper(3.6, 36, 0x123d52, 0x091925);
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -1.35;
     (grid.material as THREE.Material).transparent = true;
     (grid.material as THREE.Material).opacity = 0.24;
     this.scene.add(grid);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1));
+    this.scene.add(new THREE.HemisphereLight(0xd9f4ff, 0x18202a, 1.35));
+    const surfaceLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    surfaceLight.position.set(-1.4, 2.2, 0.8);
+    this.scene.add(surfaceLight);
     this.canvas.tabIndex = 0;
     window.addEventListener("keydown", (event) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -355,6 +376,9 @@ class TheaterController {
     this.lastRenderAt = now;
     this.updateNavigation(elapsed);
     this.controls.update();
+    document.documentElement.dataset.viewerPosition = [
+      this.camera.position.x, this.camera.position.y, this.camera.position.z,
+    ].map((value) => value.toFixed(5)).join(",");
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this.render);
   };
@@ -423,7 +447,7 @@ class TheaterController {
     element<HTMLButtonElement>("stop-button").disabled = false;
     setText("capture-state", "FORMING");
     this.hideStageMessage();
-    await this.refreshMetricCalibration();
+    await this.refreshSpatialCalibration();
     this.scheduleFrame();
   }
 
@@ -445,13 +469,13 @@ class TheaterController {
   private scheduleFrame(): void {
     if (!this.running) return;
     if (this.video.requestVideoFrameCallback) {
-      this.frameCallback = this.video.requestVideoFrameCallback((now) => void this.onVideoFrame(now));
+      this.frameCallback = this.video.requestVideoFrameCallback((now, metadata) => void this.onVideoFrame(now, metadata));
     } else {
       this.fallbackTimer = window.setTimeout(() => void this.onVideoFrame(performance.now()), 32);
     }
   }
 
-  private async onVideoFrame(now: number): Promise<void> {
+  private async onVideoFrame(now: number, frameIdentity?: VideoFrameIdentity): Promise<void> {
     this.scheduleFrame();
     if (!this.running || this.processing || this.runtime?.busy ||
         now - this.lastProcessedAt < this.analysisIntervalMs ||
@@ -459,7 +483,7 @@ class TheaterController {
     this.processing = true;
     this.lastProcessedAt = now;
     try {
-      await this.processFrame(now);
+      await this.processFrame(now, frameIdentity);
     } catch (error) {
       this.freezeOnTrackingFailure(error);
     } finally {
@@ -467,7 +491,7 @@ class TheaterController {
     }
   }
 
-  private async processFrame(now: number): Promise<void> {
+  private async processFrame(now: number, frameIdentity?: VideoFrameIdentity): Promise<void> {
     if (!this.runtime) throw new Error("Keyxym v0.26 authority is unavailable");
     const sourceWidth = this.video.videoWidth;
     const sourceHeight = this.video.videoHeight;
@@ -475,16 +499,45 @@ class TheaterController {
     const calculated = BigInt(Math.max(1, Math.round((performance.timeOrigin + now) * 1_000_000)));
     const timestampNs = calculated > this.lastTimestampNs ? calculated : this.lastTimestampNs + 1n;
     this.lastTimestampNs = timestampNs;
-    const calibration = this.metricCalibration?.verified === true ? this.metricCalibration : null;
+    const calibration = this.spatialCalibration?.verified === true ? this.spatialCalibration : null;
+    const adapter = calibration ? window.tessarynSpatialSensor : undefined;
     const bitmap = await createImageBitmap(this.video);
+    let spatialFrame = null;
+    try {
+      if (calibration) {
+        if (!adapter || !frameIdentity || !Number.isFinite(frameIdentity.mediaTime) ||
+            !Number.isSafeInteger(frameIdentity.presentedFrames) || frameIdentity.presentedFrames < 1) {
+          throw new Error("Metric capture requires an exact browser media-frame identity");
+        }
+        const spatialRequest = {
+          timestampNs: timestampNs.toString(),
+          colorMediaTimeSeconds: frameIdentity.mediaTime,
+          presentedFrames: frameIdentity.presentedFrames,
+          colorWidth: sourceWidth,
+          colorHeight: sourceHeight,
+        };
+        spatialFrame = await adapter.captureFrame(spatialRequest);
+        assertValidSpatialFrame(spatialFrame, calibration, spatialRequest);
+      }
+    } catch (error) {
+      bitmap.close();
+      throw error;
+    }
     const result = await this.runtime.ingest({
       bitmap,
       timestampNs,
       sourceWidth,
       sourceHeight,
-      scaleMetersPerUnit: calibration?.scaleMetersPerUnit ?? 1,
-      metricScale: calibration !== null,
+      scaleMetersPerUnit: 1,
+      metricScale: spatialFrame !== null,
       intrinsics: calibration?.intrinsics,
+      spatial: spatialFrame && calibration ? {
+        width: spatialFrame.width,
+        height: spatialFrame.height,
+        depthMeters: spatialFrame.depthMeters,
+        worldFromCamera: spatialFrame.worldFromCamera,
+        calibrationReceipt: digestBytesFromHex(calibration.receipt),
+      } : undefined,
     });
     const previouslyRecovered = this.hadRecoveredPose;
     this.pose = result.pose;
@@ -495,11 +548,18 @@ class TheaterController {
     this.formingSamples = result.forming;
     this.frameNumber += 1;
     this.hadRecoveredPose ||= result.pose.recovered;
-    if (result.geometrySnapshot && result.pose.recovered) this.geometrySnapshot = result.geometrySnapshot;
+    if (result.pose.recovered) this.followCapturePose(result.pose);
+    if (result.geometrySnapshot && result.surfaceSnapshot && result.pose.recovered) {
+      if (result.geometrySnapshot.revision !== result.surfaceSnapshot.revision) {
+        throw new Error("Keyxym native surface revision diverges from authority geometry");
+      }
+      this.geometrySnapshot = result.geometrySnapshot;
+      this.surfaceSnapshot = result.surfaceSnapshot;
+    }
     this.analysisIntervalMs = Math.max(33, Math.min(100, result.processingMs * 1.25));
     setText("dispatch-time", `${result.processingMs.toFixed(1)} ms / worker`);
     this.updateFormingCloud(result.forming, result.quality.coverage);
-    this.updateAuthorityCloud(this.geometrySnapshot.surfels);
+    this.updateAuthorityCloud(this.geometrySnapshot.surfels, this.surfaceSnapshot.vertices);
     this.updateQualityUi();
     this.recordRuntimeEvidence();
     this.updateControls();
@@ -558,7 +618,27 @@ class TheaterController {
     setPointGeometry(this.formingGeometry, positions, colors, alpha, size);
   }
 
-  private updateAuthorityCloud(surfels: KeyxymSurfel[]): void {
+  private followCapturePose(pose: KeyxymPoseEstimate): void {
+    if (pose.worldFromCamera.length !== 16 || !Array.from(pose.worldFromCamera).every(Number.isFinite)) return;
+    const value = pose.worldFromCamera;
+    const captured = new THREE.Matrix4().set(
+      value[0]!, value[1]!, value[2]!, value[3]!,
+      value[4]!, value[5]!, value[6]!, value[7]!,
+      value[8]!, value[9]!, value[10]!, value[11]!,
+      value[12]!, value[13]!, value[14]!, value[15]!,
+    );
+    // Keyxym uses +Z forward and +Y down; Three uses -Z forward and +Y up.
+    // Conjugating the rigid pose preserves the captured world frame while
+    // placing the Theater observer at the participant's recovered camera.
+    const basis = new THREE.Matrix4().makeScale(1, -1, -1);
+    const theaterPose = basis.clone().multiply(captured).multiply(basis);
+    theaterPose.decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    this.controls.target.copy(this.camera.position).add(forward.multiplyScalar(2));
+    this.controls.update();
+  }
+
+  private updateAuthorityCloud(surfels: KeyxymSurfel[], nativeVertices: KeyxymSurfaceVertex[] = []): void {
     const positions = new Float32Array(surfels.length * 3);
     const colors = new Float32Array(surfels.length * 3);
     const alpha = new Float32Array(surfels.length);
@@ -573,11 +653,58 @@ class TheaterController {
       size[index] = 0.55 + Math.min(0.85, surfel.observations * 0.10) + clamp01(surfel.confidence) * 0.65;
     }
     setPointGeometry(this.authorityGeometry, positions, colors, alpha, size);
+    const nativeSurface = nativeVertices.length >= 3 && nativeVertices.length % 3 === 0;
+    const surfacePositions = new Float32Array(nativeSurface ? nativeVertices.length * 3 : 0);
+    const surfaceNormals = new Float32Array(nativeSurface ? nativeVertices.length * 3 : 0);
+    const surfaceColors = new Float32Array(nativeSurface ? nativeVertices.length * 3 : 0);
+    if (nativeSurface) {
+      for (let index = 0; index < nativeVertices.length; index += 1) {
+        const vertex = nativeVertices[index]!;
+        surfacePositions[index * 3] = vertex.x;
+        surfacePositions[index * 3 + 1] = -vertex.y;
+        surfacePositions[index * 3 + 2] = -vertex.z;
+        surfaceNormals[index * 3] = vertex.nx;
+        surfaceNormals[index * 3 + 1] = -vertex.ny;
+        surfaceNormals[index * 3 + 2] = -vertex.nz;
+        const confidenceScale = 0.88 + clamp01(vertex.confidence) * 0.12;
+        surfaceColors[index * 3] = clamp01(vertex.r * confidenceScale);
+        surfaceColors[index * 3 + 1] = clamp01(vertex.g * confidenceScale);
+        surfaceColors[index * 3 + 2] = clamp01(vertex.b * confidenceScale);
+      }
+    }
+    setSurfaceGeometry(
+      this.authoritySurfaceGeometry,
+      surfacePositions,
+      surfaceNormals,
+      surfaceColors,
+    );
     // Never recenter or renormalize an evolving map. Its origin is the first
     // camera pose and remains stable for locomotion, replay, and occlusion.
     this.authorityCloud.position.set(0, 0, 0);
     this.authorityCloud.scale.setScalar(1);
-    this.formingCloud.visible = surfels.length < 1_024;
+    this.authoritySurface.position.set(0, 0, 0);
+    this.authoritySurface.scale.setScalar(1);
+    const nativeTriangles = nativeSurface ? nativeVertices.length / 3 : 0;
+    const hasSurface = nativeTriangles >= 16;
+    const hasContinuum = nativeTriangles >= 64;
+    const metricContinuum = this.quality?.metricScale === true && hasContinuum;
+    this.authoritySurface.visible = metricContinuum;
+    this.authorityCloud.visible = this.quality?.metricScale === true && !hasSurface;
+    this.formingCloud.visible = this.quality?.metricScale === true && surfels.length < 1_024;
+    const stage = this.canvas.closest(".stage-panel");
+    stage?.classList.toggle("has-authority", hasSurface);
+    stage?.classList.toggle("has-authoritative-surface", metricContinuum);
+    document.documentElement.dataset.surfaceMode = this.quality?.metricScale === true
+      ? (nativeSurface ? "native-triangles" : "metric-surfels-pending")
+      : "relative-live-preview";
+    document.documentElement.dataset.surfacePatches = "0";
+    document.documentElement.dataset.surfaceVertices = String(nativeSurface ? nativeVertices.length : 0);
+    document.documentElement.dataset.surfaceTriangles = String(nativeTriangles);
+    document.documentElement.dataset.surfaceSupportedArea = "0.000000";
+    document.documentElement.dataset.surfaceMedianRadius = "0.000000";
+    document.documentElement.dataset.surfaceMaximumRadius = "0.000000";
+    document.documentElement.dataset.surfaceMaximumAngularRadius = "0.000000";
+    document.documentElement.dataset.surfaceBuildMilliseconds = "0.000";
     setText("surfel-count", surfels.length.toLocaleString());
   }
 
@@ -994,19 +1121,19 @@ class TheaterController {
     const value = Number(element<HTMLInputElement>("scale-input").value);
     if (!Number.isFinite(value) || value < 0.01 || value > 20) throw new Error("Reference length must be between 0.01 and 20 meters");
     this.requestedReferenceMeters = value;
-    setText("sensor-detail", `Reference request recorded: ${value.toFixed(3)} m. Metric status remains disabled until a verified sensor adapter binds that scale to this capture.`);
+    setText("sensor-detail", `Reference request recorded: ${value.toFixed(3)} m. It is not metric evidence; synchronized calibrated depth and spatial pose are still required.`);
     element<HTMLDialogElement>("calibration-dialog").close();
   }
 
-  private async refreshMetricCalibration(): Promise<void> {
-    const calibration = await window.tessarynMetricSensor?.currentCalibration().catch(() => null) ?? null;
-    if (calibration?.verified === true && Number.isFinite(calibration.scaleMetersPerUnit) &&
-        calibration.scaleMetersPerUnit > 0 && nonzeroDigest(calibration.receipt)) {
-      this.metricCalibration = calibration;
+  private async refreshSpatialCalibration(): Promise<void> {
+    const calibration = await window.tessarynSpatialSensor?.currentCalibration().catch(() => null) ?? null;
+    if (isValidSpatialCalibration(calibration)) {
+      const intrinsics = calibration.intrinsics;
+      this.spatialCalibration = calibration;
       setText("sensor-badge", calibration.device.toUpperCase());
-      setText("sensor-detail", `Verified metric scale: ${calibration.scaleMetersPerUnit.toFixed(6)} meters per unit.`);
+      setText("sensor-detail", `Host-verified synchronized RGB-D and spatial pose: ${intrinsics.width}×${intrinsics.height}.`);
     } else {
-      this.metricCalibration = null;
+      this.spatialCalibration = null;
     }
   }
 
@@ -1016,7 +1143,7 @@ class TheaterController {
     const port = await serial.requestPort();
     await port.open({ baudRate: 921_600 });
     element("sensor-log").textContent = `Serial transport connected: ${JSON.stringify(port.getInfo())}. Metric authority requires a verified scale receipt.`;
-    await this.refreshMetricCalibration();
+    await this.refreshSpatialCalibration();
   }
 
   private async connectUsb(): Promise<void> {
@@ -1025,7 +1152,7 @@ class TheaterController {
     const device = await usb.requestDevice({ filters: [] });
     await device.open();
     element("sensor-log").textContent = `USB transport connected: ${device.productName ?? "spatial sensor"} (${device.vendorId}:${device.productId}).`;
-    await this.refreshMetricCalibration();
+    await this.refreshSpatialCalibration();
   }
 
   private async probeXr(): Promise<void> {
@@ -1035,7 +1162,7 @@ class TheaterController {
       return;
     }
     element("sensor-log").textContent = "WebXR immersive AR is available. Metric authority still requires a verified calibration receipt.";
-    await this.refreshMetricCalibration();
+    await this.refreshSpatialCalibration();
   }
 
   private async reset(): Promise<void> {
@@ -1048,6 +1175,7 @@ class TheaterController {
     this.lastTimestampNs = 0n;
     this.analysisIntervalMs = 50;
     this.geometrySnapshot = { revision: 0n, surfels: [] };
+    this.surfaceSnapshot = { revision: 0n, vertices: [] };
     this.pose = null; this.quality = null; this.authority = null; this.receipts = null;
     this.sourceCommitment = ZERO_DIGEST;
     this.formingSamples = [];
@@ -1062,6 +1190,17 @@ class TheaterController {
     delete document.documentElement.dataset.worldCellSealed;
     setPointGeometry(this.formingGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
     setPointGeometry(this.authorityGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
+    setSurfaceGeometry(this.authoritySurfaceGeometry, new Float32Array(), new Float32Array(), new Float32Array());
+    this.canvas.closest(".stage-panel")?.classList.remove("has-authority", "has-authoritative-surface");
+    delete document.documentElement.dataset.surfacePatches;
+    delete document.documentElement.dataset.surfaceMode;
+    delete document.documentElement.dataset.surfaceVertices;
+    delete document.documentElement.dataset.surfaceMaximumRadius;
+    delete document.documentElement.dataset.surfaceMaximumAngularRadius;
+    delete document.documentElement.dataset.surfaceBuildMilliseconds;
+    delete document.documentElement.dataset.surfaceTriangles;
+    delete document.documentElement.dataset.surfaceSupportedArea;
+    delete document.documentElement.dataset.surfaceMedianRadius;
     setText("surfel-count", "0"); setText("frame-count", "0"); setText("pose-state", "KEYXYM READY");
     setText("rootprint", "UNSEALED"); setText("cell-state", "WORLD CELL / READY / RELATIVE");
     element("evidence-log").textContent = "No evidence recorded.";

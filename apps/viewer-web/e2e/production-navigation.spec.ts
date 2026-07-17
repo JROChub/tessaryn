@@ -16,7 +16,7 @@ test("the Origin opens its authoritative World Cell route and same-origin releas
   const attestation = await response.json();
   expect(attestation.schema).toBe("tessaryn/deployment-attestation/v1");
   expect(attestation.product).toBe("TESSARYN Origin");
-  expect(attestation.authority.keyxym.version).toBe("0.26.0");
+  expect(attestation.authority.keyxym.version).toBe("0.26.1");
   expect(attestation.authority.keyxym.source_exact).toBe(true);
 
   await worldCell.click();

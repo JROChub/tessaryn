@@ -34,11 +34,11 @@ async function fixture() {
   await write(
     join(directory, "keyxym-v26", "manifest.json"),
     `${JSON.stringify({
-      abi: "keyxym-v26-reality-authority-1",
-      source_commit: "c94d4db57d1db89e96cb7fd860da2d4c1617f516",
+      abi: "keyxym-v26-reality-authority-spatial-surface-3",
+      source_commit: "5758375618325d215ce9ed6ad96872f36179e188",
       source_exact: true,
       source_repository: "JROChub/keyxym_map",
-      version: "0.26.0",
+      version: "0.26.1",
     })}\n`,
   );
   await write(
@@ -90,7 +90,7 @@ test("release attestation binds the qualified commit and every deployed file det
   assert.equal(release.deployment.source_commit, sourceCommit);
   assert.equal(release.deployment.run_id, 401);
   assert.equal(release.deployment.run_attempt, 3);
-  assert.equal(release.authority.keyxym.version, "0.26.0");
+  assert.equal(release.authority.keyxym.version, "0.26.1");
   assert.equal(release.authority.keyxym.source_exact, true);
   assert.equal(release.authority.browser_assurance.profile, "eform/world-cell-assurance/v1");
   assert.equal("generated_at" in release, false);

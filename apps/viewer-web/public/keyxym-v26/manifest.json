@@ -1,13 +1,13 @@
 {
-  "abi": "keyxym-v26-reality-authority-1",
+  "abi": "keyxym-v26-reality-authority-spatial-surface-3",
   "artifacts": {
     "keyxym-v26.mjs": {
-      "bytes": 8367,
-      "sha256": "e6d8e6511cb57b4a5049ae81ae7fee50268d94d08a80991d6005f2b5587589bf"
+      "bytes": 8661,
+      "sha256": "ec3e38fedfd7885d430f2fd3cfab08ec1af5cdeeadd840faca057394ed7a8942"
     },
     "keyxym-v26.wasm": {
-      "bytes": 87390,
-      "sha256": "ed18dc74a756ca4c95848036f72baa521d02a733350ce3e589ce4423186c8c52"
+      "bytes": 111034,
+      "sha256": "48a9de27f8a212fabc2f4f72108109dad0fe166f1e81eef806da282f42aa6a85"
     }
   },
   "authority_floats": 8,
@@ -16,17 +16,19 @@
   "maximum_analysis_height": 240,
   "maximum_analysis_width": 320,
   "maximum_preview_samples": 8192,
+  "maximum_surface_vertices": 288000,
   "maximum_surfels": 48000,
   "maximum_tracks": 768,
-  "perception_abi": "keyxym-v26-dense-photometric-surface-v1",
+  "perception_abi": "keyxym-v26-calibrated-spatial-triangle-surface-v3",
   "pose_floats": 27,
   "preview_record_floats": 10,
   "quality_floats": 8,
   "receipt_bytes": 96,
-  "schema": "keyxym.browser-runtime-provenance/v9",
-  "source_commit": "2672ebe79655b3d78912b9332e24057b35772008",
+  "schema": "keyxym.browser-runtime-provenance/v11",
+  "source_commit": "5758375618325d215ce9ed6ad96872f36179e188",
   "source_exact": true,
   "source_repository": "JROChub/keyxym_map",
+  "surface_vertex_record_floats": 11,
   "timestamp_abi": "wasm-bigint-i64",
   "toolchain": {
     "name": "Emscripten",
@@ -37,23 +39,27 @@
   "validation": {
     "artifacts_identical": true,
     "duplicate_geometry_suppressed": true,
-    "middlebury_maximum_confirmed_surfels": 909,
+    "middlebury_maximum_confirmed_surfels": 2093,
     "middlebury_maximum_parallax_degrees": 7.455694198608398,
     "middlebury_maximum_revision": 9,
-    "middlebury_maximum_surfels": 2341,
+    "middlebury_maximum_surfels": 4790,
+    "middlebury_maximum_surface_vertices": 3174,
     "middlebury_moment_ready_frames": 2,
     "middlebury_recovered_frames": 10,
     "middlebury_seal_ready_frames": 1,
     "middlebury_temple_ring_sha256": "5f871fe96d25f510eac026c66c3a4c38229326260986e9926cba8a64e88c8359",
-    "middlebury_terminal_surfels": 2341,
+    "middlebury_terminal_surface_vertices": 1977,
+    "middlebury_terminal_surfels": 4790,
     "middlebury_views": 18,
+    "metric_spatial_ingest": true,
     "mobile_sdk_tests": 25,
     "native_tests": 26,
-    "profile": "prxf/photographic-continuum-qualification/v3",
+    "profile": "prxf/calibrated-spatial-continuum-qualification/v5",
     "reproducible_builds": 2,
-    "sanitizer_compilers": 2,
+    "sanitizer_compilers": 1,
     "sanitizer_tests": 26,
+    "scale_only_metric_rejected": true,
     "wasm_runtime": true
   },
-  "version": "0.26.0"
+  "version": "0.26.1"
 }

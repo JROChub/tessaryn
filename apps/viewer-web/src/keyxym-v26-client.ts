@@ -49,6 +49,13 @@ export class KeyxymV26WorkerClient {
     scaleMetersPerUnit: number;
     metricScale: boolean;
     intrinsics?: { width: number; height: number; fx: number; fy: number; cx: number; cy: number };
+    spatial?: {
+      width: number;
+      height: number;
+      depthMeters: Float32Array;
+      worldFromCamera: Float32Array;
+      calibrationReceipt: Uint8Array;
+    };
   }): Promise<KeyxymV26WorkerFrameResult> {
     if (this.destroyed) {
       input.bitmap.close();
@@ -72,8 +79,16 @@ export class KeyxymV26WorkerClient {
       scaleMetersPerUnit: input.scaleMetersPerUnit,
       metricScale: input.metricScale,
       intrinsics: input.intrinsics,
+      spatial: input.spatial,
     };
-    this.worker.postMessage(request, [input.bitmap]);
+    const transfer: Transferable[] = [input.bitmap];
+    if (input.spatial) {
+      for (const buffer of [input.spatial.depthMeters.buffer, input.spatial.worldFromCamera.buffer,
+        input.spatial.calibrationReceipt.buffer]) {
+        if (!transfer.includes(buffer as Transferable)) transfer.push(buffer as Transferable);
+      }
+    }
+    this.worker.postMessage(request, transfer);
     return promise;
   }
 
