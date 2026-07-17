@@ -71,6 +71,8 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
     let timestamp = 0n;
     let maximumSurfels = 0;
     let currentSurfels = 0;
+    let currentSurfaceVertices = 0;
+    let maximumSurfaceVertices = 0;
     let maximumRevision = 0n;
     let maximumParallax = 0;
     let recoveredFrames = 0;
@@ -105,7 +107,14 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
           if (snapshot.geometry) {
             currentSurfels = snapshot.geometry.length / imported.KEYXYM_V26_SURFEL_FLOATS;
           }
+          if (snapshot.surface) {
+            if (snapshot.surface.length % (imported.KEYXYM_V26_SURFACE_VERTEX_FLOATS * 3) !== 0) {
+              throw new Error("candidate surface is not aligned to complete triangles");
+            }
+            currentSurfaceVertices = snapshot.surface.length / imported.KEYXYM_V26_SURFACE_VERTEX_FLOATS;
+          }
           maximumSurfels = Math.max(maximumSurfels, currentSurfels);
+          maximumSurfaceVertices = Math.max(maximumSurfaceVertices, currentSurfaceVertices);
           maximumRevision = snapshot.geometryRevision > maximumRevision
             ? snapshot.geometryRevision : maximumRevision;
           maximumParallax = Math.max(maximumParallax, snapshot.pose.parallaxDegrees);
@@ -134,6 +143,8 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
               confirmed: snapshot.quality.confirmed,
               uncertain: snapshot.quality.uncertain,
               surfels: currentSurfels,
+              surfaceVertices: currentSurfaceVertices,
+              surfaceTriangles: currentSurfaceVertices / 3,
               revision: snapshot.geometryRevision.toString(),
             });
           }
@@ -145,6 +156,8 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
     return {
       maximumSurfels,
       terminalSurfels: currentSurfels,
+      maximumSurfaceVertices,
+      terminalSurfaceVertices: currentSurfaceVertices,
       maximumRevision: maximumRevision.toString(),
       maximumParallax,
       recoveredFrames,
@@ -160,6 +173,8 @@ test("source-exact Keyxym candidate sustains geometry on real photographic views
   expect(result.recoveredFrames).toBeGreaterThanOrEqual(3);
   expect(result.maximumSurfels).toBeGreaterThanOrEqual(2_000);
   expect(result.terminalSurfels).toBeGreaterThanOrEqual(2_000);
+  expect(result.maximumSurfaceVertices).toBeGreaterThanOrEqual(300);
+  expect(result.terminalSurfaceVertices).toBeGreaterThanOrEqual(300);
   expect(result.maximumConfirmed).toBeGreaterThanOrEqual(512);
   expect(result.momentReadyFrames).toBeGreaterThanOrEqual(1);
   expect(result.sealReadyFrames).toBeGreaterThanOrEqual(1);

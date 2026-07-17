@@ -10,8 +10,9 @@ have different evidence strength:
    preview;
 2. relative multi-view geometry, reconstructed from measured photometric and
    feature correspondences; and
-3. metric geometry, admitted only when a sensor adapter supplies verified
-   intrinsics, scale, and a nonzero calibration receipt.
+3. metric geometry, admitted only when a host sensor adapter supplies
+   synchronized axial depth in meters, calibrated intrinsics, a rigid
+   world-from-camera pose, and the exact calibration receipt.
 
 No forming sample or interpolated optical flow enters a Moment or Rootprint.
 
@@ -19,16 +20,19 @@ No forming sample or interpolated optical flow enters a Moment or Rootprint.
 
 ```text
 camera RGBA + source digest
-  -> bounded persistent corner tracking
-  -> robust relative pose and positive-depth gates
-  -> dense forward/backward photometric surface correspondence
-  -> two-ray triangulation with angular uncertainty
-  -> deterministic voxel fusion
+  -> calibrated RGB-D + rigid spatial pose when the host supplies them
+  -> exact back-projection and depth-discontinuity topology gates
+  -> measured-normal triangle construction
+  -> deterministic persistent surfel fusion
   -> stable capture-origin coordinate frame
-  -> depth-writing surface splats and participant navigation
+  -> depth-writing native surfaces and participant navigation
   -> automatic authority-gated Moments
   -> eform / Power House seal and local re-verification
 ```
+
+Without the spatial adapter, Keyxym executes bounded monocular tracking and
+relative pose recovery. The Theater deliberately keeps the live camera visible
+instead of presenting a sparse relative point field as an inhabitable place.
 
 Pose tracks and surface samples are intentionally separate. Dense image
 samples cannot vote a weak camera model into existence. Once a pose is accepted,
@@ -44,11 +48,22 @@ continuity, trajectory, authority, nor geometry. Lost tracking freezes the
 authoritative map; a bounded local re-anchor may resume odometry without
 inventing the missing interval.
 
-The generic browser camera path is relative scale. A verified native adapter
-may additionally provide calibrated `fx`, `fy`, `cx`, and `cy` values at a
-declared source resolution. Those intrinsics are scaled to the analysis image
-inside the worker. A typed reference length entered in the user interface is
-never sufficient to promote a Cell to metric status.
+The generic browser camera path is relative scale. A host adapter installs the
+`window.tessarynSpatialSensor` contract defined in
+`apps/viewer-web/src/tessaryn-spatial-sensor.ts`. The Theater first freezes the
+browser color bitmap, then identifies it by `mediaTime` and `presentedFrames`;
+the adapter must return those values unchanged with the matched depth and pose.
+Its calibration receipt is the
+canonical digest of the device identifier, depth and pose conventions,
+synchronization declaration, and exact `fx`, `fy`, `cx`, `cy`, width, and
+height. Every color request must return depth and pose carrying the identical
+nanosecond timestamp. The worker commits color, depth, pose, and receipt before
+Keyxym ingestion. A typed reference length, transport connection, scale value,
+or IMU stream is never sufficient to promote a Cell to metric status.
+
+The receipt is a tamper-evident calibration commitment. Hardware authenticity
+remains the responsibility of the installed trusted host adapter; the browser
+does not claim that WebUSB or WebSerial transport alone authenticates a device.
 
 ## Stable inhabitation
 

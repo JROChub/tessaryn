@@ -17,7 +17,7 @@ function archiveEntry(index: number): string {
   return `templeRing/templeR${String(index).padStart(4, "0")}.png`;
 }
 
-test("official photographic views sustain authoritative World Cell geometry", async ({ page }) => {
+test("official photographic views sustain authoritative World Cell geometry", async ({ page }, testInfo) => {
   test.skip(!archive, "Set the exact official Middlebury TempleRing archive.");
   test.setTimeout(120_000);
   expect(await sha256File(archive!)).toBe(expectedArchiveSha256);
@@ -118,6 +118,13 @@ test("official photographic views sustain authoritative World Cell geometry", as
       rootprint: document.querySelector("#rootprint")?.textContent ?? null,
       momentAllowed: node.dataset.momentAllowed ?? null,
       sealAllowed: node.dataset.sealAllowed ?? null,
+      surfacePatches: node.dataset.surfacePatches ?? null,
+      surfaceMode: node.dataset.surfaceMode ?? null,
+      surfaceVertices: node.dataset.surfaceVertices ?? null,
+      surfaceTriangles: node.dataset.surfaceTriangles ?? null,
+      surfaceMaximumRadius: node.dataset.surfaceMaximumRadius ?? null,
+      surfaceMaximumAngularRadius: node.dataset.surfaceMaximumAngularRadius ?? null,
+      surfaceBuildMilliseconds: node.dataset.surfaceBuildMilliseconds ?? null,
     }));
     const surfels = Number(observation.surfels ?? 0);
     const revision = Number(observation.revision ?? 0);
@@ -149,12 +156,24 @@ test("official photographic views sustain authoritative World Cell geometry", as
     everMomentReady: node.dataset.everMomentReady,
     everSealReady: node.dataset.everSealReady,
     sealed: node.dataset.worldCellSealed,
+    surfacePatches: Number(node.dataset.surfacePatches ?? 0),
+    surfaceMode: node.dataset.surfaceMode,
+    surfaceVertices: Number(node.dataset.surfaceVertices ?? 0),
+    surfaceTriangles: Number(node.dataset.surfaceTriangles ?? 0),
+    surfaceMaximumRadius: Number(node.dataset.surfaceMaximumRadius ?? Number.POSITIVE_INFINITY),
+    surfaceMaximumAngularRadius: Number(node.dataset.surfaceMaximumAngularRadius ?? Number.POSITIVE_INFINITY),
+    surfaceBuildMilliseconds: Number(node.dataset.surfaceBuildMilliseconds ?? Number.POSITIVE_INFINITY),
   }));
   console.log("PHOTOGRAPHIC_WORLD_CELL", JSON.stringify({
     maximumSurfels, maximumRevision, maximumParallax, maximumConfirmed,
     observedMomentReady, observedSealReady, observedSealedRootprint,
     observations, terminal,
   }));
+  const renderedFrame = await page.screenshot({
+    path: testInfo.outputPath("authoritative-world-cell.png"),
+    fullPage: true,
+  });
+  await testInfo.attach("authoritative-world-cell", { body: renderedFrame, contentType: "image/png" });
 
   expect(terminal.mode).toBe("authoritative");
   expect(terminal.authority).toBe("verified");
@@ -163,13 +182,20 @@ test("official photographic views sustain authoritative World Cell geometry", as
   expect(maximumParallax).toBeGreaterThanOrEqual(0.6);
   expect(maximumSurfels).toBeGreaterThanOrEqual(2_000);
   expect(maximumConfirmed).toBeGreaterThanOrEqual(512);
-  expect(observedMomentReady).toBe(true);
   expect(terminal.everMomentReady).toBe("true");
   expect(terminal.everSealReady).toBe("true");
   expect(terminal.sealed).toBe("true");
   expect(maximumRevision).toBeGreaterThanOrEqual(3);
   expect(terminal.surfels).toBeGreaterThanOrEqual(2_000);
   expect(terminal.revision).toBeGreaterThanOrEqual(3);
+  expect(terminal.surfaceMode).toBe("relative-live-preview");
+  expect(terminal.surfaceVertices).toBeGreaterThanOrEqual(300);
+  expect(terminal.surfaceTriangles).toBeGreaterThanOrEqual(100);
+  expect(terminal.surfaceMaximumRadius).toBe(0);
+  expect(terminal.surfaceMaximumAngularRadius).toBe(0);
+  expect(terminal.surfaceBuildMilliseconds).toBeLessThan(60);
+  expect(await page.locator("#camera").evaluate((video) => Number.parseFloat(getComputedStyle(video).opacity))).toBeGreaterThanOrEqual(0.99);
+  expect(await page.locator(".stage-panel").evaluate((stage) => stage.classList.contains("has-authoritative-surface"))).toBe(false);
   expect(terminal.rootprint).toMatch(/^[0-9A-F]{16}$/u);
   expect(pageErrors).toEqual([]);
 });

@@ -30,7 +30,9 @@ test("v0.26 runtime executes RGBA authority inside a bounded worker", async () =
     "_keyxym_v26_copy_receipts",
     "_keyxym_v26_copy_preview_packed",
     "_keyxym_v26_geometry_revision",
+    "_keyxym_v26_ingest_spatial_rgba_packed",
     "_keyxym_v26_copy_geometry_snapshot_packed",
+    "_keyxym_v26_copy_surface_snapshot_packed",
     "_keyxym_v26_quality_packed",
     "_keyxym_v26_authority_packed",
   ]) assert.match(runtime, new RegExp(symbol));
@@ -80,17 +82,18 @@ test("assurance binds the native pose, quality, and authority receipt triple", a
 
 test("v0.26 provenance pins the complete source-exact authority", async () => {
   const source = await read("src/keyxym-v26-provenance.ts");
-  assert.match(source, /keyxym\.browser-runtime-provenance\/v9/);
-  assert.match(source, /keyxym-v26-reality-authority-1/);
-  assert.match(source, /keyxym-v26-dense-photometric-surface-v1/);
-  assert.match(source, /2672ebe79655b3d78912b9332e24057b35772008/);
+  assert.match(source, /keyxym\.browser-runtime-provenance\/v11/);
+  assert.match(source, /keyxym-v26-reality-authority-spatial-surface-3/);
+  assert.match(source, /keyxym-v26-calibrated-spatial-triangle-surface-v3/);
+  assert.match(source, /5758375618325d215ce9ed6ad96872f36179e188/);
   assert.match(source, /source_exact !== true/);
   assert.match(source, /pose_floats !== 27/);
   assert.match(source, /authority_floats !== 8/);
   assert.match(source, /receipt_bytes !== 96/);
   assert.match(source, /reproducible_builds !== 2/);
-  assert.match(source, /middlebury_maximum_confirmed_surfels !== 909/);
-  assert.match(source, /middlebury_terminal_surfels !== 2341/);
+  assert.match(source, /middlebury_maximum_confirmed_surfels !== 2093/);
+  assert.match(source, /middlebury_terminal_surfels !== 4790/);
+  assert.match(source, /middlebury_maximum_surface_vertices !== 3_174/);
   assert.match(source, /middlebury_seal_ready_frames !== 1/);
   assert.match(source, /await WebAssembly\.compile\(wasmBytes\)/);
 });
@@ -112,6 +115,32 @@ test("scale request cannot impersonate verified metric calibration", async () =>
   ]);
   assert.match(html, /Recording a known length does not itself establish metric scale/);
   assert.match(source, /this\.requestedReferenceMeters = value/);
-  assert.match(source, /this\.metricCalibration\?\.verified === true/);
+  assert.match(source, /this\.spatialCalibration\?\.verified === true/);
+  assert.match(source, /metricScale: spatialFrame !== null/);
   assert.doesNotMatch(source, /metricScale:\s*this\.requestedReferenceMeters/);
+});
+
+test("metric capture requires the public synchronized spatial sensor contract", async () => {
+  const [sensor, theater, worker, runtime] = await Promise.all([
+    read("src/tessaryn-spatial-sensor.ts"),
+    read("src/world-cell-theater-v26.ts"),
+    read("src/keyxym-v26-worker.ts"),
+    read("src/keyxym-v26-runtime.ts"),
+  ]);
+  assert.match(sensor, /TessarynSpatialSensor/);
+  assert.match(sensor, /tessaryn\/spatial-calibration\/v1/);
+  assert.match(sensor, /row-major-world-from-camera/);
+  assert.match(sensor, /spatialCalibrationReceipt/);
+  assert.match(sensor, /assertValidSpatialFrame/);
+  assert.match(theater, /isValidSpatialCalibration/);
+  assert.match(theater, /assertValidSpatialFrame/);
+  assert.match(worker, /Metric authority requires a synchronized calibrated depth and spatial-pose frame/);
+  assert.match(sensor, /colorMediaTimeSeconds/);
+  assert.match(sensor, /presentedFrames/);
+  assert.match(theater, /const bitmap = await createImageBitmap\(this\.video\)/);
+  assert.match(theater, /Metric capture requires an exact browser media-frame identity/);
+  assert.match(worker, /spatial\.depthMeters\.byteOffset/);
+  assert.match(worker, /spatial\.worldFromCamera\.byteOffset/);
+  assert.match(runtime, /geometry snapshot revision diverges from authority/);
+  assert.match(runtime, /depth >= 0/);
 });

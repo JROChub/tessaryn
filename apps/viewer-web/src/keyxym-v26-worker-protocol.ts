@@ -21,6 +21,13 @@ export type KeyxymV26WorkerRequest =
       scaleMetersPerUnit: number;
       metricScale: boolean;
       intrinsics?: { width: number; height: number; fx: number; fy: number; cx: number; cy: number };
+      spatial?: {
+        width: number;
+        height: number;
+        depthMeters: Float32Array;
+        worldFromCamera: Float32Array;
+        calibrationReceipt: Uint8Array;
+      };
     }
   | { type: "destroy" };
 
@@ -32,6 +39,7 @@ export interface KeyxymV26WorkerFrameResult {
   authority: KeyxymV26Authority;
   forming: Float32Array;
   geometry: Float32Array | null;
+  surface: Float32Array | null;
   geometryRevision: string;
   poseReceipt: Uint8Array;
   qualityReceipt: Uint8Array;

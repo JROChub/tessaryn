@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 
 const origin = new URL(process.env.TESSARYN_LIVE_ORIGIN || "https://tessaryn.com/");
+const expectedKeyxym = Object.freeze({
+  abi: "keyxym-v26-reality-authority-spatial-surface-3",
+  sourceCommit: "5758375618325d215ce9ed6ad96872f36179e188",
+  wasmSha256: "48a9de27f8a212fabc2f4f72108109dad0fe166f1e81eef806da282f42aa6a85",
+});
 const expectedCommit = process.env.TESSARYN_EXPECTED_COMMIT?.trim() ?? "";
 if (!/^[0-9a-f]{40}$/u.test(expectedCommit)) {
   throw new Error("TESSARYN_EXPECTED_COMMIT is missing or malformed");
@@ -47,7 +52,9 @@ for (let attempt = 1; attempt <= 18; attempt += 1) {
 }
 if (!release) throw lastError ?? new Error("release.json was not available");
 if (release.schema !== "tessaryn/deployment-attestation/v1" ||
-    release.authority?.keyxym?.version !== "0.26.0" ||
+    release.authority?.keyxym?.version !== "0.26.1" ||
+    release.authority?.keyxym?.abi !== expectedKeyxym.abi ||
+    release.authority?.keyxym?.source_commit !== expectedKeyxym.sourceCommit ||
     release.authority?.keyxym?.source_exact !== true) {
   throw new Error("live release attestation does not name the approved v0.26 authority");
 }
@@ -72,6 +79,20 @@ for (const path of [
   if (result.bytes.byteLength !== record.bytes || digest(result.bytes) !== record.sha256) {
     throw new Error(`live ${path} does not match release.json`);
   }
+}
+
+const keyxymManifestResult = await fetchBytes("keyxym-v26/manifest.json");
+const keyxymManifest = JSON.parse(keyxymManifestResult.bytes.toString("utf8"));
+if (keyxymManifest.schema !== "keyxym.browser-runtime-provenance/v11" ||
+    keyxymManifest.abi !== expectedKeyxym.abi ||
+    keyxymManifest.perception_abi !== "keyxym-v26-calibrated-spatial-triangle-surface-v3" ||
+    keyxymManifest.source_commit !== expectedKeyxym.sourceCommit ||
+    keyxymManifest.source_exact !== true ||
+    keyxymManifest.artifacts?.["keyxym-v26.wasm"]?.sha256 !== expectedKeyxym.wasmSha256 ||
+    keyxymManifest.validation?.metric_spatial_ingest !== true ||
+    keyxymManifest.validation?.duplicate_geometry_suppressed !== true ||
+    keyxymManifest.validation?.scale_only_metric_rejected !== true) {
+  throw new Error("live Keyxym manifest does not name the qualified calibrated spatial authority");
 }
 
 const legacyTheater = (await fetchBytes("world-cell-theater.html")).bytes.toString("utf8");
@@ -109,14 +130,15 @@ for (const path of javascriptAssets) {
   applicationBytes += result.bytes.toString("utf8");
 }
 for (const marker of [
-  "tessaryn-world-cell-scan-v4",
-  "world-cell-scan-v4",
-  "START WORLD CELL SCAN",
-  "NO DEFENSIBLE GEOMETRY",
-  "relative-sparse-reconstruction",
+  "keyxym-v26-reality-authority-spatial-surface-3",
+  "native-triangles",
+  "relative-live-preview",
+  "tessaryn/spatial-calibration/v1",
+  "Metric capture requires an exact browser media-frame identity",
+  "Host-verified synchronized RGB-D",
 ]) {
   if (!applicationBytes.includes(marker)) {
-    throw new Error(`live release omits required Scan V4 marker: ${marker}`);
+    throw new Error(`live release omits required spatial continuum marker: ${marker}`);
   }
 }
 for (const forbidden of ["camera-first-live-tracks", "FLOW PTS", "18,000 VIS"]) {

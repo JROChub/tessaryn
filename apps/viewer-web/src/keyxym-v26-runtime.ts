@@ -3,8 +3,10 @@ export const KEYXYM_V26_QUALITY_FLOATS = 8;
 export const KEYXYM_V26_AUTHORITY_FLOATS = 8;
 export const KEYXYM_V26_FORMING_FLOATS = 10;
 export const KEYXYM_V26_SURFEL_FLOATS = 13;
+export const KEYXYM_V26_SURFACE_VERTEX_FLOATS = 11;
 export const KEYXYM_V26_RECEIPT_BYTES = 96;
 export const KEYXYM_V26_MAXIMUM_SURFELS = 48_000;
+export const KEYXYM_V26_MAXIMUM_SURFACE_VERTICES = 288_000;
 export const KEYXYM_V26_MAXIMUM_FORMING_SAMPLES = 8_192;
 
 export interface KeyxymV26BrowserFrame {
@@ -19,6 +21,11 @@ export interface KeyxymV26BrowserFrame {
   metricScale: boolean;
   rgba: Uint8Array;
   sourceCommitment: Uint8Array;
+  spatial?: {
+    depthMeters: Float32Array;
+    worldFromCamera: Float32Array;
+    calibrationReceipt: Uint8Array;
+  };
 }
 
 export interface KeyxymV26Pose {
@@ -73,6 +80,7 @@ export interface KeyxymV26Snapshot {
   receipts: KeyxymV26Receipts;
   forming: Float32Array;
   geometry: Float32Array | null;
+  surface: Float32Array | null;
   geometryRevision: bigint;
 }
 
@@ -84,10 +92,12 @@ type EmscriptenModule = {
   _keyxym_v26_session_create(...args: number[]): number;
   _keyxym_v26_session_destroy(session: number): void;
   _keyxym_v26_ingest_rgba_packed(...args: Array<number | bigint>): number;
+  _keyxym_v26_ingest_spatial_rgba_packed(...args: Array<number | bigint>): number;
   _keyxym_v26_copy_receipts(session: number, output: number, capacity: number, required: number): number;
   _keyxym_v26_copy_preview_packed(session: number, output: number, capacity: number, required: number): number;
   _keyxym_v26_geometry_revision(session: number): bigint;
   _keyxym_v26_copy_geometry_snapshot_packed(session: number, output: number, capacity: number, required: number, revision: number): number;
+  _keyxym_v26_copy_surface_snapshot_packed(session: number, output: number, capacity: number, required: number, revision: number): number;
   _keyxym_v26_quality_packed(session: number, output: number, count: number): number;
   _keyxym_v26_authority_packed(session: number, output: number, count: number): number;
 };
@@ -158,8 +168,10 @@ export class KeyxymV26Runtime {
     for (const name of [
       "HEAPU8", "HEAPF32", "_malloc", "_free", "_keyxym_v26_session_create",
       "_keyxym_v26_session_destroy", "_keyxym_v26_ingest_rgba_packed",
+      "_keyxym_v26_ingest_spatial_rgba_packed",
       "_keyxym_v26_copy_receipts", "_keyxym_v26_copy_preview_packed",
       "_keyxym_v26_geometry_revision", "_keyxym_v26_copy_geometry_snapshot_packed",
+      "_keyxym_v26_copy_surface_snapshot_packed",
       "_keyxym_v26_quality_packed", "_keyxym_v26_authority_packed",
     ] as const) if (!(name in module)) throw new Error(`Keyxym v0.26 ABI missing ${name}`);
 
@@ -184,17 +196,41 @@ export class KeyxymV26Runtime {
     if (frame.sourceCommitment.byteLength !== 32) throw new Error("Keyxym source commitment must be 32 bytes");
     if (frame.timestampNs <= this.lastTimestampNs) throw new Error("Keyxym timestamps must increase strictly");
     if (![frame.fx, frame.fy, frame.cx, frame.cy, frame.scaleMetersPerUnit].every(finite) || frame.fx <= 0 || frame.fy <= 0 || frame.scaleMetersPerUnit <= 0) throw new Error("Keyxym camera model is invalid");
+    if (frame.metricScale !== (frame.spatial !== undefined)) throw new Error("Keyxym metric authority requires calibrated spatial evidence");
+    if (frame.spatial && (frame.spatial.depthMeters.length !== pixels ||
+        frame.spatial.worldFromCamera.length !== 16 ||
+        frame.spatial.calibrationReceipt.byteLength !== 32 ||
+        !frame.spatial.depthMeters.every((depth) => finite(depth) && depth >= 0) ||
+        !frame.spatial.worldFromCamera.every(finite))) {
+      throw new Error("Keyxym calibrated spatial payload is invalid");
+    }
 
     const rgba = writeBytes(this.module, frame.rgba);
     const commitment = writeBytes(this.module, frame.sourceCommitment);
     const posePointer = this.module._malloc(KEYXYM_V26_POSE_FLOATS * 4);
+    const depthPointer = frame.spatial ? this.module._malloc(frame.spatial.depthMeters.byteLength) : 0;
+    const spatialPosePointer = frame.spatial ? this.module._malloc(frame.spatial.worldFromCamera.byteLength) : 0;
+    const calibrationPointer = frame.spatial ? writeBytes(this.module, frame.spatial.calibrationReceipt) : 0;
     try {
-      const status = this.module._keyxym_v26_ingest_rgba_packed(
-        this.session, BigInt.asIntN(64, frame.timestampNs), frame.width, frame.height,
-        frame.fx, frame.fy, frame.cx, frame.cy, frame.scaleMetersPerUnit,
-        frame.metricScale ? 1 : 0, rgba, frame.rgba.byteLength, commitment,
-        frame.sourceCommitment.byteLength, posePointer, KEYXYM_V26_POSE_FLOATS,
-      );
+      if (frame.spatial) {
+        this.module.HEAPF32.set(frame.spatial.depthMeters, depthPointer >>> 2);
+        this.module.HEAPF32.set(frame.spatial.worldFromCamera, spatialPosePointer >>> 2);
+      }
+      const status = frame.spatial
+        ? this.module._keyxym_v26_ingest_spatial_rgba_packed(
+          this.session, BigInt.asIntN(64, frame.timestampNs), frame.width, frame.height,
+          frame.fx, frame.fy, frame.cx, frame.cy, rgba, frame.rgba.byteLength,
+          depthPointer, frame.spatial.depthMeters.length,
+          spatialPosePointer, frame.spatial.worldFromCamera.length,
+          calibrationPointer, frame.spatial.calibrationReceipt.byteLength,
+          commitment, frame.sourceCommitment.byteLength, posePointer, KEYXYM_V26_POSE_FLOATS,
+        )
+        : this.module._keyxym_v26_ingest_rgba_packed(
+          this.session, BigInt.asIntN(64, frame.timestampNs), frame.width, frame.height,
+          frame.fx, frame.fy, frame.cx, frame.cy, frame.scaleMetersPerUnit,
+          0, rgba, frame.rgba.byteLength, commitment,
+          frame.sourceCommitment.byteLength, posePointer, KEYXYM_V26_POSE_FLOATS,
+        );
       if (status === INVALID_ARGUMENT) throw new Error("Keyxym rejected the browser frame");
       if (status !== OK) throw new Error(`Keyxym v0.26 ingest failed (${status})`);
       const poseValues = this.module.HEAPF32.slice(posePointer >>> 2, (posePointer >>> 2) + KEYXYM_V26_POSE_FLOATS);
@@ -211,6 +247,9 @@ export class KeyxymV26Runtime {
       this.module._free(rgba);
       this.module._free(commitment);
       this.module._free(posePointer);
+      if (depthPointer) this.module._free(depthPointer);
+      if (spatialPosePointer) this.module._free(spatialPosePointer);
+      if (calibrationPointer) this.module._free(calibrationPointer);
     }
   }
 
@@ -271,15 +310,17 @@ export class KeyxymV26Runtime {
     return this.copyPacked(KEYXYM_V26_FORMING_FLOATS, KEYXYM_V26_MAXIMUM_FORMING_SAMPLES, (o, c, r) => this.module._keyxym_v26_copy_preview_packed(this.session, o, c, r));
   }
 
-  private geometry(): { geometry: Float32Array | null; geometryRevision: bigint } {
+  private geometry(): { geometry: Float32Array | null; surface: Float32Array | null; geometryRevision: bigint } {
     const revision = this.module._keyxym_v26_geometry_revision(this.session);
-    if (revision === this.lastGeometryRevision) return { geometry: null, geometryRevision: revision };
+    if (revision === this.lastGeometryRevision) return { geometry: null, surface: null, geometryRevision: revision };
     const required = this.module._malloc(4);
     const revisionPointer = this.module._malloc(8);
     try {
       const probe = this.module._keyxym_v26_copy_geometry_snapshot_packed(this.session, 0, 0, required, revisionPointer);
       const count = new DataView(this.module.HEAPU8.buffer).getUint32(required, true);
+      const returnedRevision = new DataView(this.module.HEAPU8.buffer).getBigUint64(revisionPointer, true);
       if (probe !== OK && probe !== BUFFER_TOO_SMALL) throw new Error(`Keyxym geometry probe failed (${probe})`);
+      if (returnedRevision !== revision) throw new Error("Keyxym geometry snapshot revision diverges from authority");
       if (count % KEYXYM_V26_SURFEL_FLOATS !== 0 || count / KEYXYM_V26_SURFEL_FLOATS > KEYXYM_V26_MAXIMUM_SURFELS) throw new Error("Keyxym geometry exceeds contract");
       let geometry = new Float32Array();
       if (count > 0) {
@@ -287,12 +328,43 @@ export class KeyxymV26Runtime {
         try {
           const status = this.module._keyxym_v26_copy_geometry_snapshot_packed(this.session, output, count, required, revisionPointer);
           if (status !== OK) throw new Error(`Keyxym geometry copy failed (${status})`);
+          if (new DataView(this.module.HEAPU8.buffer).getBigUint64(revisionPointer, true) !== revision) {
+            throw new Error("Keyxym geometry changed during snapshot copy");
+          }
           geometry = this.module.HEAPF32.slice(output >>> 2, (output >>> 2) + count);
           if (!geometry.every(finite)) throw new Error("Keyxym geometry is non-finite");
         } finally { this.module._free(output); }
       }
+      const surface = this.surface(revision);
       this.lastGeometryRevision = revision;
-      return { geometry, geometryRevision: revision };
+      return { geometry, surface, geometryRevision: revision };
+    } finally { this.module._free(required); this.module._free(revisionPointer); }
+  }
+
+  private surface(expectedRevision: bigint): Float32Array {
+    const required = this.module._malloc(4);
+    const revisionPointer = this.module._malloc(8);
+    try {
+      const probe = this.module._keyxym_v26_copy_surface_snapshot_packed(
+        this.session, 0, 0, required, revisionPointer);
+      const count = new DataView(this.module.HEAPU8.buffer).getUint32(required, true);
+      const returnedRevision = new DataView(this.module.HEAPU8.buffer).getBigUint64(revisionPointer, true);
+      if (probe !== OK && probe !== BUFFER_TOO_SMALL) throw new Error(`Keyxym surface probe failed (${probe})`);
+      if (returnedRevision !== expectedRevision) throw new Error("Keyxym surface revision diverges from authority geometry");
+      if (count % (KEYXYM_V26_SURFACE_VERTEX_FLOATS * 3) !== 0 ||
+          count / KEYXYM_V26_SURFACE_VERTEX_FLOATS > KEYXYM_V26_MAXIMUM_SURFACE_VERTICES) {
+        throw new Error("Keyxym surface output exceeds contract");
+      }
+      if (count === 0) return new Float32Array();
+      const output = this.module._malloc(count * 4);
+      try {
+        const status = this.module._keyxym_v26_copy_surface_snapshot_packed(
+          this.session, output, count, required, revisionPointer);
+        if (status !== OK) throw new Error(`Keyxym surface copy failed (${status})`);
+        const values = this.module.HEAPF32.slice(output >>> 2, (output >>> 2) + count);
+        if (!values.every(finite)) throw new Error("Keyxym surface output is non-finite");
+        return values;
+      } finally { this.module._free(output); }
     } finally { this.module._free(required); this.module._free(revisionPointer); }
   }
 

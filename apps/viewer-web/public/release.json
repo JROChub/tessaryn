@@ -12,10 +12,10 @@
   "deployment": null,
   "authority": {
     "keyxym": {
-      "version": "0.26.0",
-      "abi": "keyxym-v26-reality-authority-1",
+      "version": "0.26.1",
+      "abi": "keyxym-v26-reality-authority-spatial-surface-3",
       "source_repository": "JROChub/keyxym_map",
-      "source_commit": "c94d4db57d1db89e96cb7fd860da2d4c1617f516",
+      "source_commit": "5758375618325d215ce9ed6ad96872f36179e188",
       "source_exact": true
     },
     "browser_assurance": {
