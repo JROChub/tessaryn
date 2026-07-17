@@ -6,7 +6,7 @@
   },
   "inputs": {
     "Cargo.lock": "7544b3dccb0fc6913fb31cc484906392dee194c1dee3d949c05bbdf23feaeae3",
-    "apps/viewer-web/package-lock.json": "4b7b182d5964615175823ce26d15112ef35aa59090b10820951b97fc5795cdc6"
+    "apps/viewer-web/package-lock.json": "e939879a533ccc46bae1bd96f20b58ded81c75729d2472b548b152acda1760a8"
   },
   "files": {
     "sbom/rust/tessaryn-anchor.cdx.json": "a2d27d4b3a8183fa3d5c670d5a29c22a3290ed92aa30ccb20a9701f07f096df3",
