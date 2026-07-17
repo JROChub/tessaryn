@@ -1,5 +1,6 @@
 import "./world-cell-theater.css";
 import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { KeyxymV26Manifest } from "./keyxym-v26-provenance";
 import {
   KEYXYM_V26_SURFEL_FLOATS,
@@ -83,6 +84,14 @@ interface MetricSensorCalibration {
   scaleMetersPerUnit: number;
   device: string;
   receipt: string;
+  intrinsics?: {
+    width: number;
+    height: number;
+    fx: number;
+    fy: number;
+    cx: number;
+    cy: number;
+  };
 }
 
 declare global {
@@ -99,7 +108,7 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 };
 
 const ZERO_DIGEST = "0".repeat(64);
-const MAX_MOMENTS = 24;
+const MAX_MOMENTS = 48;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -122,11 +131,15 @@ function nonzeroDigest(value: string): boolean {
 function nonzeroBytes(value: Uint8Array): boolean {
   return value.byteLength === 32 && value.some((item) => item !== 0);
 }
+function rootprintLabel(value: string): string {
+  const digest = value.startsWith("sha256:") ? value.slice(7) : value;
+  return digest.slice(0, 16).toUpperCase();
+}
 
 function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     transparent: true,
-    depthWrite: false,
+    depthWrite: !additive,
     depthTest: true,
     blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
     vertexShader: `
@@ -140,7 +153,7 @@ function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
         vAlpha = aAlpha;
         vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * viewPosition;
-        gl_PointSize = clamp(aSize * (280.0 / max(0.35, -viewPosition.z)), 1.25, 26.0);
+        gl_PointSize = clamp(aSize * (42.0 / max(0.35, -viewPosition.z)), 1.0, 14.0);
       }
     `,
     fragmentShader: `
@@ -149,9 +162,8 @@ function createPointMaterial(additive: boolean): THREE.ShaderMaterial {
       void main() {
         float radius = length(gl_PointCoord - vec2(0.5));
         if (radius > 0.5) discard;
-        float core = smoothstep(0.5, 0.06, radius);
-        float glow = smoothstep(0.5, 0.0, radius) * 0.48;
-        gl_FragColor = vec4(vColor * (0.70 + glow), vAlpha * core);
+        float core = smoothstep(0.5, 0.34, radius);
+        gl_FragColor = vec4(vColor, vAlpha * core);
       }
     `,
   });
@@ -235,6 +247,7 @@ class TheaterController {
   });
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
+  private readonly controls = new OrbitControls(this.camera, this.canvas);
   private readonly formingGeometry = new THREE.BufferGeometry();
   private readonly authorityGeometry = new THREE.BufferGeometry();
   private readonly formingCloud = new THREE.Points(this.formingGeometry, createPointMaterial(true));
@@ -271,10 +284,23 @@ class TheaterController {
   private expectedDigest = "";
   private expectedBytes = 0;
   private hadRecoveredPose = false;
+  private lastAutomaticMomentAt = 0;
+  private readonly heldKeys = new Set<string>();
+  private lastRenderAt = performance.now();
 
   constructor(private readonly manifest: KeyxymV26Manifest) {
     this.runtimeCommitmentValue = runtimeCommitment(manifest);
-    this.camera.position.set(0, 0, 2.65);
+    // Keyxym's camera convention looks down +Z; the renderer converts it to
+    // Three's -Z convention so the participant begins at the capture origin.
+    this.camera.position.set(0, 0, 0.02);
+    this.controls.target.set(0, 0, -2);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.075;
+    this.controls.enablePan = true;
+    this.controls.screenSpacePanning = false;
+    this.controls.minDistance = 0.05;
+    this.controls.maxDistance = 40;
+    this.controls.zoomToCursor = true;
     this.scene.add(this.formingCloud, this.authorityCloud);
     const grid = new THREE.GridHelper(3.6, 36, 0x123d52, 0x091925);
     grid.rotation.x = Math.PI / 2;
@@ -283,6 +309,15 @@ class TheaterController {
     (grid.material as THREE.Material).opacity = 0.24;
     this.scene.add(grid);
     this.scene.add(new THREE.AmbientLight(0xffffff, 1));
+    this.canvas.tabIndex = 0;
+    window.addEventListener("keydown", (event) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"].includes(event.code)) {
+        this.heldKeys.add(event.code);
+        event.preventDefault();
+      }
+    });
+    window.addEventListener("keyup", (event) => this.heldKeys.delete(event.code));
     new ResizeObserver(() => this.resize()).observe(this.canvas);
     this.resize();
     this.render();
@@ -315,11 +350,33 @@ class TheaterController {
   }
 
   private render = (): void => {
-    if (!this.running) this.authorityCloud.rotation.y += 0.00035;
-    this.formingCloud.rotation.y *= 0.96;
+    const now = performance.now();
+    const elapsed = Math.min(0.05, Math.max(0, (now - this.lastRenderAt) / 1_000));
+    this.lastRenderAt = now;
+    this.updateNavigation(elapsed);
+    this.controls.update();
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this.render);
   };
+
+  private updateNavigation(elapsed: number): void {
+    if (!this.heldKeys.size || elapsed <= 0) return;
+    const forward = new THREE.Vector3().subVectors(this.controls.target, this.camera.position);
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-8) forward.set(0, 0, -1);
+    forward.normalize();
+    const right = new THREE.Vector3().crossVectors(forward, this.camera.up).normalize();
+    const movement = new THREE.Vector3();
+    if (this.heldKeys.has("KeyW") || this.heldKeys.has("ArrowUp")) movement.add(forward);
+    if (this.heldKeys.has("KeyS") || this.heldKeys.has("ArrowDown")) movement.sub(forward);
+    if (this.heldKeys.has("KeyD") || this.heldKeys.has("ArrowRight")) movement.add(right);
+    if (this.heldKeys.has("KeyA") || this.heldKeys.has("ArrowLeft")) movement.sub(right);
+    if (movement.lengthSq() <= 0) return;
+    const fast = this.heldKeys.has("ShiftLeft") || this.heldKeys.has("ShiftRight");
+    movement.normalize().multiplyScalar((fast ? 2.4 : 0.8) * elapsed);
+    this.camera.position.add(movement);
+    this.controls.target.add(movement);
+  }
 
   private bindControls(): void {
     element<HTMLButtonElement>("start-button").onclick = () => void this.startCamera().catch((error) => this.fail(error));
@@ -427,6 +484,7 @@ class TheaterController {
       sourceHeight,
       scaleMetersPerUnit: calibration?.scaleMetersPerUnit ?? 1,
       metricScale: calibration !== null,
+      intrinsics: calibration?.intrinsics,
     });
     const previouslyRecovered = this.hadRecoveredPose;
     this.pose = result.pose;
@@ -445,6 +503,25 @@ class TheaterController {
     this.updateQualityUi();
     this.recordRuntimeEvidence();
     this.updateControls();
+    const latestMoment = this.moments.at(-1);
+    const sealTransition = result.authority.sealAllowed && latestMoment?.authority.sealAllowed !== true;
+    if (this.canCommitMoment() && this.moments.length < MAX_MOMENTS &&
+        latestMoment?.geometryRevision !== this.geometrySnapshot.revision.toString() &&
+        (sealTransition || Date.now() - this.lastAutomaticMomentAt >= 2_500)) {
+      await this.commitMoment(true);
+      this.lastAutomaticMomentAt = Date.now();
+      if (result.authority.sealAllowed && nativeAssuranceBridge()) {
+        try {
+          await this.seal();
+        } catch (error) {
+          // Preserve capture continuity if the local assurance transport is
+          // temporarily unavailable. The exact seal-ready Moment remains
+          // immutable and available for an explicit retry.
+          console.warn("Automatic World Cell seal deferred", error);
+          setText("cell-state", "WORLD CELL / SEAL READY / RETRY AVAILABLE");
+        }
+      }
+    }
     if (previouslyRecovered && !result.pose.recovered) {
       this.setStageMessage("TRACKING FROZEN", "Authoritative geometry is frozen. Return to a textured, previously observed view for relocalization.", true);
     } else if (result.pose.recovered) {
@@ -457,6 +534,8 @@ class TheaterController {
     document.documentElement.dataset.authorityRejectionMask = String(result.authority.rejectionMask);
     document.documentElement.dataset.momentAllowed = String(result.authority.momentAllowed);
     document.documentElement.dataset.sealAllowed = String(result.authority.sealAllowed);
+    if (result.authority.momentAllowed) document.documentElement.dataset.everMomentReady = "true";
+    if (result.authority.sealAllowed) document.documentElement.dataset.everSealReady = "true";
   }
 
   private updateFormingCloud(samples: KeyxymFormingSample[], coverage: number): void {
@@ -471,10 +550,10 @@ class TheaterController {
       const temporalDepth = Math.min(0.34, sample.age * 0.006 + flow * 2.5);
       positions[index * 3] = sample.normalizedX * (1.10 + temporalDepth * 0.18) + sample.flowX * 3.4;
       positions[index * 3 + 1] = sample.normalizedY * (0.84 + temporalDepth * 0.12) + sample.flowY * 3.4;
-      positions[index * 3 + 2] = -0.86 + temporalDepth + Math.min(0.07, sample.salience * 0.10);
+      positions[index * 3 + 2] = -0.86 - temporalDepth - Math.min(0.07, sample.salience * 0.10);
       colors[index * 3] = sample.r; colors[index * 3 + 1] = sample.g; colors[index * 3 + 2] = sample.b;
       alpha[index] = Math.max(0.07, (0.72 - authorityWeight * 0.50) * (0.30 + clamp01(sample.trackSupport) * 0.70));
-      size[index] = 2.2 + Math.min(9, sample.age * 0.20) + Math.min(5, flow * 82);
+      size[index] = 0.45 + Math.min(0.75, sample.age * 0.025) + Math.min(0.65, flow * 16);
     }
     setPointGeometry(this.formingGeometry, positions, colors, alpha, size);
   }
@@ -486,20 +565,19 @@ class TheaterController {
     const size = new Float32Array(surfels.length);
     for (let index = 0; index < surfels.length; index += 1) {
       const surfel = surfels[index]!;
-      positions[index * 3] = surfel.x; positions[index * 3 + 1] = surfel.y; positions[index * 3 + 2] = surfel.z;
+      positions[index * 3] = surfel.x;
+      positions[index * 3 + 1] = -surfel.y;
+      positions[index * 3 + 2] = -surfel.z;
       colors[index * 3] = clamp01(surfel.r); colors[index * 3 + 1] = clamp01(surfel.g); colors[index * 3 + 2] = clamp01(surfel.b);
-      alpha[index] = Math.max(0.14, clamp01(surfel.confidence) * (1 - Math.min(0.78, Math.max(0, surfel.uncertainty))));
-      size[index] = 3.0 + Math.min(7, surfel.observations * 0.8) + clamp01(surfel.confidence) * 2.8;
+      alpha[index] = Math.max(0.28, clamp01(surfel.confidence) * (1 - Math.min(0.72, Math.max(0, surfel.uncertainty))));
+      size[index] = 0.55 + Math.min(0.85, surfel.observations * 0.10) + clamp01(surfel.confidence) * 0.65;
     }
     setPointGeometry(this.authorityGeometry, positions, colors, alpha, size);
-    const sphere = this.authorityGeometry.boundingSphere;
-    if (sphere && sphere.radius > 0.00001) {
-      this.authorityCloud.position.copy(sphere.center).multiplyScalar(-1);
-      this.authorityCloud.scale.setScalar(Math.min(4, 0.92 / sphere.radius));
-    } else {
-      this.authorityCloud.position.set(0, 0, 0);
-      this.authorityCloud.scale.setScalar(1);
-    }
+    // Never recenter or renormalize an evolving map. Its origin is the first
+    // camera pose and remains stable for locomotion, replay, and occlusion.
+    this.authorityCloud.position.set(0, 0, 0);
+    this.authorityCloud.scale.setScalar(1);
+    this.formingCloud.visible = surfels.length < 1_024;
     setText("surfel-count", surfels.length.toLocaleString());
   }
 
@@ -522,7 +600,9 @@ class TheaterController {
     setText("uncertain-value", Math.round(this.quality.uncertain).toLocaleString());
     setText("rejected-value", Math.round(this.quality.rejected).toLocaleString());
     setText("scale-value", this.quality.metricScale ? "METRIC" : "RELATIVE");
-    setText("cell-state", `WORLD CELL / ${this.quality.metricScale ? "METRIC" : "RELATIVE"} / ${label}`);
+    setText("cell-state", this.sealedCell
+      ? `WORLD CELL / SEALED / ${this.sealedCell.scaleState.toUpperCase()} / ${this.sealedCell.moments.length} MOMENTS`
+      : `WORLD CELL / ${this.quality.metricScale ? "METRIC" : "RELATIVE"} / ${label}`);
     setWidth("quality-meter", clamp01(this.authority.score) * 100);
     setWidth("compute-meter", Math.min(100, 18 + this.formingSamples.length / 120 + this.geometrySnapshot.surfels.length / 480));
     setText("capture-state", label);
@@ -576,7 +656,7 @@ class TheaterController {
       nonzeroDigest(this.sourceCommitment);
   }
 
-  private async commitMoment(): Promise<void> {
+  private async commitMoment(automatic = false): Promise<void> {
     if (!this.canCommitMoment() || !this.pose || !this.quality || !this.authority || !this.receipts) {
       throw new Error("The native Keyxym v0.26 authority decision does not permit a Moment");
     }
@@ -585,7 +665,7 @@ class TheaterController {
     const parent = this.moments.at(-1)?.canonicalDigest ?? ZERO_DIGEST;
     const body: Omit<MomentRecord, "canonicalDigest"> = {
       schema: "tessaryn/world-cell-moment/v26",
-      id: `moment-${String(this.moments.length).padStart(4, "0")}`,
+      id: `${automatic ? "continuum" : "moment"}-${String(this.moments.length).padStart(4, "0")}`,
       sequence: this.moments.length + 1,
       createdAtUnixMs: Date.now(),
       geometryRevision: this.geometrySnapshot.revision.toString(),
@@ -703,7 +783,8 @@ class TheaterController {
       throw new Error("eform and Power House rejected the sealed World Cell");
     }
     this.sealedCell = { ...draft, canonicalDigest, assuranceEvidence: evidence, seal };
-    setText("rootprint", seal.rootprint.slice(0, 16).toUpperCase());
+    document.documentElement.dataset.worldCellSealed = "true";
+    setText("rootprint", rootprintLabel(seal.rootprint));
     setText("cell-state", `WORLD CELL / SEALED / ${draft.scaleState.toUpperCase()} / ${this.moments.length} MOMENTS`);
     element("evidence-log").textContent = JSON.stringify({ runtimeEvidence: this.evidence, assuranceEvidence: evidence, seal }, null, 2);
     this.updateControls();
@@ -836,7 +917,7 @@ class TheaterController {
     this.currentMoment = Math.max(0, this.moments.length - 1);
     this.updateTimeline();
     this.showMoment(this.currentMoment);
-    setText("rootprint", cell.seal.rootprint.slice(0, 16).toUpperCase());
+    setText("rootprint", rootprintLabel(cell.seal.rootprint));
     setText("transfer-state", `VERIFIED / reconstructed ${bytes.byteLength.toLocaleString()} sealed bytes.`);
     this.updateControls();
   }
@@ -975,6 +1056,10 @@ class TheaterController {
     this.sealedCell = null;
     this.currentMoment = 0;
     this.hadRecoveredPose = false;
+    this.lastAutomaticMomentAt = 0;
+    delete document.documentElement.dataset.everMomentReady;
+    delete document.documentElement.dataset.everSealReady;
+    delete document.documentElement.dataset.worldCellSealed;
     setPointGeometry(this.formingGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
     setPointGeometry(this.authorityGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
     setText("surfel-count", "0"); setText("frame-count", "0"); setText("pose-state", "KEYXYM READY");

@@ -20,6 +20,7 @@ export type KeyxymV26WorkerRequest =
       sourceHeight: number;
       scaleMetersPerUnit: number;
       metricScale: boolean;
+      intrinsics?: { width: number; height: number; fx: number; fy: number; cx: number; cy: number };
     }
   | { type: "destroy" };
 

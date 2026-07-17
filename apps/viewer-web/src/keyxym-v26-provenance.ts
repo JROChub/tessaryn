@@ -1,10 +1,10 @@
 export interface KeyxymV26ArtifactRecord { bytes: number; sha256: string }
 
 export interface KeyxymV26Manifest {
-  schema: "keyxym.browser-runtime-provenance/v8";
+  schema: "keyxym.browser-runtime-provenance/v9";
   version: "0.26.0";
   abi: "keyxym-v26-reality-authority-1";
-  perception_abi: "keyxym-v26-calibrated-cpp-frontend-v1";
+  perception_abi: "keyxym-v26-dense-photometric-surface-v1";
   source_repository: "JROChub/keyxym_map";
   source_commit: string;
   source_exact: true;
@@ -12,7 +12,7 @@ export interface KeyxymV26Manifest {
   maximum_surfels: 48000;
   maximum_analysis_width: 320;
   maximum_analysis_height: 240;
-  maximum_tracks: 384;
+  maximum_tracks: 768;
   maximum_preview_samples: 8192;
   timestamp_abi: "wasm-bigint-i64";
   pose_floats: 27;
@@ -28,24 +28,24 @@ export interface KeyxymV26Manifest {
     official_package_sha256: string;
   };
   validation: {
-    profile: "prxf/photographic-reconstruction-qualification/v2";
+    profile: "prxf/photographic-continuum-qualification/v3";
     reproducible_builds: 2;
     artifacts_identical: true;
     native_tests: 26;
     sanitizer_tests: 26;
+    sanitizer_compilers: 2;
     mobile_sdk_tests: 25;
     wasm_runtime: true;
-    tartanair_rgb_sha256: string;
-    tartanair_maximum_matches: 194;
-    tartanair_maximum_inliers: 16;
-    tartanair_maximum_surfels: 1000;
-    tartanair_maximum_revision: 14;
     middlebury_temple_ring_sha256: string;
     middlebury_views: 18;
-    middlebury_recovered_frames: 6;
-    middlebury_maximum_surfels: 198;
-    middlebury_terminal_surfels: 198;
-    middlebury_maximum_revision: 5;
+    middlebury_recovered_frames: 10;
+    middlebury_maximum_surfels: 2341;
+    middlebury_terminal_surfels: 2341;
+    middlebury_maximum_revision: 9;
+    middlebury_maximum_confirmed_surfels: 909;
+    middlebury_maximum_parallax_degrees: number;
+    middlebury_moment_ready_frames: 2;
+    middlebury_seal_ready_frames: 1;
     duplicate_geometry_suppressed: true;
   };
   artifacts: {
@@ -60,9 +60,9 @@ export interface KeyxymV26AssetUrls {
   wasm: string;
 }
 
-const SOURCE = "82fd76af0e502e48e7700144f33ca267e7929215";
+const SOURCE = "2672ebe79655b3d78912b9332e24057b35772008";
 const MODULE_SHA256 = "e6d8e6511cb57b4a5049ae81ae7fee50268d94d08a80991d6005f2b5587589bf";
-const WASM_SHA256 = "b14dfbb6369eaaa707b96d39147166d7c659e6817a2b41e3106a3a97197967bf";
+const WASM_SHA256 = "ed18dc74a756ca4c95848036f72baa521d02a733350ce3e589ce4423186c8c52";
 const EMSCRIPTEN_RELEASE = "9074aa513b501925adb1361e208932ad32a29a5f";
 const EMSCRIPTEN_PACKAGE = "3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3";
 const HASH = /^[0-9a-f]{64}$/;
@@ -112,27 +112,30 @@ export async function verifyKeyxymV26Bundle(): Promise<KeyxymV26Manifest> {
   const response = await fetch(urls.manifest, { cache: "no-store", credentials: "same-origin", redirect: "error" });
   if (!response.ok) throw new Error(`Keyxym v0.26 manifest unavailable (${response.status})`);
   const manifest = await response.json() as KeyxymV26Manifest;
-  if (manifest.schema !== "keyxym.browser-runtime-provenance/v8" || manifest.version !== "0.26.0" ||
-      manifest.abi !== "keyxym-v26-reality-authority-1" || manifest.perception_abi !== "keyxym-v26-calibrated-cpp-frontend-v1" ||
+  if (manifest.schema !== "keyxym.browser-runtime-provenance/v9" || manifest.version !== "0.26.0" ||
+      manifest.abi !== "keyxym-v26-reality-authority-1" || manifest.perception_abi !== "keyxym-v26-dense-photometric-surface-v1" ||
       manifest.source_repository !== "JROChub/keyxym_map" || manifest.source_commit !== SOURCE || manifest.source_exact !== true ||
       manifest.derivation !== "source-exact-reproducible-local-build" || manifest.maximum_surfels !== 48_000 ||
-      manifest.maximum_analysis_width !== 320 || manifest.maximum_analysis_height !== 240 || manifest.maximum_tracks !== 384 ||
+      manifest.maximum_analysis_width !== 320 || manifest.maximum_analysis_height !== 240 || manifest.maximum_tracks !== 768 ||
       manifest.maximum_preview_samples !== 8_192 || manifest.timestamp_abi !== "wasm-bigint-i64" || manifest.pose_floats !== 27 ||
       manifest.quality_floats !== 8 || manifest.authority_floats !== 8 || manifest.preview_record_floats !== 10 ||
       manifest.geometry_record_floats !== 13 || manifest.receipt_bytes !== 96 || manifest.toolchain.name !== "Emscripten" ||
       manifest.toolchain.version !== "6.0.3" || manifest.toolchain.release_commit !== EMSCRIPTEN_RELEASE ||
       manifest.toolchain.official_package_sha256 !== EMSCRIPTEN_PACKAGE ||
-      manifest.validation.profile !== "prxf/photographic-reconstruction-qualification/v2" ||
+      manifest.validation.profile !== "prxf/photographic-continuum-qualification/v3" ||
       manifest.validation.reproducible_builds !== 2 || !manifest.validation.artifacts_identical ||
       manifest.validation.native_tests !== 26 || manifest.validation.sanitizer_tests !== 26 ||
+      manifest.validation.sanitizer_compilers !== 2 ||
       manifest.validation.mobile_sdk_tests !== 25 || !manifest.validation.wasm_runtime ||
-      manifest.validation.tartanair_rgb_sha256 !== "9bea5fca9d0cf50105c7d34583d4d5db06e3715ef708262b4dfad763d34b17da" ||
-      manifest.validation.tartanair_maximum_matches !== 194 || manifest.validation.tartanair_maximum_inliers !== 16 ||
-      manifest.validation.tartanair_maximum_surfels !== 1000 || manifest.validation.tartanair_maximum_revision !== 14 ||
       manifest.validation.middlebury_temple_ring_sha256 !== "5f871fe96d25f510eac026c66c3a4c38229326260986e9926cba8a64e88c8359" ||
-      manifest.validation.middlebury_views !== 18 || manifest.validation.middlebury_recovered_frames !== 6 ||
-      manifest.validation.middlebury_maximum_surfels !== 198 || manifest.validation.middlebury_terminal_surfels !== 198 ||
-      manifest.validation.middlebury_maximum_revision !== 5 || !manifest.validation.duplicate_geometry_suppressed ||
+      manifest.validation.middlebury_views !== 18 || manifest.validation.middlebury_recovered_frames !== 10 ||
+      manifest.validation.middlebury_maximum_surfels !== 2341 || manifest.validation.middlebury_terminal_surfels !== 2341 ||
+      manifest.validation.middlebury_maximum_revision !== 9 ||
+      manifest.validation.middlebury_maximum_confirmed_surfels !== 909 ||
+      manifest.validation.middlebury_maximum_parallax_degrees < 7.45 ||
+      manifest.validation.middlebury_moment_ready_frames !== 2 ||
+      manifest.validation.middlebury_seal_ready_frames !== 1 ||
+      !manifest.validation.duplicate_geometry_suppressed ||
       Object.keys(manifest.artifacts).sort().join(",") !== "keyxym-v26.mjs,keyxym-v26.wasm") {
     throw new Error("Keyxym v0.26 provenance violates the reality-authority contract");
   }

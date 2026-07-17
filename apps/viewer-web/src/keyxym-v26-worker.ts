@@ -55,15 +55,21 @@ async function processFrame(request: Extract<KeyxymV26WorkerRequest, { type: "fr
   const image = context.getImageData(0, 0, width, height);
   const rgba = new Uint8Array(image.data.buffer.slice(0));
   const sourceCommitment = new Uint8Array(await crypto.subtle.digest("SHA-256", rgba));
+  const supplied = request.intrinsics;
+  const suppliedValid = supplied !== undefined &&
+    [supplied.width, supplied.height, supplied.fx, supplied.fy, supplied.cx, supplied.cy].every(Number.isFinite) &&
+    supplied.width > 0 && supplied.height > 0 && supplied.fx > 0 && supplied.fy > 0;
+  const scaleX = suppliedValid ? width / supplied.width : 1;
+  const scaleY = suppliedValid ? height / supplied.height : 1;
   const focal = width / (2 * Math.tan(Math.PI / 6));
   const snapshot = runtime.ingest({
     timestampNs: BigInt(request.timestampNs),
     width,
     height,
-    fx: focal,
-    fy: focal,
-    cx: width / 2,
-    cy: height / 2,
+    fx: suppliedValid ? supplied.fx * scaleX : focal,
+    fy: suppliedValid ? supplied.fy * scaleY : focal,
+    cx: suppliedValid ? supplied.cx * scaleX : width / 2,
+    cy: suppliedValid ? supplied.cy * scaleY : height / 2,
     scaleMetersPerUnit: request.scaleMetersPerUnit,
     metricScale: request.metricScale,
     rgba,

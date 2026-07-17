@@ -146,7 +146,7 @@ export class KeyxymV26Runtime {
     const voxelSize = options.voxelSizeMeters ?? 0.018;
     const width = options.maximumAnalysisWidth ?? 320;
     const height = options.maximumAnalysisHeight ?? 240;
-    const tracks = options.maximumTracks ?? 384;
+    const tracks = options.maximumTracks ?? 768;
     const forming = options.maximumFormingSamples ?? KEYXYM_V26_MAXIMUM_FORMING_SAMPLES;
     for (const [value, name] of [[width, "analysis width"], [height, "analysis height"], [tracks, "track budget"], [forming, "forming budget"]] as const) positiveInteger(value, name);
     if (!finite(voxelSize) || voxelSize <= 0) throw new Error("Keyxym voxel size is invalid");
