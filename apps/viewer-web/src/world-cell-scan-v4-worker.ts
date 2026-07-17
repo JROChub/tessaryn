@@ -43,6 +43,8 @@ interface SolveMetrics {
   parallaxDegrees: number;
   coverage: number;
   triangulationAngleDegrees: number;
+  rotationOnlyErrorPixels: number;
+  rotationOnlyInlierRatio: number;
   processingMs: number;
 }
 
@@ -100,6 +102,11 @@ const EPSILON = 1e-10;
 const MIN_MATCHES = 24;
 const MIN_RECONSTRUCTED_POINTS = 16;
 const MAX_OUTPUT_POINTS = 900;
+const ROTATION_ONLY_INLIER_PIXELS = 1.5;
+const ROTATION_ONLY_MAX_MEDIAN_ERROR_PIXELS = 1.25;
+const ROTATION_ONLY_MIN_INLIERS = 16;
+const ROTATION_ONLY_MIN_INLIER_RATIO = 0.6;
+const ROTATION_ONLY_MAX_ORTHOGONALITY_ERROR = 0.12;
 
 const clamp = (value: number, low: number, high: number): number =>
   Math.max(low, Math.min(high, value));
@@ -357,10 +364,12 @@ function sampsonError(matrix: number[], match: NormalizedMatch): number {
   );
 }
 
-function deterministicSample(count: number, seed: number): number[] {
+function deterministicSample(count: number, seed: number, size = 8): number[] {
+  if (!Number.isSafeInteger(count) || !Number.isSafeInteger(size) ||
+      count <= 0 || size <= 0 || size > count) return [];
   const output: number[] = [];
   let state = seed >>> 0;
-  while (output.length < 8) {
+  while (output.length < size) {
     state = (1664525 * state + 1013904223) >>> 0;
     const candidate = state % count;
     if (!output.includes(candidate)) output.push(candidate);
@@ -382,6 +391,96 @@ function estimateEssentialRansac(matches: NormalizedMatch[], focalLength: number
   }
   if (bestInliers.length < 8) return null;
   return { matrix: estimateEssential(bestInliers), inliers: bestInliers };
+}
+
+function estimateCalibratedHomography(matches: NormalizedMatch[]): number[] {
+  const normal = new Array<number>(81).fill(0);
+  for (const match of matches) {
+    const rows = [
+      [-match.x1, -match.y1, -1, 0, 0, 0,
+        match.x2 * match.x1, match.x2 * match.y1, match.x2],
+      [0, 0, 0, -match.x1, -match.y1, -1,
+        match.y2 * match.x1, match.y2 * match.y1, match.y2],
+    ];
+    for (const row of rows) {
+      for (let left = 0; left < 9; left += 1) {
+        for (let right = left; right < 9; right += 1) {
+          const value = (normal[left * 9 + right] ?? 0) +
+            (row[left] ?? 0) * (row[right] ?? 0);
+          normal[left * 9 + right] = value;
+          normal[right * 9 + left] = value;
+        }
+      }
+    }
+  }
+  return smallestEigenvector(normal, 9);
+}
+
+function homographyResidualPixels(
+  homography: number[],
+  match: NormalizedMatch,
+  focalLength: number,
+): number {
+  const weight = (homography[6] ?? 0) * match.x1 +
+    (homography[7] ?? 0) * match.y1 + (homography[8] ?? 0);
+  if (Math.abs(weight) <= EPSILON) return Number.POSITIVE_INFINITY;
+  const x = ((homography[0] ?? 0) * match.x1 +
+    (homography[1] ?? 0) * match.y1 + (homography[2] ?? 0)) / weight;
+  const y = ((homography[3] ?? 0) * match.x1 +
+    (homography[4] ?? 0) * match.y1 + (homography[5] ?? 0)) / weight;
+  return focalLength * Math.hypot(x - match.x2, y - match.y2);
+}
+
+function rotationOrthogonalityError(homography: number[]): number {
+  const determinant = determinant3(homography);
+  if (!Number.isFinite(determinant) || Math.abs(determinant) <= EPSILON) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const sign = determinant < 0 ? -1 : 1;
+  const scale = Math.cbrt(Math.abs(determinant));
+  const normalized = homography.map((value) => value * sign / scale);
+  const gram = multiply3(transpose3(normalized), normalized);
+  let squaredError = 0;
+  for (let row = 0; row < 3; row += 1) {
+    for (let columnIndex = 0; columnIndex < 3; columnIndex += 1) {
+      const expected = row === columnIndex ? 1 : 0;
+      squaredError += ((gram[row * 3 + columnIndex] ?? 0) - expected) ** 2;
+    }
+  }
+  return Math.sqrt(squaredError / 9);
+}
+
+function rotationOnlyMetrics(
+  matches: NormalizedMatch[],
+  focalLength: number,
+): { errorPixels: number; inliers: number; inlierRatio: number; orthogonalityError: number } {
+  let bestInliers: NormalizedMatch[] = [];
+  for (let iteration = 0; iteration < 160; iteration += 1) {
+    const indices = deterministicSample(matches.length, iteration * 2246822519 + 31, 4);
+    const sample = indices.map((index) => matches[index]!).filter(Boolean);
+    if (sample.length !== 4) continue;
+    const homography = estimateCalibratedHomography(sample);
+    const inliers = matches.filter((match) =>
+      homographyResidualPixels(homography, match, focalLength) <= ROTATION_ONLY_INLIER_PIXELS);
+    if (inliers.length > bestInliers.length) bestInliers = inliers;
+  }
+  if (bestInliers.length < 4) {
+    return {
+      errorPixels: Number.POSITIVE_INFINITY,
+      inliers: 0,
+      inlierRatio: 0,
+      orthogonalityError: Number.POSITIVE_INFINITY,
+    };
+  }
+  const homography = estimateCalibratedHomography(bestInliers);
+  const residuals = bestInliers.map((match) =>
+    homographyResidualPixels(homography, match, focalLength));
+  return {
+    errorPixels: median(residuals),
+    inliers: bestInliers.length,
+    inlierRatio: bestInliers.length / Math.max(1, matches.length),
+    orthogonalityError: rotationOrthogonalityError(homography),
+  };
 }
 
 function validRotation(matrix: number[]): number[] {
@@ -752,6 +851,24 @@ function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
       coverage: selected.coverage,
     });
   }
+  const rotationOnly = rotationOnlyMetrics(essential.inliers, focalLength);
+  const modelMetrics: Partial<SolveMetrics> = {
+    pair: selected.pair,
+    matches: selected.matches.length,
+    inliers: essential.inliers.length,
+    coverage: selected.coverage,
+    rotationOnlyErrorPixels: rotationOnly.errorPixels,
+    rotationOnlyInlierRatio: rotationOnly.inlierRatio,
+  };
+  if (rotationOnly.errorPixels <= ROTATION_ONLY_MAX_MEDIAN_ERROR_PIXELS &&
+      rotationOnly.inliers >= ROTATION_ONLY_MIN_INLIERS &&
+      rotationOnly.inlierRatio >= ROTATION_ONLY_MIN_INLIER_RATIO &&
+      rotationOnly.orthogonalityError <= ROTATION_ONLY_MAX_ORTHOGONALITY_ERROR) {
+    return fail(
+      "The views are explained by camera rotation without observable translation.",
+      modelMetrics,
+    );
+  }
   let best: {
     candidate: PoseCandidate;
     points: TriangulatedPoint[];
@@ -789,6 +906,8 @@ function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
     parallaxDegrees,
     coverage: selected.coverage,
     triangulationAngleDegrees,
+    rotationOnlyErrorPixels: rotationOnly.errorPixels,
+    rotationOnlyInlierRatio: rotationOnly.inlierRatio,
   };
   if (valid.length < MIN_RECONSTRUCTED_POINTS) {
     return fail("Too few points passed positive-depth and reprojection checks.", partialMetrics);
@@ -827,6 +946,8 @@ function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
       parallaxDegrees,
       coverage: selected.coverage,
       triangulationAngleDegrees,
+      rotationOnlyErrorPixels: rotationOnly.errorPixels,
+      rotationOnlyInlierRatio: rotationOnly.inlierRatio,
       processingMs: performance.now() - startedAt,
     },
   };

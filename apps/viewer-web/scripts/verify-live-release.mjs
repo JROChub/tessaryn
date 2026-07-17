@@ -81,6 +81,13 @@ if (!/type="module"[^>]+src="\.\/assets\//u.test(legacyTheater) ||
 }
 const canonicalRoute = await fetchBytes("world-cell-theater/");
 const canonicalTheater = canonicalRoute.bytes.toString("utf8");
+const canonicalInventory = inventory.get("world-cell-theater/index.html");
+const canonicalPath = new URL(canonicalRoute.finalUrl).pathname;
+if (!canonicalInventory || canonicalRoute.bytes.byteLength !== canonicalInventory.bytes ||
+    digest(canonicalRoute.bytes) !== canonicalInventory.sha256 ||
+    !canonicalPath.endsWith("/world-cell-theater/")) {
+  throw new Error("live canonical World Cell route does not resolve to its attested directory artifact");
+}
 if (!/type="module"[^>]+src="\.\.\/assets\//u.test(canonicalTheater) ||
     canonicalTheater.includes("/src/world-cell-authority-entry.ts")) {
   throw new Error("live extensionless World Cell Theater route is not the built application entry");

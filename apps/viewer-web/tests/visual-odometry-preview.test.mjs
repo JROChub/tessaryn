@@ -30,6 +30,11 @@ test("World Cell Scan V4 gates relative geometry on measured multi-view evidence
   assert.match(worker, /positiveDepthRatio/);
   assert.match(worker, /reprojectionErrorPixels/);
   assert.match(worker, /triangulationAngleDegrees/);
+  assert.match(worker, /estimateCalibratedHomography/);
+  assert.match(worker, /rotationOnlyMetrics/);
+  assert.match(worker, /ROTATION_ONLY_MAX_MEDIAN_ERROR_PIXELS/);
+  assert.match(worker, /ROTATION_ONLY_MIN_INLIER_RATIO/);
+  assert.match(worker, /ROTATION_ONLY_MAX_ORTHOGONALITY_ERROR/);
   assert.match(worker, /selected\.coverage < 0\.24/);
   assert.match(worker, /MIN_RECONSTRUCTED_POINTS = 16/);
   assert.doesNotMatch(worker, /luminance.*depth|radial.*depth|ordinalDepth/iu);

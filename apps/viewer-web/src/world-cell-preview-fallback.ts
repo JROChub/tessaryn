@@ -55,6 +55,8 @@ interface SolveMetrics {
   parallaxDegrees: number;
   coverage: number;
   triangulationAngleDegrees: number;
+  rotationOnlyErrorPixels: number;
+  rotationOnlyInlierRatio: number;
   processingMs: number;
 }
 
@@ -360,6 +362,8 @@ function formatFailureReason(result: SolveFailure): string {
     Number.isFinite(metrics.parallaxDegrees) ? `${Number(metrics.parallaxDegrees).toFixed(2)}° parallax` : null,
     Number.isFinite(metrics.reprojectionErrorPixels) ?
       `${Number(metrics.reprojectionErrorPixels).toFixed(2)} px reprojection error` : null,
+    Number.isFinite(metrics.rotationOnlyErrorPixels) ?
+      `${Number(metrics.rotationOnlyErrorPixels).toFixed(2)} px rotation residual` : null,
   ].filter((value): value is string => value !== null);
   return `${result.reason}${measurements.length > 0 ? ` (${measurements.join(", ")})` : ""}`;
 }
@@ -595,6 +599,8 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     document.documentElement.dataset.scanState = "ready";
     document.documentElement.dataset.scanPoints = "0";
     document.documentElement.dataset.scanViews = "0";
+    delete document.documentElement.dataset.scanRotationError;
+    delete document.documentElement.dataset.scanRotationSupport;
     start.textContent = "START WORLD CELL SCAN";
     start.disabled = !navigator.mediaDevices?.getUserMedia;
     solveButton.textContent = "FINISH & SOLVE";
@@ -678,6 +684,10 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       document.documentElement.dataset.scanInliers = String(result.metrics.inliers);
       document.documentElement.dataset.scanReprojectionError =
         result.metrics.reprojectionErrorPixels.toFixed(4);
+      document.documentElement.dataset.scanRotationError =
+        result.metrics.rotationOnlyErrorPixels.toFixed(4);
+      document.documentElement.dataset.scanRotationSupport =
+        result.metrics.rotationOnlyInlierRatio.toFixed(4);
       setText("capture-state", "RELATIVE SCAN COMPLETE");
       setText("compute-state", "GEOMETRY ACCEPTED");
       setText("pose-state", "RELATIVE SOLVE");
@@ -721,6 +731,14 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       document.documentElement.dataset.scanState = "rejected";
       document.documentElement.dataset.scanResult = "no-geometry";
       document.documentElement.dataset.scanPoints = "0";
+      if (Number.isFinite(result.metrics.rotationOnlyErrorPixels)) {
+        document.documentElement.dataset.scanRotationError =
+          Number(result.metrics.rotationOnlyErrorPixels).toFixed(4);
+      }
+      if (Number.isFinite(result.metrics.rotationOnlyInlierRatio)) {
+        document.documentElement.dataset.scanRotationSupport =
+          Number(result.metrics.rotationOnlyInlierRatio).toFixed(4);
+      }
       setText("capture-state", "SCAN REJECTED");
       setText("compute-state", "NO GEOMETRY CREATED");
       setText("pose-state", "RESCAN REQUIRED");
