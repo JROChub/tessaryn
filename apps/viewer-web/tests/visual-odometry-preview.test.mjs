@@ -14,6 +14,7 @@ test("World Cell Scan V4 gates relative geometry on measured multi-view evidence
   assert.match(runtime, /tessaryn-world-cell-scan-v4/);
   assert.match(runtime, /dataset\.visualRenderer = "world-cell-scan-v4"/);
   assert.match(runtime, /dataset\.scanState = "capturing"/);
+  assert.match(runtime, /MIN_KEYFRAMES = 6/);
   assert.match(runtime, /FINISH & SOLVE/);
   assert.match(runtime, /new Worker\(new URL\("\.\/world-cell-scan-v4-worker\.ts"/);
   assert.match(runtime, /NO DEFENSIBLE GEOMETRY/);
@@ -25,6 +26,9 @@ test("World Cell Scan V4 gates relative geometry on measured multi-view evidence
   assert.doesNotMatch(runtime, /commitMoment|buildCell|channel\.send/);
 
   assert.match(worker, /estimateEssentialRansac/);
+  assert.match(worker, /choosePairs/);
+  assert.match(worker, /for \(let index = 0; index < selections\.length; index \+= 1\)/);
+  assert.match(worker, /failureProgress/);
   assert.match(worker, /decomposeEssential/);
   assert.match(worker, /triangulate/);
   assert.match(worker, /positiveDepthRatio/);

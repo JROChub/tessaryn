@@ -97,6 +97,14 @@ interface TriangulatedPoint {
   match: NormalizedMatch;
 }
 
+interface PairSelection {
+  pair: [number, number];
+  matches: PixelMatch[];
+  coverage: number;
+  medianFlow: number;
+  score: number;
+}
+
 const scope = globalThis as unknown as WorkerScope;
 const EPSILON = 1e-10;
 const MIN_MATCHES = 24;
@@ -726,6 +734,8 @@ function spatialCoverage(matches: PixelMatch[], width: number, height: number): 
 function candidatePairs(frames: ScanFramePayload[]): [number, number][] {
   const last = frames.length - 1;
   const middle = Math.floor(last / 2);
+  const lowerThird = Math.floor(last / 3);
+  const upperThird = Math.ceil(last * 2 / 3);
   const candidates: [number, number][] = [
     [0, last],
     [0, Math.max(1, last - 1)],
@@ -733,6 +743,9 @@ function candidatePairs(frames: ScanFramePayload[]): [number, number][] {
     [0, middle],
     [middle, last],
     [Math.min(1, last - 1), Math.max(2, last - 1)],
+    [0, upperThird],
+    [lowerThird, last],
+    [lowerThird, upperThird],
   ];
   const unique = new Map<string, [number, number]>();
   for (const pair of candidates) {
@@ -742,19 +755,8 @@ function candidatePairs(frames: ScanFramePayload[]): [number, number][] {
   return [...unique.values()];
 }
 
-function choosePair(frames: ScanFramePayload[]): {
-  pair: [number, number];
-  matches: PixelMatch[];
-  coverage: number;
-  medianFlow: number;
-} | null {
-  let best: {
-    pair: [number, number];
-    matches: PixelMatch[];
-    coverage: number;
-    medianFlow: number;
-    score: number;
-  } | null = null;
+function choosePairs(frames: ScanFramePayload[]): PairSelection[] {
+  const selections: PairSelection[] = [];
   for (const pair of candidatePairs(frames)) {
     const first = frames[pair[0]];
     const second = frames[pair[1]];
@@ -764,9 +766,9 @@ function choosePair(frames: ScanFramePayload[]): {
     const coverage = spatialCoverage(matches, first.width, first.height);
     const usableFlow = Number.isFinite(flow) ? Math.min(flow, 24) : 0;
     const score = matches.length * coverage * usableFlow;
-    if (!best || score > best.score) best = { pair, matches, coverage, medianFlow: flow, score };
+    selections.push({ pair, matches, coverage, medianFlow: flow, score });
   }
-  return best;
+  return selections.sort((left, right) => right.score - left.score);
 }
 
 function sampleColor(frame: ScanFramePayload, x: number, y: number): [number, number, number] {
@@ -802,8 +804,11 @@ function normalizePointCloud(points: RelativePoint[]): RelativePoint[] {
     }));
 }
 
-function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
-  const startedAt = performance.now();
+function solvePair(
+  frames: ScanFramePayload[],
+  selected: PairSelection,
+  startedAt: number,
+): SolveSuccess | SolveFailure {
   const fail = (reason: string, metrics: Partial<SolveMetrics> = {}): SolveFailure => ({
     type: "result",
     ok: false,
@@ -814,9 +819,6 @@ function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
       processingMs: performance.now() - startedAt,
     },
   });
-  if (frames.length < 4) return fail("At least four distinct views are required.");
-  const selected = choosePair(frames);
-  if (!selected) return fail("No usable keyframe pair was found.");
   const first = frames[selected.pair[0]]!;
   const focalLength = Math.max(first.width, first.height) * 0.9;
   const centerX = first.width / 2;
@@ -948,6 +950,44 @@ function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
       triangulationAngleDegrees,
       rotationOnlyErrorPixels: rotationOnly.errorPixels,
       rotationOnlyInlierRatio: rotationOnly.inlierRatio,
+      processingMs: performance.now() - startedAt,
+    },
+  };
+}
+
+function failureProgress(result: SolveFailure): number {
+  return Number(result.metrics.reconstructed ?? 0) * 1_000_000 +
+    Number(result.metrics.inliers ?? 0) * 1_000 +
+    Number(result.metrics.matches ?? 0);
+}
+
+function solve(frames: ScanFramePayload[]): SolveSuccess | SolveFailure {
+  const startedAt = performance.now();
+  const fail = (reason: string): SolveFailure => ({
+    type: "result",
+    ok: false,
+    reason,
+    metrics: { keyframes: frames.length, processingMs: performance.now() - startedAt },
+  });
+  if (frames.length < 6) return fail("At least six distinct views are required.");
+  const selections = choosePairs(frames);
+  if (selections.length === 0) return fail("No usable keyframe pair was found.");
+  let bestFailure: SolveFailure | null = null;
+  for (let index = 0; index < selections.length; index += 1) {
+    const selected = selections[index]!;
+    const result = solvePair(frames, selected, startedAt);
+    result.metrics.keyframes = frames.length;
+    if (result.ok) return result;
+    if (!bestFailure || failureProgress(result) > failureProgress(bestFailure)) {
+      bestFailure = result;
+    }
+  }
+  if (!bestFailure) return fail("No candidate baseline produced measurable geometry.");
+  return {
+    ...bestFailure,
+    metrics: {
+      ...bestFailure.metrics,
+      keyframes: frames.length,
       processingMs: performance.now() - startedAt,
     },
   };

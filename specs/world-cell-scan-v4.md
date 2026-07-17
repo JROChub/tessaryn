@@ -6,15 +6,15 @@ World Cell Scan V4 is the ordinary RGB-camera path used when no verified metric 
 
 ## Capture contract
 
-The browser captures four to twelve bounded grayscale/RGBA keyframes while the user moves sideways around a textured subject. A view is admitted only when measured feature tracking has sufficient support, spatial coverage, and inter-frame motion. The live display contains only the current bounded tracking overlay; it never accumulates decorative or pseudo-depth particles.
+The browser captures six to twelve bounded grayscale/RGBA keyframes while the user moves sideways around a textured subject. A view is admitted only when measured feature tracking has sufficient support, spatial coverage, and inter-frame motion. The live display contains only the current bounded tracking overlay; it never accumulates decorative or pseudo-depth particles.
 
 ## Reconstruction contract
 
 The worker:
 
-1. selects a separated keyframe pair;
+1. generates bounded, separated keyframe-pair candidates across the scan timeline;
 2. performs mean-normalized patch matching with ratio and forward/backward consistency checks;
-3. estimates an essential matrix with deterministic RANSAC and the calibrated eight-point form using a declared approximate browser focal model;
+3. ranks several independent temporal baselines, then estimates an essential matrix for each candidate with deterministic RANSAC and the calibrated eight-point form using a declared approximate browser focal model;
 4. enforces the essential-matrix singular-value constraint;
 5. fits a calibrated rotation-only competing model and rejects a scan when that
    simpler model explains the correspondence field without observable translation;
@@ -23,7 +23,8 @@ The worker:
 8. requires positive depth in both cameras;
 9. rejects points exceeding the reprojection-error limit;
 10. requires spatial coverage and a minimum triangulation angle; and
-11. emits bounded scale-free points only when the complete acceptance gate passes.
+11. continues to the next ranked baseline when a candidate is degenerate or fails acceptance; and
+12. emits bounded scale-free points when at least one independently gated baseline passes the complete acceptance gate.
 
 If any gate fails, the result is `no-geometry`. The browser must display the failure measurements and create no point cloud.
 
