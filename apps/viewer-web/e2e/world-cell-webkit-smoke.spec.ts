@@ -1,20 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test("iPhone WebKit reaches World Cell Scan V4 without waiting for service-worker authority", async ({ page }) => {
+test("iPhone WebKit initializes the provenance-gated Keyxym authority", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   const response = await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
   expect(response?.ok()).toBe(true);
 
-  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "visual-preview", {
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "authoritative", {
     timeout: 15_000,
   });
-  await expect(page.locator("html")).toHaveAttribute("data-visual-renderer", "world-cell-scan-v4");
-  await expect(page.locator("html")).toHaveAttribute("data-scan-state", "ready");
+  await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
+  await expect(page.locator("html")).toHaveAttribute("data-world-cell-controller", "keyxym-v026-worker-v1");
   await expect(page.locator("#start-button")).toBeEnabled();
-  await expect(page.locator("#start-button")).toHaveText("START WORLD CELL SCAN");
-  await expect(page.locator("#stage-message b")).toHaveText("WORLD CELL SCAN V4 READY");
+  await expect(page.locator("#start-button")).toHaveText("START CAMERA");
+  await expect(page.locator("#stage-message b")).toHaveText("REALITY FORMATION READY");
 
   const builtResponse = await page.request.get("/world-cell-theater.html");
   expect(builtResponse.ok()).toBe(true);
