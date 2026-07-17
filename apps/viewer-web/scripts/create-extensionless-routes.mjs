@@ -11,7 +11,14 @@ async function createRoute(sourceFile, routeDirectory) {
   const targetDirectory = join(distDirectory, routeDirectory);
   const targetPath = join(targetDirectory, "index.html");
   const source = await readFile(sourcePath, "utf8");
+  if (!source.includes("<head>")) {
+    throw new Error(`${sourceFile} does not contain a document head`);
+  }
+  if (/<base\s/iu.test(source)) {
+    throw new Error(`${sourceFile} already declares a document base`);
+  }
   const nested = source
+    .replace("<head>", '<head>\n    <base href="../">')
     .replaceAll('href="./', 'href="../')
     .replaceAll('src="./', 'src="../');
   await mkdir(targetDirectory, { recursive: true });

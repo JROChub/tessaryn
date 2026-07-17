@@ -102,7 +102,7 @@ test("provenance-bound TartanAir frames produce native Keyxym relative geometry"
     });
   }, { indices: continuousCaptureIndices });
 
-  await page.goto("/world-cell-theater.html", { waitUntil: "networkidle" });
+  await page.goto("/world-cell-theater/", { waitUntil: "networkidle" });
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "authoritative");
   await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
   await page.locator("#start-button").click();

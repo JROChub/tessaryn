@@ -22,9 +22,16 @@ test("build creates a canonical extensionless World Cell route with corrected as
   const dist = join(root, "dist");
   await mkdir(dist, { recursive: true });
   await writeFile(join(dist, "world-cell-theater.html"), [
-    '<link rel="stylesheet" href="./assets/theater.css">',
-    '<script type="module" src="./assets/theater.js"></script>',
-    '<a href="./">home</a>',
+    "<!doctype html>",
+    "<html>",
+    "  <head>",
+    '    <link rel="stylesheet" href="./assets/theater.css">',
+    "  </head>",
+    "  <body>",
+    '    <script type="module" src="./assets/theater.js"></script>',
+    '    <a href="./">home</a>',
+    "  </body>",
+    "</html>",
   ].join("\n"));
 
   await runNode([scriptUrl.pathname], {
@@ -33,6 +40,7 @@ test("build creates a canonical extensionless World Cell route with corrected as
   });
 
   const route = await readFile(join(dist, "world-cell-theater", "index.html"), "utf8");
+  assert.match(route, /<base href="\.\.\/">/);
   assert.match(route, /href="\.\.\/assets\/theater\.css"/);
   assert.match(route, /src="\.\.\/assets\/theater\.js"/);
   assert.match(route, /href="\.\.\/"/);

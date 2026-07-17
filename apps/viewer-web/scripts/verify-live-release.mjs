@@ -88,9 +88,10 @@ if (!canonicalInventory || canonicalRoute.bytes.byteLength !== canonicalInventor
     !canonicalPath.endsWith("/world-cell-theater/")) {
   throw new Error("live canonical World Cell route does not resolve to its attested directory artifact");
 }
-if (!/type="module"[^>]+src="\.\.\/assets\//u.test(canonicalTheater) ||
+if (!/<base href="\.\.\/">/u.test(canonicalTheater) ||
+    !/type="module"[^>]+src="\.\.\/assets\//u.test(canonicalTheater) ||
     canonicalTheater.includes("/src/world-cell-authority-entry.ts")) {
-  throw new Error("live extensionless World Cell Theater route is not the built application entry");
+  throw new Error("live extensionless World Cell Theater route lacks its root asset contract");
 }
 
 const javascriptAssets = [...inventory.keys()].filter((path) =>
