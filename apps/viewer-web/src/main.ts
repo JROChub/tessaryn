@@ -1052,8 +1052,10 @@ function updateCondensation(progress: number, phase: string): void {
   if (progress > 0 && runtimeMetrics.firstStructureMs === undefined) {
     runtimeMetrics.firstStructureMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   }
-  elements.condensation.style.width = String(Math.round(progress * 100)) + "%";
-  if (!condensationComplete) {
+  if (ownsCondensationPresentation()) {
+    elements.condensation.style.width = String(Math.round(progress * 100)) + "%";
+  }
+  if (!condensationComplete && ownsCondensationPresentation()) {
     elements.originPhase.textContent = "ORIGIN / " + phase;
     elements.originStatus.textContent =
       progress < 1 ? "WORLD CELLS CONDENSING" : "MATERIALIZATION COMPLETE";
@@ -1065,6 +1067,7 @@ function finishCondensation(): void {
   condensationComplete = true;
   runtimeMetrics.materializedMs = performance.now() - runtimeMetrics.bootStartedAtMs;
   document.body.dataset.materialized = "true";
+  if (!ownsCondensationPresentation()) return;
   elements.originPhase.textContent = "ORIGIN / MATERIALIZED";
   elements.originStatus.textContent =
     elements.app.dataset.source === "validation"
@@ -1078,6 +1081,10 @@ function finishCondensation(): void {
   showToast(
     `${String(materializedCells)} WORLD CELLS / CONTINUUM ASSEMBLED`,
   );
+}
+
+function ownsCondensationPresentation(): boolean {
+  return elements.app.dataset.source === "reference" || elements.app.dataset.source === "validation";
 }
 
 function openTrace(cell: DemoCell): void {

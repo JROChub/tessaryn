@@ -46,6 +46,8 @@ test("World Cell model handoff preserves native triangles and scale classificati
   assert.doesNotMatch(modelExport, /triangulat|poisson|convexHull/iu);
   assert.match(origin, /takeOriginFile\(handoffId\)/u);
   assert.match(origin, /await routeLocalFiles\(\[file\]\)/u);
+  assert.match(origin, /ownsCondensationPresentation\(\)/u);
+  assert.match(origin, /dataset\.source === "reference" \|\| elements\.app\.dataset\.source === "validation"/u);
   assert.match(weave, /listConstructions\(\)/u);
   assert.match(weave, /OPEN IN ORIGIN/u);
 });

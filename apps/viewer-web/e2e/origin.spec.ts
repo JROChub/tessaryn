@@ -192,7 +192,7 @@ test("construction intake exposes every route and indexes ordinary files without
   expectInsideViewport(await bounds(page, "#intake-dialog"));
   await expect(page.locator(".intake-routes")).toContainText("VERIFIED PLACE");
   await expect(page.locator(".intake-routes")).toContainText("TEMPORAL OBJECT");
-  await expect(page.locator(".intake-routes")).toContainText("SOURCE GEOMETRY");
+  await expect(page.locator(".intake-routes")).toContainText("3D MODEL");
   await expect(page.locator(".intake-routes")).toContainText("SOURCE EVIDENCE");
   expect(await page.locator("#import-input").getAttribute("accept")).toBeNull();
   expect(await page.locator("#import-input").getAttribute("multiple")).not.toBeNull();
