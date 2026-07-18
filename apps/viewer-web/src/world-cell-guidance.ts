@@ -27,20 +27,21 @@ export function installWorldCellGuidance(): () => void {
 
   const update = () => {
     if (root.dataset.keyxymAuthority !== "verified") return;
+    if (root.dataset.captureActive !== "true") return;
     const authorityStage = root.dataset.authorityStage ?? "forming";
     if (authorityStage !== "forming") {
       establishedTracking = true;
       return;
     }
-    if ((capture.textContent ?? "").trim() === "READY") return;
-
     const mask = numericAttribute(root, "authorityRejectionMask");
     if (mask & REJECT_REPROJECTION) {
       heading.textContent = "REDUCE MOTION BLUR";
       detail.textContent = "Move more slowly, keep textured edges sharp, and maintain the same objects in view until reprojection returns below the authority limit.";
     } else if (mask & MOTION_REJECTIONS) {
-      heading.textContent = establishedTracking ? "REACQUIRE TRACKING" : "CREATE 3D PARALLAX";
-      detail.textContent = "Move slowly sideways around textured objects at different depths. Keep them in view; avoid flat walls, digital screens, blur, and repeating patterns.";
+      heading.textContent = establishedTracking ? "RELOCALIZING / MAP RETAINED" : "CREATE 3D PARALLAX";
+      detail.textContent = establishedTracking
+        ? "The accumulated reconstruction is intact. Move slowly back toward a textured view already observed, then continue sideways."
+        : "Move slowly sideways around textured objects at different depths. Keep them in view; avoid flat walls, digital screens, blur, and repeating patterns.";
     } else if (mask & (REJECT_GEOMETRY | REJECT_CONTINUITY)) {
       heading.textContent = "BUILD VERIFIED GEOMETRY";
       detail.textContent = "Continue a slow arc, then revisit the same surfaces so Keyxym can confirm them across frames before enabling a Moment.";

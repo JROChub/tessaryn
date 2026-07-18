@@ -243,6 +243,7 @@ function validateMoment(moment: MomentRecord, expectedParent: string): void {
 
 class TheaterController {
   private readonly video = element<VideoWithFrameCallback>("camera");
+  private readonly retainedSourceFrame = element<HTMLCanvasElement>("retained-source-frame");
   private readonly canvas = element<HTMLCanvasElement>("stage");
   private readonly renderer = new THREE.WebGLRenderer({
     canvas: this.canvas,
@@ -283,6 +284,8 @@ class TheaterController {
   private frameNumber = 0;
   private geometrySnapshot: KeyxymGeometrySnapshot = { revision: 0n, surfels: [] };
   private surfaceSnapshot: KeyxymSurfaceSnapshot = { revision: 0n, vertices: [] };
+  private renderedSurfelCount = 0;
+  private renderedSurfaceTriangles = 0;
   private pose: KeyxymPoseEstimate | null = null;
   private quality: KeyxymQuality | null = null;
   private authority: KeyxymAuthorityDecision | null = null;
@@ -348,6 +351,8 @@ class TheaterController {
     this.runtime = await KeyxymV26TheaterRuntime.load(this.manifest);
     this.bindControls();
     document.documentElement.dataset.worldCellController = "keyxym-v026-worker-v1";
+    document.documentElement.dataset.captureActive = "false";
+    document.documentElement.dataset.reconstructionVisible = "false";
     setText("backend-name", "KEYXYM V0.26 / REALITY");
     setText("adapter-name", this.manifest.source_commit.slice(0, 12).toUpperCase());
     setText("gpu-badge", "WORKER WASM READY");
@@ -442,10 +447,14 @@ class TheaterController {
     this.video.srcObject = this.mediaStream;
     await this.video.play();
     this.running = true;
+    document.documentElement.dataset.captureActive = "true";
+    document.documentElement.dataset.sourceFrameRetained = "false";
+    this.canvas.closest(".stage-panel")?.classList.remove("has-retained-source");
     this.lastProcessedAt = 0;
     element<HTMLButtonElement>("start-button").disabled = true;
     element<HTMLButtonElement>("stop-button").disabled = false;
     setText("capture-state", "FORMING");
+    this.updatePresentationMode();
     this.hideStageMessage();
     await this.refreshSpatialCalibration();
     this.scheduleFrame();
@@ -453,17 +462,41 @@ class TheaterController {
 
   private stopCamera(): void {
     this.running = false;
+    document.documentElement.dataset.captureActive = "false";
     if (this.frameCallback && this.video.cancelVideoFrameCallback) this.video.cancelVideoFrameCallback(this.frameCallback);
     if (this.fallbackTimer) window.clearTimeout(this.fallbackTimer);
     this.frameCallback = 0;
     this.fallbackTimer = 0;
+    this.retainCurrentSourceFrame();
     this.mediaStream?.getTracks().forEach((track) => track.stop());
     this.mediaStream = null;
-    this.video.srcObject = null;
+    // Keep the ended stream attached so the last sensory frame remains a
+    // visible reference when no native geometry was defensible. Reset or a
+    // new capture replaces it explicitly; hardware tracks are already closed.
+    this.video.pause();
     element<HTMLButtonElement>("start-button").disabled = false;
     element<HTMLButtonElement>("stop-button").disabled = true;
-    setText("capture-state", "READY");
+    this.showStoppedResult();
     this.updateControls();
+  }
+
+  private retainCurrentSourceFrame(): void {
+    const width = this.video.videoWidth;
+    const height = this.video.videoHeight;
+    if (width < 1 || height < 1) {
+      document.documentElement.dataset.sourceFrameRetained = "false";
+      return;
+    }
+    this.retainedSourceFrame.width = width;
+    this.retainedSourceFrame.height = height;
+    const context = this.retainedSourceFrame.getContext("2d", { alpha: false });
+    if (!context) {
+      document.documentElement.dataset.sourceFrameRetained = "false";
+      return;
+    }
+    context.drawImage(this.video, 0, 0, width, height);
+    document.documentElement.dataset.sourceFrameRetained = "true";
+    this.canvas.closest(".stage-panel")?.classList.add("has-retained-source");
   }
 
   private scheduleFrame(): void {
@@ -485,7 +518,8 @@ class TheaterController {
     try {
       await this.processFrame(now, frameIdentity);
     } catch (error) {
-      this.freezeOnTrackingFailure(error);
+      if (this.running) this.handleFrameFailure(error);
+      else this.showStoppedResult();
     } finally {
       this.processing = false;
     }
@@ -582,10 +616,12 @@ class TheaterController {
         }
       }
     }
-    if (previouslyRecovered && !result.pose.recovered) {
-      this.setStageMessage("TRACKING FROZEN", "Authoritative geometry is frozen. Return to a textured, previously observed view for relocalization.", true);
-    } else if (result.pose.recovered) {
-      this.hideStageMessage();
+    if (this.running) {
+      if (previouslyRecovered && !result.pose.recovered) {
+        this.setStageMessage("RELOCALIZING", "The accumulated reconstruction is retained. Return to a textured, previously observed view to continue it.", true);
+      } else if (result.pose.recovered) {
+        this.hideStageMessage();
+      }
     }
     document.documentElement.dataset.formingSamples = String(result.forming.length);
     document.documentElement.dataset.authoritativeSurfels = String(this.geometrySnapshot.surfels.length);
@@ -596,6 +632,7 @@ class TheaterController {
     document.documentElement.dataset.sealAllowed = String(result.authority.sealAllowed);
     if (result.authority.momentAllowed) document.documentElement.dataset.everMomentReady = "true";
     if (result.authority.sealAllowed) document.documentElement.dataset.everSealReady = "true";
+    if (!this.running) this.showStoppedResult();
   }
 
   private updateFormingCloud(samples: KeyxymFormingSample[], coverage: number): void {
@@ -685,18 +722,9 @@ class TheaterController {
     this.authoritySurface.position.set(0, 0, 0);
     this.authoritySurface.scale.setScalar(1);
     const nativeTriangles = nativeSurface ? nativeVertices.length / 3 : 0;
-    const hasSurface = nativeTriangles >= 16;
-    const hasContinuum = nativeTriangles >= 64;
-    const metricContinuum = this.quality?.metricScale === true && hasContinuum;
-    this.authoritySurface.visible = metricContinuum;
-    this.authorityCloud.visible = this.quality?.metricScale === true && !hasSurface;
-    this.formingCloud.visible = this.quality?.metricScale === true && surfels.length < 1_024;
-    const stage = this.canvas.closest(".stage-panel");
-    stage?.classList.toggle("has-authority", hasSurface);
-    stage?.classList.toggle("has-authoritative-surface", metricContinuum);
-    document.documentElement.dataset.surfaceMode = this.quality?.metricScale === true
-      ? (nativeSurface ? "native-triangles" : "metric-surfels-pending")
-      : "relative-live-preview";
+    this.renderedSurfelCount = surfels.length;
+    this.renderedSurfaceTriangles = nativeTriangles;
+    this.updatePresentationMode();
     document.documentElement.dataset.surfacePatches = "0";
     document.documentElement.dataset.surfaceVertices = String(nativeSurface ? nativeVertices.length : 0);
     document.documentElement.dataset.surfaceTriangles = String(nativeTriangles);
@@ -706,6 +734,44 @@ class TheaterController {
     document.documentElement.dataset.surfaceMaximumAngularRadius = "0.000000";
     document.documentElement.dataset.surfaceBuildMilliseconds = "0.000";
     setText("surfel-count", surfels.length.toLocaleString());
+  }
+
+  private updatePresentationMode(): void {
+    const metric = this.quality?.metricScale === true;
+    const hasSurface = this.renderedSurfaceTriangles >= 16;
+    const hasContinuum = this.renderedSurfaceTriangles >= 64;
+    const metricContinuum = metric && hasContinuum;
+    const relativeSurface = !metric && !this.running && hasSurface;
+    const relativePoints = !metric && !this.running && !hasSurface && this.renderedSurfelCount > 0;
+    const surfaceVisible = metricContinuum || relativeSurface;
+    const pointsVisible = (metric && !hasSurface && this.renderedSurfelCount > 0) || relativePoints;
+    const reconstructionVisible = surfaceVisible || pointsVisible;
+
+    const surfaceMaterial = this.authoritySurface.material as THREE.MeshStandardMaterial;
+    if (surfaceMaterial.transparent !== relativeSurface) {
+      surfaceMaterial.transparent = relativeSurface;
+      surfaceMaterial.needsUpdate = true;
+    }
+    surfaceMaterial.opacity = relativeSurface ? 0.72 : 1;
+    surfaceMaterial.depthWrite = !relativeSurface;
+    this.authoritySurface.visible = surfaceVisible;
+    this.authorityCloud.visible = pointsVisible;
+    this.formingCloud.visible = this.running && metric && this.renderedSurfelCount < 1_024;
+    const stage = this.canvas.closest(".stage-panel");
+    stage?.classList.toggle("has-authority", hasSurface || this.renderedSurfelCount > 0);
+    stage?.classList.toggle("has-authoritative-surface", surfaceVisible);
+    stage?.classList.toggle("has-metric-continuum", metricContinuum);
+    stage?.classList.toggle("has-relative-reconstruction", relativeSurface || relativePoints);
+    document.documentElement.dataset.reconstructionVisible = String(reconstructionVisible);
+    document.documentElement.dataset.surfaceMode = metric
+      ? (hasSurface ? "native-triangles" : "metric-surfels-pending")
+      : this.running
+        ? "relative-live-preview"
+        : hasSurface
+          ? "relative-native-triangles"
+          : relativePoints
+            ? "relative-native-surfels"
+            : "relative-source-frame";
   }
 
   private updateQualityUi(): void {
@@ -1091,13 +1157,40 @@ class TheaterController {
     element<HTMLButtonElement>("send-button").disabled = !this.sealedCell || !this.channel || this.channel.readyState !== "open";
   }
 
-  private freezeOnTrackingFailure(error: unknown): void {
+  private handleFrameFailure(error: unknown): void {
     const reason = error instanceof Error ? error.message : String(error);
-    setText("pose-state", "TRACKING FROZEN");
-    setText("capture-state", "FROZEN");
-    setText("cell-state", "WORLD CELL / AUTHORITY FROZEN");
-    this.setStageMessage("TRACKING FROZEN", `${reason}. Authoritative geometry was not advanced.`, true);
+    console.error("World Cell frame rejected", error);
+    setText("pose-state", "FRAME REJECTED");
+    setText("capture-state", "CAPTURE ACTIVE");
+    this.setStageMessage("FRAME REJECTED", `${reason}. The accumulated reconstruction is intact; capture can continue.`, true);
     this.updateControls();
+  }
+
+  private showStoppedResult(): void {
+    this.updatePresentationMode();
+    const metric = this.quality?.metricScale === true;
+    const reconstructionVisible = document.documentElement.dataset.reconstructionVisible === "true";
+    if (reconstructionVisible) {
+      const title = metric ? "METRIC CONTINUUM READY" : "RELATIVE RECONSTRUCTION READY";
+      setText("pose-state", "RECONSTRUCTION READY");
+      setText("capture-state", "RECONSTRUCTION READY");
+      this.setStageMessage(
+        title,
+        "Capture stopped. Native geometry remains visible over the retained sensory frame; drag to inspect it or restart the camera to extend it.",
+        true,
+      );
+    } else {
+      setText("pose-state", "CAPTURE PAUSED");
+      setText("capture-state", "PAUSED");
+      this.setStageMessage(
+        "CAPTURE PAUSED",
+        "No native reconstruction was established. The final source frame is retained; restart and move slowly sideways around textured objects at different depths.",
+        true,
+      );
+    }
+    if (this.sealedCell) {
+      setText("cell-state", `WORLD CELL / SEALED / ${this.sealedCell.scaleState.toUpperCase()} / ${this.sealedCell.moments.length} MOMENTS`);
+    }
   }
 
   private setStageMessage(title: string, detail: string, visible = true): void {
@@ -1167,6 +1260,9 @@ class TheaterController {
 
   private async reset(): Promise<void> {
     this.stopCamera();
+    this.video.srcObject = null;
+    this.retainedSourceFrame.width = 1;
+    this.retainedSourceFrame.height = 1;
     if (this.playTimer) window.clearInterval(this.playTimer);
     this.playTimer = 0;
     this.runtime?.destroy();
@@ -1176,6 +1272,8 @@ class TheaterController {
     this.analysisIntervalMs = 50;
     this.geometrySnapshot = { revision: 0n, surfels: [] };
     this.surfaceSnapshot = { revision: 0n, vertices: [] };
+    this.renderedSurfelCount = 0;
+    this.renderedSurfaceTriangles = 0;
     this.pose = null; this.quality = null; this.authority = null; this.receipts = null;
     this.sourceCommitment = ZERO_DIGEST;
     this.formingSamples = [];
@@ -1191,7 +1289,13 @@ class TheaterController {
     setPointGeometry(this.formingGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
     setPointGeometry(this.authorityGeometry, new Float32Array(), new Float32Array(), new Float32Array(), new Float32Array());
     setSurfaceGeometry(this.authoritySurfaceGeometry, new Float32Array(), new Float32Array(), new Float32Array());
-    this.canvas.closest(".stage-panel")?.classList.remove("has-authority", "has-authoritative-surface");
+    this.canvas.closest(".stage-panel")?.classList.remove(
+      "has-authority", "has-authoritative-surface", "has-metric-continuum", "has-relative-reconstruction",
+      "has-retained-source",
+    );
+    document.documentElement.dataset.captureActive = "false";
+    document.documentElement.dataset.reconstructionVisible = "false";
+    document.documentElement.dataset.sourceFrameRetained = "false";
     delete document.documentElement.dataset.surfacePatches;
     delete document.documentElement.dataset.surfaceMode;
     delete document.documentElement.dataset.surfaceVertices;

@@ -33,6 +33,10 @@ camera RGBA + source digest
 Without the spatial adapter, Keyxym executes bounded monocular tracking and
 relative pose recovery. The Theater deliberately keeps the live camera visible
 instead of presenting a sparse relative point field as an inhabitable place.
+When capture stops, it freezes the final sensory frame and renders the
+accumulated native relative triangles over that frame. The recovered result is
+therefore inspectable without representing relative geometry as metric depth or
+discarding the participant's last recognizable observation.
 
 Pose tracks and surface samples are intentionally separate. Dense image
 samples cannot vote a weak camera model into existence. Once a pose is accepted,
