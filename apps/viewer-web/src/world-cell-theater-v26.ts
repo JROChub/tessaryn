@@ -245,12 +245,8 @@ class TheaterController {
   private readonly video = element<VideoWithFrameCallback>("camera");
   private readonly retainedSourceFrame = element<HTMLCanvasElement>("retained-source-frame");
   private readonly canvas = element<HTMLCanvasElement>("stage");
-  private readonly renderer = new THREE.WebGLRenderer({
-    canvas: this.canvas,
-    alpha: true,
-    antialias: true,
-    powerPreference: "high-performance",
-  });
+  private readonly renderer: THREE.WebGLRenderer | null;
+  private readonly fallbackContext: CanvasRenderingContext2D | null;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
   private readonly controls = new OrbitControls(this.camera, this.canvas);
@@ -311,6 +307,24 @@ class TheaterController {
 
   constructor(private readonly manifest: KeyxymV26Manifest) {
     this.runtimeCommitmentValue = runtimeCommitment(manifest);
+    let renderer: THREE.WebGLRenderer | null = null;
+    let fallbackContext: CanvasRenderingContext2D | null = null;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas: this.canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+      });
+    } catch (error) {
+      // Rendering capability is not reconstruction authority. A browser that
+      // cannot create WebGL must still capture, reconstruct, seal, and transfer.
+      console.warn("WebGL unavailable; using the compatible World Cell renderer", error);
+      fallbackContext = this.canvas.getContext("2d", { alpha: true });
+    }
+    this.renderer = renderer;
+    this.fallbackContext = fallbackContext;
+    document.documentElement.dataset.worldCellRenderer = renderer ? "webgl" : "canvas-2d";
     // Keyxym's camera convention looks down +Z; the renderer converts it to
     // Three's -Z convention so the participant begins at the capture origin.
     this.camera.position.set(0, 0, 0.02);
@@ -360,8 +374,8 @@ class TheaterController {
     setText("pose-state", "KEYXYM READY");
     setText("cell-state", "WORLD CELL / READY / RELATIVE");
     this.setStageMessage(
-      "REALITY FORMATION READY",
-      "The worker forms immediate visual evidence while calibrated Keyxym geometry becomes authoritative.",
+      "READY TO CAPTURE A PLACE",
+      "Start the camera, frame a textured subject, then move slowly sideways around it. TESSARYN will tell you when enough real geometry has formed.",
     );
     this.updateControls();
     navigator.serviceWorker?.register("./sw.js").catch(() => undefined);
@@ -369,8 +383,14 @@ class TheaterController {
 
   private resize(): void {
     const bounds = this.canvas.getBoundingClientRect();
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    this.renderer.setSize(Math.max(1, bounds.width), Math.max(1, bounds.height), false);
+    const pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    if (this.renderer) {
+      this.renderer.setPixelRatio(pixelRatio);
+      this.renderer.setSize(Math.max(1, bounds.width), Math.max(1, bounds.height), false);
+    } else {
+      this.canvas.width = Math.max(1, Math.round(bounds.width * pixelRatio));
+      this.canvas.height = Math.max(1, Math.round(bounds.height * pixelRatio));
+    }
     this.camera.aspect = Math.max(1, bounds.width) / Math.max(1, bounds.height);
     this.camera.updateProjectionMatrix();
   }
@@ -384,9 +404,46 @@ class TheaterController {
     document.documentElement.dataset.viewerPosition = [
       this.camera.position.x, this.camera.position.y, this.camera.position.z,
     ].map((value) => value.toFixed(5)).join(",");
-    this.renderer.render(this.scene, this.camera);
+    if (this.renderer) this.renderer.render(this.scene, this.camera);
+    else this.renderCompatibleCanvas();
     requestAnimationFrame(this.render);
   };
+
+  private renderCompatibleCanvas(): void {
+    const context = this.fallbackContext;
+    if (!context) return;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const scaleX = width / 2;
+    const scaleY = height / 2;
+    context.clearRect(0, 0, width, height);
+
+    if (this.running) {
+      const formingStride = Math.max(1, Math.ceil(this.formingSamples.length / 900));
+      for (let index = 0; index < this.formingSamples.length; index += formingStride) {
+        const sample = this.formingSamples[index]!;
+        const x = (sample.normalizedX + 1) * scaleX;
+        const y = (1 - sample.normalizedY) * scaleY;
+        context.fillStyle = `rgba(${Math.round(clamp01(sample.r) * 255)},${Math.round(clamp01(sample.g) * 255)},${Math.round(clamp01(sample.b) * 255)},.48)`;
+        context.fillRect(x - 1.5, y - 1.5, 3, 3);
+      }
+    }
+
+    const surfels = this.geometrySnapshot.surfels;
+    const surfelStride = Math.max(1, Math.ceil(surfels.length / 2_500));
+    const projected = new THREE.Vector3();
+    for (let index = 0; index < surfels.length; index += surfelStride) {
+      const surfel = surfels[index]!;
+      projected.set(surfel.x, -surfel.y, -surfel.z).project(this.camera);
+      if (projected.z < -1 || projected.z > 1) continue;
+      const x = (projected.x + 1) * scaleX;
+      const y = (1 - projected.y) * scaleY;
+      context.fillStyle = `rgba(${Math.round(clamp01(surfel.r) * 255)},${Math.round(clamp01(surfel.g) * 255)},${Math.round(clamp01(surfel.b) * 255)},.82)`;
+      context.beginPath();
+      context.arc(x, y, 1.5 + clamp01(surfel.confidence) * 2.5, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
 
   private updateNavigation(elapsed: number): void {
     if (!this.heldKeys.size || elapsed <= 0) return;
@@ -424,6 +481,7 @@ class TheaterController {
     element<HTMLButtonElement>("sensor-button").onclick = () => element<HTMLDialogElement>("sensor-dialog").showModal();
     element<HTMLButtonElement>("evidence-button").onclick = () => element<HTMLDialogElement>("evidence-dialog").showModal();
     element<HTMLButtonElement>("calibrate-button").onclick = () => element<HTMLDialogElement>("calibration-dialog").showModal();
+    element<HTMLButtonElement>("advanced-button").onclick = () => this.toggleAdvancedControls();
     element<HTMLButtonElement>("apply-calibration").onclick = () => this.recordReferenceRequest();
     element<HTMLButtonElement>("serial-button").onclick = () => void this.connectSerial().catch((error) => this.sensorError(error));
     element<HTMLButtonElement>("usb-button").onclick = () => void this.connectUsb().catch((error) => this.sensorError(error));
@@ -436,6 +494,16 @@ class TheaterController {
       this.runtime?.destroy();
       this.peer?.close();
     }, { once: true });
+  }
+
+  private toggleAdvancedControls(): void {
+    const button = element<HTMLButtonElement>("advanced-button");
+    const controls = document.querySelector<HTMLElement>(".advanced-capture");
+    const expanded = button.getAttribute("aria-expanded") !== "true";
+    button.setAttribute("aria-expanded", String(expanded));
+    button.textContent = expanded ? "HIDE ADVANCED" : "ADVANCED";
+    if (controls) controls.hidden = !expanded;
+    document.documentElement.dataset.advancedControls = String(expanded);
   }
 
   private async startCamera(): Promise<void> {

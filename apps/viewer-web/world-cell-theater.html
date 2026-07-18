@@ -16,7 +16,7 @@
     <a class="brand" href="./"><span class="brand-mark"><i></i><i></i><i></i></span><span><b>TESSARYN</b><small>NATIVE 4D CONTINUUM</small></span></a>
     <div class="origin-title"><small>ACTIVE INSTRUMENT</small><b>REALITY WORLD CELL THEATER</b></div>
     <div class="top-states"><span id="capture-state"><i></i>VERIFYING</span><span id="compute-state">PROVENANCE</span><span id="peer-state">UNPAIRED</span></div>
-    <div class="top-actions"><button id="evidence-button" class="icon-command secondary">EVIDENCE</button><a class="icon-button" href="./">×</a></div>
+    <div class="top-actions"><button id="evidence-button" class="icon-command secondary">PROOF</button><a class="icon-button" href="./" aria-label="Close World Cell Theater">×</a></div>
   </header>
 
   <main class="theater-main">
@@ -25,27 +25,33 @@
       <canvas id="retained-source-frame" aria-hidden="true"></canvas>
       <canvas id="stage"></canvas>
       <div class="scan-overlay"><i></i><i></i><i></i><i></i></div>
-      <div class="navigation-hint">DRAG TO LOOK · W A S D TO WALK · WHEEL TO DOLLY · SHIFT TO MOVE FASTER</div>
+      <div class="navigation-hint">AFTER CAPTURE · DRAG TO LOOK · W A S D TO WALK · WHEEL TO DOLLY</div>
       <div class="stage-hud">
         <span><small>SURFELS</small><b id="surfel-count">0</b></span>
         <span><small>FRAMES</small><b id="frame-count">0</b></span>
         <span><small>POSE</small><b id="pose-state">AUTHORITY OFFLINE</b></span>
         <span><small>ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
       </div>
-      <div id="stage-message" class="stage-message"><b>VERIFYING KEYXYM V0.26 AUTHORITY</b><span>Camera access remains disabled until the calibrated runtime, worker ABI, source, validation matrix, and receipt commitments are verified.</span></div>
+      <div id="stage-message" class="stage-message"><b>PREPARING YOUR WORLD CELL</b><span>We are verifying the reconstruction engine before the camera can start. Your images stay on this device.</span></div>
     </section>
 
     <aside class="instrument-stack">
       <section class="instrument-panel accent-cyan">
-        <header><span><small>CAPTURE PIPELINE</small><b>KEYXYM REALITY INPUT</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
+        <header><span><small>CREATE A WORLD CELL</small><b>CAPTURE A PLACE YOU CAN RETURN TO</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
+        <p class="capture-promise">Move around one subject and TESSARYN will build a verifiable spatial memory—not an AI guess.</p>
+        <ol class="capture-steps" aria-label="World Cell capture steps">
+          <li><b>1</b><span>Start the camera</span></li>
+          <li><b>2</b><span>Move slowly sideways</span></li>
+          <li><b>3</b><span>Stop and explore</span></li>
+        </ol>
         <div class="command-grid">
           <button id="start-button" class="icon-command" disabled>START CAMERA</button>
           <button id="capture-button" class="icon-command" disabled>COMMIT MOMENT</button>
           <button id="stop-button" class="icon-command secondary" disabled>STOP</button>
-          <button id="sensor-button" class="icon-command secondary">SENSOR ADAPTER</button>
-          <button id="calibrate-button" class="icon-command secondary">REQUEST SCALE REFERENCE</button>
+          <button id="advanced-button" class="icon-command secondary" type="button" aria-expanded="false">ADVANCED</button>
         </div>
-        <p id="sensor-detail">Live RGB is a relative sensor preview. Metric continuum activates only from synchronized calibrated depth and world-from-camera pose evidence; a scale value or IMU alone is insufficient.</p>
+        <div class="advanced-capture" hidden><button id="sensor-button" class="icon-command secondary">SENSOR ADAPTER</button><button id="calibrate-button" class="icon-command secondary">SCALE REFERENCE</button></div>
+        <p id="sensor-detail">Ready for an ordinary camera. For the strongest result, keep textured objects at different distances in view as you move.</p>
       </section>
 
       <section class="instrument-panel accent-gold metric-quality-panel">
@@ -62,7 +68,7 @@
         </dl>
       </section>
 
-      <section class="instrument-panel accent-gold">
+      <section class="instrument-panel accent-gold expert-only">
         <header><span><small>COMPUTE</small><b>WORKER RECONSTRUCTION ENGINE</b></span><span id="gpu-badge" class="state-pill">VERIFYING</span></header>
         <div class="compute-meter"><i id="compute-meter"></i></div>
         <dl><div><dt>BACKEND</dt><dd id="backend-name">KEYXYM V0.26</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">PROVENANCE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">—</dd></div></dl>
@@ -74,7 +80,7 @@
         <div class="replay-controls"><button id="prev-button" disabled>◀</button><input id="replay-slider" type="range" min="0" max="0" value="0"><button id="play-button" disabled>PLAY</button><button id="next-button" disabled>▶</button></div>
       </section>
 
-      <section class="instrument-panel accent-rust">
+      <section class="instrument-panel accent-rust expert-only">
         <header><span><small>CROSS-DEVICE</small><b>VERIFIED WORLD CELL LINK</b></span><span id="channel-state" class="state-pill">CLOSED</span></header>
         <div class="pair-actions"><button id="host-button" class="icon-command">CREATE OFFER</button><button id="join-button" class="icon-command secondary">JOIN OFFER</button><button id="answer-button" class="icon-command secondary">APPLY ANSWER</button><button id="send-button" class="icon-command" disabled>SEND SEALED WORLD CELL</button></div>
         <textarea id="pairing-text" spellcheck="false" placeholder="Offer/answer appears here. Copy it to the other device."></textarea>
@@ -113,6 +119,18 @@
     const node = document.getElementById(id);
     if (node) node.textContent = text;
   };
+
+  const advanced = document.getElementById("advanced-button");
+  const advancedControls = document.querySelector(".advanced-capture");
+  if (advanced instanceof HTMLButtonElement && advancedControls instanceof HTMLElement) {
+    advanced.onclick = () => {
+      const expanded = advanced.getAttribute("aria-expanded") !== "true";
+      advanced.setAttribute("aria-expanded", String(expanded));
+      advanced.textContent = expanded ? "HIDE ADVANCED" : "ADVANCED";
+      advancedControls.hidden = !expanded;
+      root.dataset.advancedControls = String(expanded);
+    };
+  }
 
   const stopBasicCamera = () => {
     basicStream?.getTracks().forEach((track) => track.stop());
