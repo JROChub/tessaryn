@@ -26,3 +26,6 @@ Ordinary monocular capture remains useful as a live relative preview, but it
 does not render sparse points as a finished place and never claims metric
 geometry. WebUSB, WebSerial, WebXR availability, an IMU, or a typed reference
 length does not independently activate metric authority.
+When capture stops, the final sensory frame remains visible beneath the native
+relative triangle or surfel reconstruction. Relocalization and rejected-frame
+messages cannot erase that accumulated result.

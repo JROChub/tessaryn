@@ -143,6 +143,12 @@ test("official photographic views sustain authoritative World Cell geometry", as
     if (observation.done || observation.fixtureError) break;
   }
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-sealed", "true", { timeout: 15_000 });
+  await page.locator("#stop-button").click();
+  await expect(page.locator("html")).toHaveAttribute("data-capture-active", "false");
+  await expect(page.locator("html")).toHaveAttribute("data-source-frame-retained", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-reconstruction-visible", "true");
+  await expect(page.locator("#capture-state")).toHaveText("RECONSTRUCTION READY");
+  await expect(page.locator("#stage-message b")).toHaveText("RELATIVE RECONSTRUCTION READY");
 
   const terminal = await page.locator("html").evaluate((node) => ({
     surfels: Number(node.dataset.authoritativeSurfels ?? 0),
@@ -188,14 +194,15 @@ test("official photographic views sustain authoritative World Cell geometry", as
   expect(maximumRevision).toBeGreaterThanOrEqual(3);
   expect(terminal.surfels).toBeGreaterThanOrEqual(2_000);
   expect(terminal.revision).toBeGreaterThanOrEqual(3);
-  expect(terminal.surfaceMode).toBe("relative-live-preview");
+  expect(terminal.surfaceMode).toBe("relative-native-triangles");
   expect(terminal.surfaceVertices).toBeGreaterThanOrEqual(300);
   expect(terminal.surfaceTriangles).toBeGreaterThanOrEqual(100);
   expect(terminal.surfaceMaximumRadius).toBe(0);
   expect(terminal.surfaceMaximumAngularRadius).toBe(0);
   expect(terminal.surfaceBuildMilliseconds).toBeLessThan(60);
-  expect(await page.locator("#camera").evaluate((video) => Number.parseFloat(getComputedStyle(video).opacity))).toBeGreaterThanOrEqual(0.99);
-  expect(await page.locator(".stage-panel").evaluate((stage) => stage.classList.contains("has-authoritative-surface"))).toBe(false);
+  expect(await page.locator("#camera").evaluate((video) => Number.parseFloat(getComputedStyle(video).opacity))).toBe(0);
+  expect(await page.locator("#retained-source-frame").evaluate((canvas) => Number.parseFloat(getComputedStyle(canvas).opacity))).toBeGreaterThanOrEqual(0.5);
+  expect(await page.locator(".stage-panel").evaluate((stage) => stage.classList.contains("has-authoritative-surface"))).toBe(true);
   expect(terminal.rootprint).toMatch(/^[0-9A-F]{16}$/u);
   expect(pageErrors).toEqual([]);
 });

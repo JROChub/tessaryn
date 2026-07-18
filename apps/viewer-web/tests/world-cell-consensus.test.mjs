@@ -57,6 +57,28 @@ test("Theater consumes native authority decisions and contains no pose solver", 
   assert.doesNotMatch(source, /tracking\s*>=\s*0\.2|parallaxDegrees\s*>=\s*0\.3|confirmed\.length\s*>=\s*4/);
 });
 
+test("stopping capture retains the source frame and exposes native relative reconstruction", async () => {
+  const [html, source, guidance, styles] = await Promise.all([
+    read("world-cell-theater.html"),
+    read("src/world-cell-theater-v26.ts"),
+    read("src/world-cell-guidance.ts"),
+    read("src/world-cell-theater.css"),
+  ]);
+  assert.match(html, /id="retained-source-frame"/);
+  assert.match(source, /retainCurrentSourceFrame/);
+  assert.match(source, /dataset\.captureActive = "false"/);
+  assert.match(source, /dataset\.reconstructionVisible/);
+  assert.match(source, /relative-native-triangles/);
+  assert.match(source, /RELATIVE RECONSTRUCTION READY/);
+  assert.match(source, /The accumulated reconstruction is intact/);
+  assert.doesNotMatch(source, /setText\("capture-state", "FROZEN"\)/);
+  assert.match(guidance, /dataset\.captureActive !== "true"/);
+  assert.match(guidance, /RELOCALIZING \/ MAP RETAINED/);
+  assert.doesNotMatch(guidance, /REACQUIRE TRACKING/);
+  assert.match(styles, /has-relative-reconstruction/);
+  assert.match(styles, /retained-source-frame/);
+});
+
 test("forming observations cannot enter Moments or seals", async () => {
   const source = await read("src/world-cell-theater-v26.ts");
   assert.match(source, /const geometry = confirmedGeometry\(this\.geometrySnapshot\.surfels\)/);

@@ -97,6 +97,7 @@ if (keyxymManifest.schema !== "keyxym.browser-runtime-provenance/v11" ||
 
 const legacyTheater = (await fetchBytes("world-cell-theater.html")).bytes.toString("utf8");
 if (!/type="module"[^>]+src="\.\/assets\//u.test(legacyTheater) ||
+    !legacyTheater.includes('id="retained-source-frame"') ||
     legacyTheater.includes("/src/world-cell-authority-entry.ts")) {
   throw new Error("live legacy World Cell Theater route is not the built application entry");
 }
@@ -111,6 +112,7 @@ if (!canonicalInventory || canonicalRoute.bytes.byteLength !== canonicalInventor
 }
 if (!/<base href="\.\.\/">/u.test(canonicalTheater) ||
     !/type="module"[^>]+src="\.\.\/assets\//u.test(canonicalTheater) ||
+    !canonicalTheater.includes('id="retained-source-frame"') ||
     canonicalTheater.includes("/src/world-cell-authority-entry.ts")) {
   throw new Error("live extensionless World Cell Theater route lacks its root asset contract");
 }
@@ -133,6 +135,8 @@ for (const marker of [
   "keyxym-v26-reality-authority-spatial-surface-3",
   "native-triangles",
   "relative-live-preview",
+  "relative-native-triangles",
+  "RELATIVE RECONSTRUCTION READY",
   "tessaryn/spatial-calibration/v1",
   "Metric capture requires an exact browser media-frame identity",
   "Host-verified synchronized RGB-D",
