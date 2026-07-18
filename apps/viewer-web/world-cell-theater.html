@@ -103,7 +103,10 @@
   root.dataset.worldCellMode = "booting";
   root.dataset.worldCellBoot = "html-ready";
   const startupModes = new Set(["booting", "initializing", "boot-error"]);
-  const timeoutMs = 8000;
+  // A cold mobile edge may need to fetch, hash, compile, and instantiate both
+  // authority WASM modules. Keep an eventual recovery bound without racing a
+  // valid first boot into the non-authoritative preview.
+  const timeoutMs = 45000;
   let basicStream = null;
 
   const setText = (id, text) => {

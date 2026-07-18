@@ -98,6 +98,7 @@ if (keyxymManifest.schema !== "keyxym.browser-runtime-provenance/v11" ||
 const legacyTheater = (await fetchBytes("world-cell-theater.html")).bytes.toString("utf8");
 if (!/type="module"[^>]+src="\.\/assets\//u.test(legacyTheater) ||
     !legacyTheater.includes('id="retained-source-frame"') ||
+    !legacyTheater.includes("const timeoutMs = 45000") ||
     legacyTheater.includes("/src/world-cell-authority-entry.ts")) {
   throw new Error("live legacy World Cell Theater route is not the built application entry");
 }
@@ -113,6 +114,7 @@ if (!canonicalInventory || canonicalRoute.bytes.byteLength !== canonicalInventor
 if (!/<base href="\.\.\/">/u.test(canonicalTheater) ||
     !/type="module"[^>]+src="\.\.\/assets\//u.test(canonicalTheater) ||
     !canonicalTheater.includes('id="retained-source-frame"') ||
+    !canonicalTheater.includes("const timeoutMs = 45000") ||
     canonicalTheater.includes("/src/world-cell-authority-entry.ts")) {
   throw new Error("live extensionless World Cell Theater route lacks its root asset contract");
 }

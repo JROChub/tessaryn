@@ -14,7 +14,7 @@ test("mobile boot always leaves VERIFYING through authority, preview, or visible
   assert.match(theater, /dataset\.worldCellMode = "booting"/);
   assert.match(theater, /dataset\.worldCellBoot = "html-ready"/);
   assert.match(theater, /new Set\(\["booting", "initializing", "boot-error"\]\)/);
-  assert.match(theater, /const timeoutMs = 8000/);
+  assert.match(theater, /const timeoutMs = 45000/);
   assert.match(theater, /window\.tessarynWorldCellBootFailure = recover/);
   assert.match(theater, /WORLD CELL MODULE UNAVAILABLE/);
   assert.match(theater, /START BASIC CAMERA/);
@@ -31,16 +31,17 @@ test("mobile boot always leaves VERIFYING through authority, preview, or visible
 
   assert.match(entry, /dataset\.worldCellBoot = "module-started"/);
   assert.match(entry, /dataset\.worldCellMode = "initializing"/);
-  assert.match(entry, /const BOOT_PHASE_TIMEOUT_MS = 8_000/);
-  assert.match(entry, /const PREVIEW_LOAD_TIMEOUT_MS = 12_000/);
-  assert.match(entry, /const serviceWorkerRefresh = refreshServiceWorker\(\)/);
+  assert.match(entry, /const BOOT_PHASE_TIMEOUT_MS = 20_000/);
+  assert.match(entry, /const PREVIEW_LOAD_TIMEOUT_MS = 20_000/);
+  assert.match(entry, /void refreshServiceWorker\(\)/);
   assert.match(entry, /"World Cell preview module load"/);
   assert.match(entry, /installEmergencyShell\(previewError\)/);
 
   assert.doesNotMatch(entry, /hasVerifiedSpatialAdapter/);
-  const authoritativeServiceWorkerWait = entry.indexOf("await serviceWorkerRefresh");
+  assert.doesNotMatch(entry, /await serviceWorkerRefresh/);
+  const concurrentServiceWorkerRefresh = entry.indexOf("void refreshServiceWorker()");
   const provenanceVerification = entry.indexOf("verifyKeyxymV26Bundle");
-  assert.ok(authoritativeServiceWorkerWait >= 0 && provenanceVerification > authoritativeServiceWorkerWait);
+  assert.ok(concurrentServiceWorkerRefresh >= 0 && provenanceVerification > concurrentServiceWorkerRefresh);
   assert.ok(
     entry.indexOf('dataset.worldCellMode = "initializing"') < entry.indexOf("async function boot"),
     "module startup state must be visible before asynchronous work",
