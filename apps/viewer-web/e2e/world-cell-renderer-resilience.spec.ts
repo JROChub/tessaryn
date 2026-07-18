@@ -19,12 +19,19 @@ test("verified capture remains available when WebGL is unavailable", async ({ pa
   await expect(page.locator("#gpu-badge")).toHaveText("WORKER WASM READY");
 });
 
-test("advanced instrument controls are progressive disclosure", async ({ page }) => {
+test("capture owns the stage and technical instruments open as a drawer", async ({ page }) => {
   await page.goto("/world-cell-theater/", { waitUntil: "domcontentloaded" });
+  const stage = await page.locator(".stage-panel").boundingBox();
+  expect(stage?.width ?? 0).toBeGreaterThan(1_000);
+  expect(stage?.height ?? 0).toBeGreaterThan(500);
+  await expect(page.locator(".instrument-stack")).toHaveAttribute("aria-hidden", "true");
   await expect(page.locator(".advanced-capture")).toBeHidden();
-  await expect(page.locator(".expert-only").first()).toBeHidden();
+  await page.locator("#details-button").click();
+  await expect(page.locator("html")).toHaveAttribute("data-details-open", "true");
+  await expect(page.locator(".instrument-stack")).toHaveAttribute("aria-hidden", "false");
+  await page.locator("#details-close").click();
+  await expect(page.locator("html")).toHaveAttribute("data-details-open", "false");
   await page.locator("#advanced-button").click();
   await expect(page.locator("#advanced-button")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(".advanced-capture")).toBeVisible();
-  await expect(page.locator(".expert-only").first()).toBeVisible();
 });

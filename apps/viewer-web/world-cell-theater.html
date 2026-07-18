@@ -16,46 +16,56 @@
     <a class="brand" href="./"><span class="brand-mark"><i></i><i></i><i></i></span><span><b>TESSARYN</b><small>NATIVE 4D CONTINUUM</small></span></a>
     <div class="origin-title"><small>ACTIVE INSTRUMENT</small><b>REALITY WORLD CELL THEATER</b></div>
     <div class="top-states"><span id="capture-state"><i></i>VERIFYING</span><span id="compute-state">PROVENANCE</span><span id="peer-state">UNPAIRED</span></div>
-    <div class="top-actions"><button id="evidence-button" class="icon-command secondary">PROOF</button><a class="icon-button" href="./" aria-label="Close World Cell Theater">×</a></div>
+    <div class="top-actions"><button id="details-button" class="icon-command secondary" type="button" aria-expanded="false">DETAILS</button><button id="evidence-button" class="icon-command secondary">PROOF</button><a class="icon-button" href="./" aria-label="Close World Cell Theater">×</a></div>
   </header>
 
   <main class="theater-main">
-    <section class="stage-panel">
+    <section class="stage-panel" aria-label="World Cell spatial stage">
       <video id="camera" autoplay muted playsinline></video>
       <canvas id="retained-source-frame" aria-hidden="true"></canvas>
       <canvas id="stage"></canvas>
       <div class="scan-overlay"><i></i><i></i><i></i><i></i></div>
-      <div class="navigation-hint">AFTER CAPTURE · DRAG TO LOOK · W A S D TO WALK · WHEEL TO DOLLY</div>
+      <div class="navigation-hint">DRAG TO LOOK · W A S D TO MOVE · WHEEL TO DOLLY</div>
       <div class="stage-hud">
-        <span><small>SURFELS</small><b id="surfel-count">0</b></span>
-        <span><small>FRAMES</small><b id="frame-count">0</b></span>
+        <span><small>GEOMETRY</small><b id="surfel-count">0</b></span>
+        <span><small>VIEWS</small><b id="frame-count">0</b></span>
         <span><small>POSE</small><b id="pose-state">AUTHORITY OFFLINE</b></span>
         <span><small>ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
       </div>
       <div id="stage-message" class="stage-message"><b>PREPARING YOUR WORLD CELL</b><span>We are verifying the reconstruction engine before the camera can start. Your images stay on this device.</span></div>
-    </section>
-
-    <aside class="instrument-stack">
-      <section class="instrument-panel accent-cyan">
-        <header><span><small>CREATE A WORLD CELL</small><b>CAPTURE A PLACE YOU CAN RETURN TO</b></span><span id="sensor-badge" class="state-pill">CAMERA</span></header>
-        <p class="capture-promise">Move around one subject and TESSARYN will construct a verifiable spatial memory from measured views.</p>
+      <section class="capture-dock" aria-label="World Cell capture controls">
+        <div class="capture-copy">
+          <div class="capture-heading"><span class="capture-kicker">WORLD CELL CAPTURE</span><span id="sensor-badge" class="state-pill">CAMERA</span></div>
+          <b>Move around a place. Keep the subject in view.</b>
+          <p id="sensor-detail">Start with a textured subject at several depths, then move slowly sideways.</p>
+        </div>
         <ol class="capture-steps" aria-label="World Cell capture steps">
-          <li><b>1</b><span>Start the camera</span></li>
-          <li><b>2</b><span>Move slowly sideways</span></li>
-          <li><b>3</b><span>Stop and explore</span></li>
+          <li><b>1</b><span>Frame</span></li>
+          <li><b>2</b><span>Move</span></li>
+          <li><b>3</b><span>Explore</span></li>
         </ol>
         <div class="command-grid">
           <button id="start-button" class="icon-command" disabled>START CAMERA</button>
-          <button id="capture-button" class="icon-command" disabled>COMMIT MOMENT</button>
-          <button id="stop-button" class="icon-command secondary" disabled>STOP</button>
-          <button id="advanced-button" class="icon-command secondary" type="button" aria-expanded="false">ADVANCED</button>
+          <button id="capture-button" class="icon-command" disabled>SAVE MOMENT</button>
+          <button id="stop-button" class="icon-command secondary" disabled>FINISH</button>
+          <button id="advanced-button" class="icon-command secondary" type="button" aria-expanded="false">MORE OPTIONS</button>
         </div>
-        <div class="advanced-capture" hidden><button id="sensor-button" class="icon-command secondary">SENSOR ADAPTER</button><button id="calibrate-button" class="icon-command secondary">SCALE REFERENCE</button></div>
-        <p id="sensor-detail">Ready for an ordinary camera. For the strongest result, keep textured objects at different distances in view as you move.</p>
+        <div class="advanced-capture" hidden><button id="sensor-button" class="icon-command secondary">DEPTH SENSOR</button><button id="calibrate-button" class="icon-command secondary">SCALE REFERENCE</button></div>
       </section>
 
+      <section class="instrument-panel accent-moss timeline-panel moment-tray">
+        <header><span><small>CAPTURED LINEAGE</small><b>WORLD CELL MOMENTS</b></span><button id="seal-button" class="icon-command secondary" disabled>EFORM REQUIRED</button></header>
+        <div id="timeline" class="timeline"><span class="empty">No Moments captured yet.</span></div>
+        <div class="replay-controls"><button id="prev-button" disabled aria-label="Previous Moment">◀</button><input id="replay-slider" aria-label="Moment position" type="range" min="0" max="0" value="0"><button id="play-button" disabled>PLAY</button><button id="next-button" disabled aria-label="Next Moment">▶</button></div>
+      </section>
+    </section>
+  </main>
+
+  <button id="details-backdrop" class="details-backdrop" type="button" aria-label="Close details"></button>
+  <aside class="instrument-stack" aria-label="World Cell details" aria-hidden="true">
+      <div class="drawer-heading"><span><small>WORLD CELL</small><b>DETAILS</b></span><button id="details-close" class="icon-button" type="button" aria-label="Close details">×</button></div>
       <section class="instrument-panel accent-gold metric-quality-panel">
-        <header><span><small>GEOMETRIC EVIDENCE</small><b>KEYXYM V0.26 AUTHORITY</b></span><span id="scale-value" class="state-pill">RELATIVE</span></header>
+        <header><span><small>CAPTURE QUALITY</small><b>MEASURED GEOMETRY</b></span><span id="scale-value" class="state-pill">RELATIVE</span></header>
         <div class="quality-meter"><i id="quality-meter"></i></div>
         <dl class="quality-grid">
           <div><dt>TRACKING</dt><dd id="tracking-value">0%</dd></div>
@@ -68,30 +78,24 @@
         </dl>
       </section>
 
-      <section class="instrument-panel accent-gold expert-only">
+      <section class="instrument-panel accent-gold">
         <header><span><small>COMPUTE</small><b>WORKER RECONSTRUCTION ENGINE</b></span><span id="gpu-badge" class="state-pill">VERIFYING</span></header>
         <div class="compute-meter"><i id="compute-meter"></i></div>
         <dl><div><dt>BACKEND</dt><dd id="backend-name">KEYXYM V0.26</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">PROVENANCE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">—</dd></div></dl>
       </section>
 
-      <section class="instrument-panel accent-moss timeline-panel">
-        <header><span><small>4D LINEAGE</small><b>AUTHORITATIVE MOMENTS</b></span><button id="seal-button" class="icon-command secondary" disabled>EFORM REQUIRED</button></header>
-        <div id="timeline" class="timeline"><span class="empty">No authoritative Moments committed.</span></div>
-        <div class="replay-controls"><button id="prev-button" disabled>◀</button><input id="replay-slider" type="range" min="0" max="0" value="0"><button id="play-button" disabled>PLAY</button><button id="next-button" disabled>▶</button></div>
-      </section>
-
-      <section class="instrument-panel accent-rust expert-only">
+      <section class="instrument-panel accent-rust">
         <header><span><small>CROSS-DEVICE</small><b>VERIFIED WORLD CELL LINK</b></span><span id="channel-state" class="state-pill">CLOSED</span></header>
         <div class="pair-actions"><button id="host-button" class="icon-command">CREATE OFFER</button><button id="join-button" class="icon-command secondary">JOIN OFFER</button><button id="answer-button" class="icon-command secondary">APPLY ANSWER</button><button id="send-button" class="icon-command" disabled>SEND SEALED WORLD CELL</button></div>
         <textarea id="pairing-text" spellcheck="false" placeholder="Offer/answer appears here. Copy it to the other device."></textarea>
         <div class="transfer-track"><i id="transfer-meter"></i></div>
         <p id="transfer-state">Only an eform and Power House verified v0.26 World Cell can be transferred and rendered as authoritative.</p>
       </section>
-    </aside>
-  </main>
+      <nav class="drawer-links" aria-label="Related TESSARYN tools"><a href="./personal-weave.html">PERSONAL WEAVE</a><a href="./keyxym-mobile.html">DEVICE LAB</a></nav>
+  </aside>
 
   <footer class="world-controls theater-controls">
-    <div class="control-group"><a href="./personal-weave.html">PERSONAL WEAVE</a><a href="./keyxym-mobile.html">DEVICE LAB</a></div>
+    <div class="control-group"><a href="./personal-weave.html">PERSONAL WEAVE</a></div>
     <div class="control-group"><span id="cell-state">WORLD CELL / VERIFYING AUTHORITY</span></div>
     <div class="control-group control-end"><button id="reset-button">RESET</button></div>
   </footer>
@@ -126,11 +130,27 @@
     advanced.onclick = () => {
       const expanded = advanced.getAttribute("aria-expanded") !== "true";
       advanced.setAttribute("aria-expanded", String(expanded));
-      advanced.textContent = expanded ? "HIDE ADVANCED" : "ADVANCED";
+      advanced.textContent = expanded ? "HIDE OPTIONS" : "MORE OPTIONS";
       advancedControls.hidden = !expanded;
       root.dataset.advancedControls = String(expanded);
     };
   }
+
+  const detailsButton = document.getElementById("details-button");
+  const detailsClose = document.getElementById("details-close");
+  const detailsBackdrop = document.getElementById("details-backdrop");
+  const detailsDrawer = document.querySelector(".instrument-stack");
+  const setDetails = (open) => {
+    root.dataset.detailsOpen = String(open);
+    if (detailsButton instanceof HTMLButtonElement) detailsButton.setAttribute("aria-expanded", String(open));
+    if (detailsDrawer instanceof HTMLElement) detailsDrawer.setAttribute("aria-hidden", String(!open));
+  };
+  if (detailsButton instanceof HTMLButtonElement) detailsButton.onclick = () => setDetails(root.dataset.detailsOpen !== "true");
+  if (detailsClose instanceof HTMLButtonElement) detailsClose.onclick = () => setDetails(false);
+  if (detailsBackdrop instanceof HTMLButtonElement) detailsBackdrop.onclick = () => setDetails(false);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setDetails(false);
+  });
 
   const stopBasicCamera = () => {
     basicStream?.getTracks().forEach((track) => track.stop());

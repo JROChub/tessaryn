@@ -18,6 +18,20 @@ test("World Cell Theater has one v0.26 provenance-gated controller", async () =>
   assert.doesNotMatch(entry, /verifyKeyxymV22Bundle/);
 });
 
+test("World Cell redesign preserves every runtime-bound interface element", async () => {
+  const [html, source] = await Promise.all([
+    read("world-cell-theater.html"),
+    read("src/world-cell-theater-v26.ts"),
+  ]);
+  const ids = new Set();
+  for (const match of source.matchAll(/(?:element(?:<[^>]+>)?|setText|setWidth)\("([^"]+)"/gu)) {
+    ids.add(match[1]);
+  }
+  for (const id of ids) {
+    assert.match(html, new RegExp(`id=["']${id}["']`), `missing runtime-bound element #${id}`);
+  }
+});
+
 test("v0.26 runtime executes RGBA authority inside a bounded worker", async () => {
   const [runtime, worker, client] = await Promise.all([
     read("src/keyxym-v26-runtime.ts"),

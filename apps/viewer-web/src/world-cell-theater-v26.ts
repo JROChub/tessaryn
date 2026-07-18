@@ -501,7 +501,7 @@ class TheaterController {
     const controls = document.querySelector<HTMLElement>(".advanced-capture");
     const expanded = button.getAttribute("aria-expanded") !== "true";
     button.setAttribute("aria-expanded", String(expanded));
-    button.textContent = expanded ? "HIDE ADVANCED" : "ADVANCED";
+    button.textContent = expanded ? "HIDE OPTIONS" : "MORE OPTIONS";
     if (controls) controls.hidden = !expanded;
     document.documentElement.dataset.advancedControls = String(expanded);
   }

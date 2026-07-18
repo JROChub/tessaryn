@@ -15,6 +15,11 @@ test("iPhone WebKit initializes the provenance-gated Keyxym authority", async ({
   await expect(page.locator("#start-button")).toBeEnabled();
   await expect(page.locator("#start-button")).toHaveText("START CAMERA");
   await expect(page.locator("#stage-message b")).toHaveText("READY TO CAPTURE A PLACE");
+  await expect(page.locator("#details-button")).toBeVisible();
+  const captureDock = await page.locator(".capture-dock").boundingBox();
+  const viewport = page.viewportSize();
+  expect(captureDock).not.toBeNull();
+  expect((captureDock?.y ?? 0) + (captureDock?.height ?? 0)).toBeLessThanOrEqual(viewport?.height ?? 0);
 
   const builtResponse = await page.request.get("/world-cell-theater.html");
   expect(builtResponse.ok()).toBe(true);
