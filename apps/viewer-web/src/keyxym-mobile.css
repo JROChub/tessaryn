@@ -159,6 +159,7 @@ dd { overflow-wrap:anywhere; margin-top:4px; color:var(--cyan); line-height:1.5;
 .weave-toolbar label { display:grid; flex:1; gap:6px; color:var(--muted); font:8px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 .weave-toolbar input { min-height:36px; padding:0 11px; color:var(--bone); border:1px solid var(--line); border-radius:3px; background:rgba(232,229,215,.035); }
 .weave-list { display:grid; gap:10px; }
+.weave-section-label { grid-column:1 / -1; margin:14px 0 0; color:var(--muted); font:700 9px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.14em; }
 .weave-object, .weave-empty { padding:16px; }
 .weave-object-heading { align-items:flex-start; }
 .weave-object-heading code { max-width:42%; overflow:hidden; color:var(--cyan); font:8px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-overflow:ellipsis; }

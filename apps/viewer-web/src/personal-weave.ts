@@ -1,12 +1,19 @@
 import "./keyxym-mobile.css";
 import {
-  clearPersonalWeave,
+  clearPersonalWeave as clearDeviceFiles,
   deletePersonalObject,
   getPersonalBlob,
   listPersonalObjects,
   storageEstimate,
   type StoredObject,
 } from "./keyxym-personal-store";
+import {
+  listPersonalWeave as listConstructions,
+  personalWeaveFile,
+  removePersonalObject as removeConstruction,
+  type PersonalWeaveObject,
+} from "./weave-client";
+import { stageOriginFile } from "./origin-handoff";
 
 const elements = {
   count: byId<HTMLElement>("weave-count"),
@@ -22,6 +29,7 @@ const elements = {
 };
 
 let objects: StoredObject[] = [];
+let constructions: PersonalWeaveObject[] = [];
 let previewUrl: string | null = null;
 
 void boot();
@@ -35,29 +43,88 @@ async function boot(): Promise<void> {
 }
 
 async function reload(): Promise<void> {
-  objects = await listPersonalObjects();
-  elements.count.textContent = String(objects.length);
-  elements.bytes.textContent = formatBytes(objects.reduce((sum, object) => sum + object.bytes, 0));
+  [objects, constructions] = await Promise.all([listPersonalObjects(), listConstructions()]);
+  elements.count.textContent = String(objects.length + constructions.length);
+  elements.bytes.textContent = formatBytes(
+    objects.reduce((sum, object) => sum + object.bytes, 0) +
+    constructions.reduce((sum, object) => sum + object.bytes, 0),
+  );
   const estimate = await storageEstimate();
   elements.quota.textContent = estimate.quota > 0
     ? `${formatBytes(estimate.usage)} / ${formatBytes(estimate.quota)} (${estimate.percent.toFixed(1)}%)`
     : "UNAVAILABLE";
-  elements.clear.disabled = objects.length === 0;
+  elements.clear.disabled = objects.length + constructions.length === 0;
   render();
 }
 
 function render(): void {
   const query = elements.search.value.trim().toLowerCase();
   const visible = objects.filter((object) => !query || object.name.toLowerCase().includes(query) || object.id.includes(query));
+  const visibleConstructions = constructions.filter((object) => !query ||
+    [object.title, object.objectId, object.artifactSha256, object.summary].join(" ").toLowerCase().includes(query));
   elements.list.replaceChildren();
-  if (visible.length === 0) {
+  if (visible.length === 0 && visibleConstructions.length === 0) {
     const empty = document.createElement("article");
     empty.className = "weave-empty";
-    empty.innerHTML = `<b>NO PERSONAL OBJECTS</b><p>Add a photo, video, document, or file from the device demo.</p><a href="./keyxym-mobile.html">OPEN DEVICE DEMO</a>`;
+    empty.innerHTML = `<b>NO PERSONAL OBJECTS</b><p>Capture a World Cell or retain a source file on this device.</p><a href="./world-cell-theater.html">CAPTURE WORLD CELL</a>`;
     elements.list.append(empty);
     return;
   }
+  if (visibleConstructions.length > 0) {
+    elements.list.append(sectionLabel("CONSTRUCTIONS / OPEN IN ORIGIN"));
+    for (const object of visibleConstructions) elements.list.append(createConstructionCard(object));
+  }
+  if (visible.length > 0) elements.list.append(sectionLabel("SOURCE FILES / DEVICE-LOCAL"));
   for (const object of visible) elements.list.append(createCard(object));
+}
+
+function sectionLabel(value: string): HTMLElement {
+  const label = document.createElement("h2");
+  label.className = "weave-section-label";
+  label.textContent = value;
+  return label;
+}
+
+function createConstructionCard(object: PersonalWeaveObject): HTMLElement {
+  const card = document.createElement("article");
+  card.className = "weave-object construction-object";
+  const heading = document.createElement("div");
+  heading.className = "weave-object-heading";
+  const title = document.createElement("span");
+  const small = document.createElement("small"); small.textContent = new Date(object.addedAtUnixUs / 1_000).toLocaleString();
+  const strong = document.createElement("b"); strong.textContent = object.title;
+  title.append(small, strong);
+  const digest = document.createElement("code"); digest.textContent = object.artifactSha256;
+  heading.append(title, digest);
+  const meta = document.createElement("dl");
+  meta.innerHTML = `<div><dt>TYPE</dt><dd>${object.artifactKind === "rgbd_reconstruction" ? "VERIFIED PLACE" : "TEMPORAL OBJECT"}</dd></div><div><dt>SIZE</dt><dd>${formatBytes(object.bytes)}</dd></div><div><dt>STATE</dt><dd>${object.publicationId ? "PUBLIC + PRIVATE" : "PRIVATE"}</dd></div>`;
+  const actions = document.createElement("div"); actions.className = "object-actions";
+  actions.append(
+    action("OPEN IN ORIGIN", "primary-action", () => void openConstruction(object)),
+    action("DOWNLOAD", "", () => void downloadConstruction(object)),
+    action("DELETE", "danger-action", () => void removeStoredConstruction(object)),
+  );
+  card.append(heading, meta, actions);
+  return card;
+}
+
+async function openConstruction(object: PersonalWeaveObject): Promise<void> {
+  const file = await personalWeaveFile(object);
+  const id = await stageOriginFile(file);
+  const origin = new URL("./", location.href);
+  origin.searchParams.set("open-local", id);
+  location.assign(origin);
+}
+
+async function downloadConstruction(object: PersonalWeaveObject): Promise<void> {
+  const file = await personalWeaveFile(object);
+  downloadBlob(file, file.name);
+}
+
+async function removeStoredConstruction(object: PersonalWeaveObject): Promise<void> {
+  if (!window.confirm(`Delete ${object.title} from this device?`)) return;
+  await removeConstruction(object);
+  await reload();
 }
 
 function createCard(object: StoredObject): HTMLElement {
@@ -113,8 +180,9 @@ async function removeObject(object: StoredObject): Promise<void> {
 }
 
 async function clearAll(): Promise<void> {
-  if (!window.confirm("Delete every Personal Weave source Blob, metadata record, and transfer journal from this device?")) return;
-  await clearPersonalWeave();
+  if (!window.confirm("Delete every Personal Weave construction, source file, metadata record, and transfer journal from this device?")) return;
+  await Promise.all(constructions.map((object) => removeConstruction(object)));
+  await clearDeviceFiles();
   await reload();
 }
 

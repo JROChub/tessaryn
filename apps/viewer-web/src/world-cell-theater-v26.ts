@@ -33,6 +33,8 @@ import {
   isValidSpatialCalibration,
   type TessarynSpatialCalibration,
 } from "./tessaryn-spatial-sensor";
+import { stageOriginFile } from "./origin-handoff";
+import { worldCellSurfacePly } from "./world-cell-export";
 
 interface RuntimeEvidence {
   time: number;
@@ -469,6 +471,9 @@ class TheaterController {
     element<HTMLButtonElement>("stop-button").onclick = () => this.stopCamera();
     element<HTMLButtonElement>("capture-button").onclick = () => void this.commitMoment().catch((error) => this.fail(error));
     element<HTMLButtonElement>("seal-button").onclick = () => void this.seal().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("open-model-button").onclick = () => void this.openModelInOrigin().catch((error) => this.fail(error));
+    element<HTMLButtonElement>("download-model-button").onclick = () => this.downloadModel();
+    element<HTMLButtonElement>("export-cell-button").onclick = () => this.exportWorldCell();
     element<HTMLInputElement>("replay-slider").oninput = (event) => this.showMoment(Number((event.target as HTMLInputElement).value));
     element<HTMLButtonElement>("prev-button").onclick = () => this.showMoment(this.currentMoment - 1);
     element<HTMLButtonElement>("next-button").onclick = () => this.showMoment(this.currentMoment + 1);
@@ -1138,6 +1143,35 @@ class TheaterController {
     setText("transfer-state", `Sent ${bytes.byteLength.toLocaleString()} sealed bytes.`);
   }
 
+  private modelFile(): File {
+    const metric = this.quality?.metricScale === true;
+    const blob = worldCellSurfacePly(this.surfaceSnapshot.vertices, metric);
+    return new File([blob], `tessaryn-world-cell-${metric ? "metric" : "relative"}.ply`, {
+      type: "application/vnd.ply",
+      lastModified: Date.now(),
+    });
+  }
+
+  private async openModelInOrigin(): Promise<void> {
+    const id = await stageOriginFile(this.modelFile());
+    const origin = new URL("../", location.href);
+    origin.searchParams.set("open-local", id);
+    location.assign(origin);
+  }
+
+  private downloadModel(): void {
+    downloadFile(this.modelFile());
+  }
+
+  private exportWorldCell(): void {
+    if (!this.sealedCell) throw new Error("Seal the World Cell before exporting its proof and lineage");
+    const bytes = encoder.encode(canonicalString(this.sealedCell));
+    downloadFile(new File([bytes], `tessaryn-world-cell-${this.sealedCell.canonicalDigest.slice(0, 12)}.json`, {
+      type: "application/vnd.tessaryn.world-cell+json",
+      lastModified: Date.now(),
+    }));
+  }
+
   private onPeerMessage(event: MessageEvent): void {
     if (typeof event.data === "string") {
       const message = JSON.parse(event.data) as Record<string, unknown>;
@@ -1223,6 +1257,10 @@ class TheaterController {
     sealButton.disabled = !sealReady || bridge === null;
     sealButton.textContent = bridge ? (sealReady ? "SEAL CELL" : "SEAL GATE") : "EFORM REQUIRED";
     element<HTMLButtonElement>("send-button").disabled = !this.sealedCell || !this.channel || this.channel.readyState !== "open";
+    const modelReady = !this.running && this.surfaceSnapshot.vertices.length >= 48 && this.surfaceSnapshot.vertices.length % 3 === 0;
+    element<HTMLButtonElement>("open-model-button").disabled = !modelReady;
+    element<HTMLButtonElement>("download-model-button").disabled = !modelReady;
+    element<HTMLButtonElement>("export-cell-button").disabled = !this.sealedCell;
   }
 
   private handleFrameFailure(error: unknown): void {
@@ -1385,4 +1423,13 @@ class TheaterController {
 export async function installWorldCellTheater(manifest: KeyxymV26Manifest): Promise<void> {
   const controller = new TheaterController(manifest);
   await controller.initialize();
+}
+
+function downloadFile(file: File): void {
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.name;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }

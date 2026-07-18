@@ -48,6 +48,7 @@ import type {
   VerificationReport,
 } from "./types";
 import { parseAndVerifyCinematicObject } from "./cinematic-object";
+import { takeOriginFile } from "./origin-handoff";
 import {
   destroyLocalIngestWorker,
   indexLocalFileOffThread,
@@ -501,6 +502,18 @@ async function boot(): Promise<void> {
 
 async function initializeObjectWeave(): Promise<void> {
   await refreshPublicWeave();
+  const handoffId = new URLSearchParams(location.search).get("open-local");
+  if (handoffId) {
+    const file = await takeOriginFile(handoffId);
+    const route = new URL(location.href);
+    route.searchParams.delete("open-local");
+    history.replaceState(null, "", route);
+    if (file) {
+      await routeLocalFiles([file]);
+      return;
+    }
+    showToast("THE ORIGIN HANDOFF EXPIRED / OPEN THE MODEL AGAIN");
+  }
   if (new URLSearchParams(location.search).get("origin") === "validation") {
     openValidationOrigin(false);
     return;
@@ -946,7 +959,7 @@ async function loadPublicObject(entry: PublicObjectCatalogEntry): Promise<void> 
   } catch (error) {
     console.error(error);
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "ADD";
+    elements.importButton.querySelector("span")!.textContent = "OPEN";
     showToast(error instanceof Error ? error.message.toUpperCase() : "PUBLIC OBJECT FAILED");
   }
 }
@@ -1503,7 +1516,7 @@ async function importReconstructionFile(
     }
   } finally {
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "ADD";
+    elements.importButton.querySelector("span")!.textContent = "OPEN";
   }
 }
 
@@ -1568,7 +1581,7 @@ async function importValidationLocusFile(
     presentIntakeFailure(file, error);
   } finally {
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "ADD";
+    elements.importButton.querySelector("span")!.textContent = "OPEN";
   }
 }
 
@@ -1687,7 +1700,7 @@ async function importCinematicFile(
     }
   } finally {
     elements.importButton.disabled = false;
-    elements.importButton.querySelector("span")!.textContent = "ADD";
+    elements.importButton.querySelector("span")!.textContent = "OPEN";
   }
 }
 
@@ -1784,7 +1797,7 @@ async function importSourceGeometry(file: File, companions: readonly File[]): Pr
   const parsing = parseSourceGeometry(file, companions);
   const [indexed, parsed] = await Promise.allSettled([indexing, parsing]);
   elements.importButton.disabled = false;
-  elements.importButton.querySelector("span")!.textContent = "ADD";
+  elements.importButton.querySelector("span")!.textContent = "OPEN";
 
   if (indexed.status === "rejected") {
     if (parsed.status === "fulfilled") disposeSourceGeometry(parsed.value);
