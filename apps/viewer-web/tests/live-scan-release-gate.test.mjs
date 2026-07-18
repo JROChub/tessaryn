@@ -15,6 +15,7 @@ test("live release verification requires the calibrated spatial continuum and re
   assert.match(source, /relative-native-triangles/);
   assert.match(source, /RELATIVE RECONSTRUCTION READY/);
   assert.match(source, /retained-source-frame/);
+  assert.match(source, /const timeoutMs = 45000/);
   assert.match(source, /tessaryn\/spatial-calibration\/v1/);
   assert.match(source, /Metric capture requires an exact browser media-frame identity/);
   assert.match(source, /Host-verified synchronized RGB-D/);

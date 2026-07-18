@@ -2,8 +2,8 @@ const root = document.documentElement;
 root.dataset.worldCellBoot = "module-started";
 root.dataset.worldCellMode = "initializing";
 
-const BOOT_PHASE_TIMEOUT_MS = 8_000;
-const PREVIEW_LOAD_TIMEOUT_MS = 12_000;
+const BOOT_PHASE_TIMEOUT_MS = 20_000;
+const PREVIEW_LOAD_TIMEOUT_MS = 20_000;
 
 function setText(id: string, value: string): void {
   const node = document.getElementById(id);
@@ -133,13 +133,14 @@ async function enterPreview(error: unknown): Promise<void> {
 }
 
 async function boot(): Promise<void> {
-  const serviceWorkerRefresh = refreshServiceWorker();
+  // Theater and authority artifacts are network-only in the service worker.
+  // Refresh it concurrently, never on the provenance/WASM critical path.
+  void refreshServiceWorker();
   try {
     // Keyxym v0.26 owns monocular RGBA feature tracking, relative pose recovery,
     // forming output, geometry, quality, and receipts. A verified spatial sensor
     // is optional evidence that promotes scale from relative to metric; it is not
     // a prerequisite for loading or executing the reconstruction authority.
-    await serviceWorkerRefresh;
     const { verifyKeyxymV26Bundle } = await withTimeout(
       import("./keyxym-v26-provenance"),
       BOOT_PHASE_TIMEOUT_MS,
