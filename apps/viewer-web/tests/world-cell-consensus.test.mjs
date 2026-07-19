@@ -32,6 +32,22 @@ test("World Cell redesign preserves every runtime-bound interface element", asyn
   }
 });
 
+test("mobile Theater keeps the stage bounded and every control in document flow", async () => {
+  const [html, styles] = await Promise.all([
+    read("world-cell-theater.html"),
+    read("src/world-cell-theater.css"),
+  ]);
+  assert.match(html, /<div class="stage-viewport">[\s\S]*?id="stage-message"/);
+  const mobile = styles.slice(styles.indexOf("@media (max-width:760px)"));
+  assert.match(mobile, /html, body \{[^}]*overflow-y:auto/);
+  assert.match(mobile, /\.theater-main \{ position:relative; inset:auto/);
+  assert.match(mobile, /\.stage-viewport \{ position:relative;[^}]*height:clamp\(/);
+  assert.match(mobile, /\.capture-dock \{ position:relative;/);
+  assert.match(mobile, /\.moment-tray \{ position:relative!important;/);
+  assert.match(mobile, /\.theater-controls \{[\s\S]*?position:relative;/);
+  assert.match(mobile, /\.model-actions \{[^}]*grid-template-columns:repeat\(2/);
+});
+
 test("v0.26 runtime executes RGBA authority inside a bounded worker", async () => {
   const [runtime, worker, client] = await Promise.all([
     read("src/keyxym-v26-runtime.ts"),

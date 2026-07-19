@@ -21,18 +21,20 @@
 
   <main class="theater-main">
     <section class="stage-panel" aria-label="World Cell spatial stage">
-      <video id="camera" autoplay muted playsinline></video>
-      <canvas id="retained-source-frame" aria-hidden="true"></canvas>
-      <canvas id="stage"></canvas>
-      <div class="scan-overlay"><i></i><i></i><i></i><i></i></div>
-      <div class="navigation-hint">DRAG TO LOOK · W A S D TO MOVE · WHEEL TO DOLLY</div>
-      <div class="stage-hud">
-        <span><small>GEOMETRY</small><b id="surfel-count">0</b></span>
-        <span><small>VIEWS</small><b id="frame-count">0</b></span>
-        <span><small>POSE</small><b id="pose-state">AUTHORITY OFFLINE</b></span>
-        <span><small>ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
+      <div class="stage-viewport">
+        <video id="camera" autoplay muted playsinline></video>
+        <canvas id="retained-source-frame" aria-hidden="true"></canvas>
+        <canvas id="stage"></canvas>
+        <div class="scan-overlay"><i></i><i></i><i></i><i></i></div>
+        <div class="navigation-hint">DRAG TO LOOK · W A S D TO MOVE · WHEEL TO DOLLY</div>
+        <div class="stage-hud">
+          <span><small>GEOMETRY</small><b id="surfel-count">0</b></span>
+          <span><small>VIEWS</small><b id="frame-count">0</b></span>
+          <span><small>POSE</small><b id="pose-state">AUTHORITY OFFLINE</b></span>
+          <span><small>ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
+        </div>
+        <div id="stage-message" class="stage-message"><b>PREPARING YOUR WORLD CELL</b><span>We are verifying the reconstruction engine before the camera can start. Your images stay on this device.</span></div>
       </div>
-      <div id="stage-message" class="stage-message"><b>PREPARING YOUR WORLD CELL</b><span>We are verifying the reconstruction engine before the camera can start. Your images stay on this device.</span></div>
       <section class="capture-dock" aria-label="World Cell capture controls">
         <div class="capture-copy">
           <div class="capture-heading"><span class="capture-kicker">WORLD CELL CAPTURE</span><span id="sensor-badge" class="state-pill">CAMERA</span></div>
