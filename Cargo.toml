@@ -32,7 +32,7 @@ axum = "0.8.9"
 hex = "0.4"
 chacha20poly1305 = "0.10.1"
 ed25519-dalek = "2.2.0"
-getrandom = "0.3.4"
+getrandom = "0.4.3"
 hkdf = "0.12.4"
 power_house = { version = "0.3.24", default-features = false, features = ["memory"] }
 proptest = "=1.9.0"
