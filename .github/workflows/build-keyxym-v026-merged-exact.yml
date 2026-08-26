@@ -1,0 +1,101 @@
+name: Build merged exact Keyxym v0.26 runtime
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/build-keyxym-v026-merged-exact.yml"
+      - "validation/keyxym-v22/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-merged-wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Require exact merged Keyxym source blobs
+        run: bash validation/keyxym-v22/verify-private-blobs.sh
+      - name: Install checksum-verified official Emscripten 6.0.3 package
+        run: |
+          set -euo pipefail
+          url='https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/9074aa513b501925adb1361e208932ad32a29a5f/wasm-binaries.tar.xz'
+          curl --fail --location --retry 8 --retry-all-errors \
+            --connect-timeout 15 --max-time 900 "$url" -o /tmp/wasm-binaries.tar.xz
+          echo '3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3  /tmp/wasm-binaries.tar.xz' | sha256sum -c -
+          mkdir -p /tmp/emscripten-6.0.3
+          tar -xJf /tmp/wasm-binaries.tar.xz -C /tmp/emscripten-6.0.3 --strip-components=1
+          printf '/tmp/emscripten-6.0.3/bin\n/tmp/emscripten-6.0.3/emscripten\n' >> "$GITHUB_PATH"
+      - name: Build and execute merged-source WebAssembly authority
+        run: |
+          emcc --version | tee /tmp/emcc-version.txt
+          grep -q '6.0.3' /tmp/emcc-version.txt
+          emcmake cmake -S validation/keyxym-v22 -B /tmp/keyxym-v26-merged-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/keyxym-v26-merged-wasm --target keyxym-v26 --parallel 2
+          node validation/keyxym-v22/tests/test_v026_wasm.mjs \
+            /tmp/keyxym-v26-merged-wasm/keyxym-v26.mjs \
+            /tmp/keyxym-v26-merged-wasm/keyxym-v26.wasm | tee /tmp/keyxym-v26-merged-runtime-result.json
+      - name: Create merged-source provenance manifest
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('/tmp/keyxym-v26-merged-wasm')
+          artifacts = {}
+          for name in ('keyxym-v26.mjs', 'keyxym-v26.wasm'):
+              data = (root / name).read_bytes()
+              artifacts[name] = {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+          manifest = {
+              'schema': 'keyxym.browser-runtime-provenance/v6',
+              'version': '0.26.0',
+              'abi': 'keyxym-v26-reality-authority-1',
+              'perception_abi': 'keyxym-v26-calibrated-cpp-frontend-v1',
+              'source_repository': 'JROChub/keyxym_map',
+              'source_commit': 'c94d4db57d1db89e96cb7fd860da2d4c1617f516',
+              'source_exact': True,
+              'derivation': 'source-exact-external-validation-build',
+              'maximum_surfels': 48000,
+              'maximum_analysis_width': 320,
+              'maximum_analysis_height': 240,
+              'maximum_tracks': 384,
+              'maximum_preview_samples': 8192,
+              'timestamp_abi': 'wasm-bigint-i64',
+              'pose_floats': 27,
+              'quality_floats': 8,
+              'authority_floats': 8,
+              'preview_record_floats': 10,
+              'geometry_record_floats': 13,
+              'receipt_bytes': 96,
+              'toolchain': {
+                  'name': 'Emscripten',
+                  'version': '6.0.3',
+                  'release_commit': '9074aa513b501925adb1361e208932ad32a29a5f',
+                  'official_package_sha256': '3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3',
+              },
+              'validation': {
+                  'exact_blob_matrix_run': 29439226477,
+                  'gcc': True,
+                  'asan_ubsan': True,
+                  'msvc': True,
+                  'mobile_sdk': True,
+                  'wasm_runtime': True,
+              },
+              'artifacts': artifacts,
+          }
+          pathlib.Path('/tmp/keyxym-v26-merged-manifest.json').write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+          PY
+          cat /tmp/keyxym-v26-merged-manifest.json
+      - name: Upload merged-source authority bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: keyxym-v26-merged-exact-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/keyxym-v26-merged-wasm/keyxym-v26.mjs
+            /tmp/keyxym-v26-merged-wasm/keyxym-v26.wasm
+            /tmp/keyxym-v26-merged-manifest.json
+            /tmp/keyxym-v26-merged-runtime-result.json
+            /tmp/emcc-version.txt
+          if-no-files-found: error
+          retention-days: 30

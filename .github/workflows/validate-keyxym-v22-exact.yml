@@ -1,0 +1,193 @@
+name: Validate exact Keyxym v0.26 reality authority
+
+on:
+  pull_request:
+    paths:
+      - "validation/keyxym-v22/**"
+      - ".github/workflows/validate-keyxym-v22-exact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Require exact private Keyxym blobs
+        run: bash validation/keyxym-v22/verify-private-blobs.sh
+      - name: Configure strict GCC build
+        run: cmake -S validation/keyxym-v22 -B /tmp/keyxym-linux -DCMAKE_BUILD_TYPE=Release
+      - name: Build strict GCC targets
+        run: cmake --build /tmp/keyxym-linux --parallel 2
+      - name: Run calibrated and browser authority tests
+        run: ctest --test-dir /tmp/keyxym-linux --output-on-failure
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CC: clang
+      CXX: clang++
+      ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:halt_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Require exact private Keyxym blobs
+        run: bash validation/keyxym-v22/verify-private-blobs.sh
+      - name: Configure AddressSanitizer and UndefinedBehaviorSanitizer
+        run: >-
+          cmake -S validation/keyxym-v22 -B /tmp/keyxym-sanitized
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build sanitized targets
+        run: cmake --build /tmp/keyxym-sanitized --parallel 2
+      - name: Run sanitized authority tests
+        shell: bash
+        run: |
+          set +e
+          ctest --test-dir /tmp/keyxym-sanitized --output-on-failure 2>&1 | tee /tmp/keyxym-sanitizer.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Upload sanitizer diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: keyxym-v26-sanitizer-diagnostics
+          path: /tmp/keyxym-sanitizer.log
+          if-no-files-found: ignore
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Require exact private Keyxym blobs
+        shell: bash
+        run: bash validation/keyxym-v22/verify-private-blobs.sh
+      - name: Configure MSVC build
+        run: cmake -S validation/keyxym-v22 -B $env:RUNNER_TEMP/keyxym-windows -A x64 -DCMAKE_BUILD_TYPE=Debug
+      - name: Build MSVC targets with warnings as errors
+        run: cmake --build $env:RUNNER_TEMP/keyxym-windows --config Debug --parallel 2
+      - name: Run MSVC authority tests
+        run: ctest --test-dir $env:RUNNER_TEMP/keyxym-windows -C Debug --output-on-failure
+
+  mobile-sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Require exact private Keyxym blobs
+        run: bash validation/keyxym-v22/verify-private-blobs.sh
+      - name: Configure bounded embeddable library
+        run: >-
+          cmake -S validation/keyxym-v22 -B /tmp/keyxym-mobile
+          -DCMAKE_BUILD_TYPE=MinSizeRel
+          -DKEYXYM_VALIDATION_TESTS=OFF
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+      - name: Build and install embeddable SDK
+        run: |
+          cmake --build /tmp/keyxym-mobile --parallel 2
+          cmake --install /tmp/keyxym-mobile --prefix /tmp/keyxym-sdk
+      - name: Verify reality authority SDK surface
+        run: |
+          test -s /tmp/keyxym-sdk/lib/libkeyxym_v26_exact.a
+          for header in \
+            v22.hpp v22_browser_frontend.hpp v26.hpp v26_browser_runtime.h; do
+            test -s "/tmp/keyxym-sdk/include/keyxym/${header}"
+          done
+
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Require exact private Keyxym blobs
+        run: bash validation/keyxym-v22/verify-private-blobs.sh
+      - name: Install checksum-verified official Emscripten 6.0.3 package
+        run: |
+          set -euo pipefail
+          url='https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/9074aa513b501925adb1361e208932ad32a29a5f/wasm-binaries.tar.xz'
+          curl --fail --location --retry 8 --retry-all-errors \
+            --connect-timeout 15 --max-time 900 "$url" -o /tmp/wasm-binaries.tar.xz
+          echo '3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3  /tmp/wasm-binaries.tar.xz' | sha256sum -c -
+          mkdir -p /tmp/emscripten-6.0.3
+          tar -xJf /tmp/wasm-binaries.tar.xz -C /tmp/emscripten-6.0.3 --strip-components=1
+          printf '/tmp/emscripten-6.0.3/bin\n/tmp/emscripten-6.0.3/emscripten\n' >> "$GITHUB_PATH"
+      - name: Verify exact Emscripten identity
+        run: |
+          emcc --version | tee /tmp/emcc-version.txt
+          grep -q '6.0.3' /tmp/emcc-version.txt
+      - name: Configure exact WebAssembly runtime
+        run: emcmake cmake -S validation/keyxym-v22 -B /tmp/keyxym-wasm -DCMAKE_BUILD_TYPE=Release
+      - name: Build exact WebAssembly runtime
+        run: cmake --build /tmp/keyxym-wasm --target keyxym-v26 --parallel 2
+      - name: Verify WebAssembly exports and execute authority
+        run: |
+          test -s /tmp/keyxym-wasm/keyxym-v26.mjs
+          test -s /tmp/keyxym-wasm/keyxym-v26.wasm
+          for symbol in \
+            keyxym_v26_session_create \
+            keyxym_v26_session_destroy \
+            keyxym_v26_ingest_rgba_packed \
+            keyxym_v26_copy_receipts \
+            keyxym_v26_copy_preview_packed \
+            keyxym_v26_geometry_revision \
+            keyxym_v26_copy_geometry_snapshot_packed \
+            keyxym_v26_quality_packed \
+            keyxym_v26_authority_packed; do
+            grep -q "$symbol" /tmp/keyxym-wasm/keyxym-v26.mjs
+          done
+          node validation/keyxym-v22/tests/test_v026_wasm.mjs \
+            /tmp/keyxym-wasm/keyxym-v26.mjs \
+            /tmp/keyxym-wasm/keyxym-v26.wasm | tee /tmp/keyxym-v26-wasm-result.json
+      - name: Record exact-source artifact provenance
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('/tmp/keyxym-wasm')
+          result = {
+            'schema': 'keyxym.reality-runtime-validation/v1',
+            'source_repository': 'JROChub/keyxym_map',
+            'source_commit': '3a830a3059c21e3e9a946b4915e3d523a014c9a2',
+            'version': '0.26.0',
+            'abi': 'keyxym-v26-reality-authority-1',
+            'pose_record_floats': 27,
+            'quality_record_floats': 8,
+            'authority_record_floats': 8,
+            'preview_record_floats': 10,
+            'geometry_record_floats': 13,
+            'receipt_bytes': 96,
+            'toolchain': {
+              'name': 'Emscripten',
+              'version': '6.0.3',
+              'release_commit': '9074aa513b501925adb1361e208932ad32a29a5f',
+              'package_sha256': '3f32b91a3f8d405846ccacee911f9364da75f413fbd11ea1f3f7f23bf9d07cf3',
+            },
+            'artifacts': {},
+          }
+          for name in ('keyxym-v26.mjs', 'keyxym-v26.wasm'):
+            data = (root / name).read_bytes()
+            result['artifacts'][name] = {
+              'bytes': len(data),
+              'sha256': hashlib.sha256(data).hexdigest(),
+            }
+          pathlib.Path('/tmp/keyxym-v26-exact-provenance.json').write_text(
+            json.dumps(result, indent=2, sort_keys=True) + '\n')
+          PY
+          cat /tmp/keyxym-v26-exact-provenance.json
+      - name: Upload exact-source reality runtime
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: keyxym-v26-exact-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/keyxym-wasm/keyxym-v26.mjs
+            /tmp/keyxym-wasm/keyxym-v26.wasm
+            /tmp/keyxym-v26-exact-provenance.json
+            /tmp/keyxym-v26-wasm-result.json
+            /tmp/emcc-version.txt
+          if-no-files-found: error
+          retention-days: 30
