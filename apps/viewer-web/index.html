@@ -14,6 +14,8 @@
   </head>
   <body>
     <div id="app" class="app-shell" data-ready="false">
+      <main id="main">
+      <h1 class="visually-hidden">TESSARYN / Native 4D Origin</h1>
       <canvas
         id="world-canvas"
         aria-label="Traversable TESSARYN Origin"
@@ -67,7 +69,7 @@
         </div>
         <div class="top-states" aria-live="polite">
           <span id="network-state"><i></i>LOCAL</span>
-          <span id="identity-state"><i></i>ROOTPRINT LIVE</span>
+          <span id="identity-state" data-glossary-term="rootprint" tabindex="0"><i></i>ROOTPRINT LIVE</span>
           <span id="cell-count">0 CELLS</span>
         </div>
         <div class="top-actions">
@@ -97,6 +99,7 @@
           <button id="verify-button" class="icon-command" type="button" title="Verify local world">
             <i data-lucide="shield-check"></i><span>VERIFY</span>
           </button>
+          <button id="help-button" class="icon-button help-button" type="button" title="Help and glossary" aria-label="Open help and glossary">?</button>
           <button id="fullscreen-button" class="icon-button" type="button" title="Toggle fullscreen">
             <i data-lucide="maximize-2"></i>
           </button>
@@ -109,7 +112,8 @@
         </div>
       </header>
 
-      <nav id="moment-rail" class="moment-rail" aria-label="Moments"></nav>
+      <h2 id="chronofield-heading" class="visually-hidden">Chronofield</h2>
+      <nav id="moment-rail" class="moment-rail" aria-labelledby="chronofield-heading"></nav>
 
       <section class="origin-status" aria-live="polite">
         <small id="origin-phase">ORIGIN / STRUCTURE</small>
@@ -124,6 +128,7 @@
           <i data-lucide="upload"></i><span>CONSTRUCT A PLACE</span>
         </button>
       </section>
+      </main>
 
       <div id="world-label" class="world-label" hidden>
         <i></i>
@@ -132,7 +137,7 @@
 
       <aside id="trace-drawer" class="trace-drawer" aria-label="Cell Trace" aria-hidden="true" inert>
         <header>
-          <div><small id="trace-kicker">CELL TRACE</small><b id="trace-title">NO CELL SELECTED</b></div>
+          <div><small id="trace-kicker">CELL TRACE</small><h2 id="trace-title">NO CELL SELECTED</h2></div>
           <button id="trace-close" class="icon-button" type="button" title="Close Trace">
             <i data-lucide="x"></i>
           </button>
@@ -149,27 +154,27 @@
             <div><dt>REPLAY</dt><dd id="trace-replay">--</dd></div>
             <div><dt>DISCLOSURE</dt><dd id="trace-disclosure">--</dd></div>
           </dl>
-          <div class="digest-block"><small>CELL ID</small><code id="trace-cell-id">--</code></div>
-          <div class="digest-block"><small>PHA FINGERPRINT</small><code id="trace-pha">--</code></div>
+          <div class="digest-block"><small data-glossary-term="digest" tabindex="0">CELL ID</small><code id="trace-cell-id">--</code></div>
+          <div class="digest-block"><small data-glossary-term="pha" tabindex="0">PHA FINGERPRINT</small><code id="trace-pha">--</code></div>
           <div class="evidence-vector" id="evidence-vector"></div>
         </div>
         <div id="trace-lineage" class="trace-panel" role="tabpanel">
           <div id="lineage-path" class="lineage-path"></div>
-          <div class="digest-block"><small>ROOTPRINT BRANCH</small><code id="trace-rootprint">--</code></div>
+          <div class="digest-block"><small data-glossary-term="rootprint" tabindex="0">ROOTPRINT BRANCH</small><code id="trace-rootprint">--</code></div>
           <div class="digest-block"><small>ANCHOR</small><code id="trace-anchor">--</code></div>
         </div>
         <div id="trace-meaning" class="trace-panel" role="tabpanel">
           <p id="trace-summary"></p>
           <div class="meaning-boundary">
             <i data-lucide="layers-3"></i>
-            <span><b>SLBIT / LIVING MEANING</b><small>Meaning reorganizes around this Cell as focus and time change.</small></span>
+            <span><b data-glossary-term="slbit" tabindex="0">SLBIT / LIVING MEANING</b><small>Meaning reorganizes around this Cell as focus and time change.</small></span>
           </div>
         </div>
       </aside>
 
       <aside id="challenge-drawer" class="challenge-drawer" aria-label="Mutation Lab" aria-hidden="true" inert>
         <header>
-          <div><small>LOCAL MUTATION LAB</small><b>WATCH FALSEHOOD STOP</b></div>
+          <div><small>LOCAL MUTATION LAB</small><h2>WATCH FALSEHOOD STOP</h2></div>
           <button id="challenge-close" class="icon-button" type="button" title="Close mutation lab">
             <i data-lucide="x"></i>
           </button>
@@ -192,7 +197,7 @@
 
       <dialog id="intake-dialog" class="intake-dialog">
         <header>
-          <div><small>LOCAL / NO UPLOAD</small><b>OPEN IN ORIGIN</b></div>
+          <div><small>LOCAL / NO UPLOAD</small><h2>OPEN IN ORIGIN</h2></div>
           <button id="intake-close" class="icon-button" type="button" title="Close construction intake">
             <i data-lucide="x"></i>
           </button>
@@ -215,7 +220,7 @@
 
       <dialog id="verification-dialog" class="verification-dialog">
         <header>
-          <div><small>LOCAL VERIFICATION REPORT</small><b id="verify-title">VERIFYING WORLD</b></div>
+          <div><small>LOCAL VERIFICATION REPORT</small><h2 id="verify-title">VERIFYING WORLD</h2></div>
           <button id="verify-close" class="icon-button" type="button" title="Close report">
             <i data-lucide="x"></i>
           </button>
@@ -232,7 +237,7 @@
 
       <dialog id="sources-dialog" class="sources-dialog">
         <header>
-          <div><small>REPRODUCIBILITY INSTRUMENT</small><b>VALIDATION LAB</b></div>
+          <div><small>REPRODUCIBILITY INSTRUMENT</small><h2>VALIDATION LAB</h2></div>
           <button id="sources-close" class="icon-button" type="button" title="Close dataset portfolio">
             <i data-lucide="x"></i>
           </button>
@@ -249,7 +254,7 @@
             <div><dt>ARCHIVES</dt><dd id="source-assets">--</dd></div>
           </dl>
           <code id="source-profile-id">--</code>
-          <button id="open-validation-origin" class="icon-command" type="button">
+          <button id="open-validation-origin" class="icon-command" type="button" data-glossary-term="locus">
             <i data-lucide="scan"></i><span>OPEN VALIDATION LOCUS</span>
           </button>
         </section>
@@ -259,7 +264,7 @@
 
       <dialog id="objects-dialog" class="objects-dialog">
         <header>
-          <div><small>OBJECT WEAVE</small><b>PLACES OWNED BY PEOPLE, NOT PROVIDERS</b></div>
+          <div><small>OBJECT WEAVE</small><h2>PLACES OWNED BY PEOPLE, NOT PROVIDERS</h2></div>
           <span id="weave-node-state" class="weave-node-state" data-state="connecting">CONNECTING</span>
           <button id="objects-close" class="icon-button" type="button" title="Close Object Weave">
             <i data-lucide="x"></i>
@@ -282,7 +287,7 @@
 
       <dialog id="publish-dialog" class="publish-dialog">
         <header>
-          <div><small>PERSONAL + PUBLIC WEAVE</small><b>PLACE THIS CONSTRUCTION</b></div>
+          <div><small>PERSONAL + PUBLIC WEAVE</small><h2>PLACE THIS CONSTRUCTION</h2></div>
           <button id="publish-close" class="icon-button" type="button" title="Close publication">
             <i data-lucide="x"></i>
           </button>
@@ -295,7 +300,7 @@
         <div class="publish-fields">
           <label><span>OBJECT ID</span><input id="publish-object-id" type="text" maxlength="96" autocomplete="off"></label>
           <label><span>TITLE</span><input id="publish-title" type="text" maxlength="160" autocomplete="off"></label>
-          <label class="wide"><span>SLBIT SUMMARY</span><textarea id="publish-summary" maxlength="500" rows="3"></textarea></label>
+          <label class="wide"><span data-glossary-term="slbit" tabindex="0">SLBIT SUMMARY</span><textarea id="publish-summary" maxlength="500" rows="3"></textarea></label>
         </div>
         <label class="publish-consent">
           <input id="publish-consent" type="checkbox">
@@ -332,8 +337,8 @@
           <input id="scale-breath" type="range" min="0" max="1000" value="500" aria-label="Continuous scale breathing">
         </div>
         <div class="control-group">
-          <button id="chronofold-button" type="button" title="Open Chronofold" aria-pressed="false"><i data-lucide="git-branch"></i><span>CHRONOFOLD</span></button>
-          <button id="evidence-button" class="active" type="button" title="Toggle provenance field" aria-pressed="true"><i data-lucide="waypoints"></i><span>PROVENANCE</span></button>
+          <button id="chronofold-button" type="button" data-glossary-term="chronofold" aria-pressed="false"><i data-lucide="git-branch"></i><span>CHRONOFOLD</span></button>
+          <button id="evidence-button" class="active" type="button" data-glossary-term="provenance" aria-pressed="true"><i data-lucide="waypoints"></i><span>PROVENANCE</span></button>
         </div>
         <div class="control-group control-end">
           <button id="challenge-button" type="button" title="Open mutation lab"><i data-lucide="flask-conical"></i><span>CHALLENGE</span></button>

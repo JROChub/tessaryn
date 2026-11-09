@@ -973,6 +973,7 @@ class TheaterController {
     this.moments.forEach((moment, index) => {
       const button = document.createElement("button");
       button.className = index === this.currentMoment ? "active" : "";
+      button.setAttribute("data-glossary-term", "moment");
       const small = document.createElement("small");
       small.textContent = `MOMENT ${String(index).padStart(2, "0")}`;
       const strong = document.createElement("b");

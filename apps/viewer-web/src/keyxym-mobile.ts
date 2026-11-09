@@ -1,5 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import "./keyxym-mobile.css";
+import { bindHashCopy } from "./glossary";
 import {
   CHUNK_BYTES,
   clearPersonalWeave,
@@ -197,7 +198,7 @@ async function clearAllObjects(): Promise<void> {
 
 async function renderObject(object: StoredObject): Promise<void> {
   const journal = await getJournal(object.id);
-  elements.objectName.textContent = object.name; elements.objectDigest.textContent = object.id;
+  elements.objectName.textContent = object.name; bindHashCopy(elements.objectDigest, object.id);
   elements.objectSize.textContent = formatBytes(object.bytes); elements.objectChunks.textContent = String(object.chunks.length);
   elements.objectJournal.textContent = journal?.complete ? "COMPLETE" : `${journal?.acknowledged.length ?? 0}/${object.chunks.length} ACKNOWLEDGED`;
   const hasBlob = Boolean(await getPersonalBlob(object.id));
