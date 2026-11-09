@@ -225,8 +225,8 @@ function createPreview(blob: Blob, url: string, name: string): HTMLElement {
 }
 
 function resetObjectPanel(): void {
-  elements.objectName.textContent = "NONE"; elements.objectDigest.textContent = "—"; elements.objectSize.textContent = "—";
-  elements.objectChunks.textContent = "—"; elements.objectJournal.textContent = "EMPTY";
+  elements.objectName.textContent = "NONE"; elements.objectDigest.textContent = "--"; elements.objectSize.textContent = "--";
+  elements.objectChunks.textContent = "--"; elements.objectJournal.textContent = "EMPTY";
   for (const button of [elements.viewButton, elements.shareButton, elements.deleteButton, elements.syncButton, elements.interruptButton]) button.disabled = true;
 }
 function resetPipeline(): void { for (const item of elements.pipelineSteps.querySelectorAll<HTMLElement>("li")) item.classList.remove("active", "done"); setProgress(0, "Ready for a local object"); }

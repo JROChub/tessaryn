@@ -860,7 +860,7 @@ class TheaterController {
     setText("pose-state", `${label} ${Math.round(this.pose.tracking * 100)}%`);
     setText("tracking-value", `${Math.round(clamp01(this.quality.tracking) * 100)}%`);
     setText("parallax-value", `${this.quality.parallaxDegrees.toFixed(2)}°`);
-    setText("error-value", Number.isFinite(this.quality.reprojectionErrorPixels) ? `${this.quality.reprojectionErrorPixels.toFixed(2)} px` : "—");
+    setText("error-value", Number.isFinite(this.quality.reprojectionErrorPixels) ? `${this.quality.reprojectionErrorPixels.toFixed(2)} px` : "--");
     setText("coverage-value", `${Math.round(clamp01(this.quality.coverage) * 100)}%`);
     setText("confirmed-value", Math.round(this.quality.confirmed).toLocaleString());
     setText("uncertain-value", Math.round(this.quality.uncertain).toLocaleString());
