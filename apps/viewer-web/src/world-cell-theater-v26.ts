@@ -974,6 +974,7 @@ class TheaterController {
       const button = document.createElement("button");
       button.className = index === this.currentMoment ? "active" : "";
       const small = document.createElement("small");
+      small.setAttribute("data-glossary-term", "moment");
       small.textContent = `MOMENT ${String(index).padStart(2, "0")}`;
       const strong = document.createElement("b");
       strong.textContent = `${(moment.geometry.length / KEYXYM_V26_SURFEL_FLOATS).toLocaleString()} CONFIRMED`;

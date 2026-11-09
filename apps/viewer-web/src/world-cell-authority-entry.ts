@@ -168,6 +168,33 @@ async function boot(): Promise<void> {
       "World Cell authoritative runtime installation",
     );
     installWorldCellGuidance();
+    try {
+      // Glossary + first-run tour must never break theater boot.
+      const [{ installGlossary }, { installOnboarding }] = await Promise.all([
+        import("./glossary"),
+        import("./onboarding"),
+      ]);
+      installGlossary();
+      installOnboarding([
+        {
+          anchor: ".capture-dock",
+          title: "Capture a World Cell",
+          body: "Frame a textured subject, move slowly sideways, then explore. Each step builds measured geometry — nothing leaves this device.",
+        },
+        {
+          anchor: ".moment-tray",
+          title: "Moments",
+          body: "Every saved Moment is a snapshot you can replay. A Moment is one frame of a place in time.",
+        },
+        {
+          anchor: "#seal-button",
+          title: "Seal",
+          body: "A seal locks this World Cell so it can travel as authoritative proof. It needs an eform first — the verified form that approves transfer.",
+        },
+      ]);
+    } catch (error) {
+      console.error("TESSARYN help unavailable", error);
+    }
     document.documentElement.dataset.keyxymAuthority = "verified";
     document.documentElement.dataset.keyxymSource = manifest.source_commit;
     document.documentElement.dataset.keyxymAbi = manifest.abi;

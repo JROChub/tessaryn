@@ -1,4 +1,5 @@
 import "./keyxym-mobile.css";
+import { bindHashCopy } from "./glossary";
 import {
   clearPersonalWeave as clearDeviceFiles,
   deletePersonalObject,
@@ -94,7 +95,7 @@ function createConstructionCard(object: PersonalWeaveObject): HTMLElement {
   const small = document.createElement("small"); small.textContent = new Date(object.addedAtUnixUs / 1_000).toLocaleString();
   const strong = document.createElement("b"); strong.textContent = object.title;
   title.append(small, strong);
-  const digest = document.createElement("code"); digest.textContent = object.artifactSha256;
+  const digest = document.createElement("code"); bindHashCopy(digest, object.artifactSha256);
   heading.append(title, digest);
   const meta = document.createElement("dl");
   meta.innerHTML = `<div><dt>TYPE</dt><dd>${object.artifactKind === "rgbd_reconstruction" ? "VERIFIED PLACE" : "TEMPORAL OBJECT"}</dd></div><div><dt>SIZE</dt><dd>${formatBytes(object.bytes)}</dd></div><div><dt>STATE</dt><dd>${object.publicationId ? "PUBLIC + PRIVATE" : "PRIVATE"}</dd></div>`;
@@ -136,7 +137,7 @@ function createCard(object: StoredObject): HTMLElement {
   const small = document.createElement("small"); small.textContent = new Date(object.createdAt).toLocaleString();
   const strong = document.createElement("b"); strong.textContent = object.name;
   title.append(small, strong);
-  const digest = document.createElement("code"); digest.textContent = object.id;
+  const digest = document.createElement("code"); bindHashCopy(digest, object.id);
   heading.append(title, digest);
   const meta = document.createElement("dl");
   meta.innerHTML = `<div><dt>TYPE</dt><dd>${escapeHtml(object.mediaType)}</dd></div><div><dt>SIZE</dt><dd>${formatBytes(object.bytes)}</dd></div><div><dt>CHUNKS</dt><dd>${object.chunks.length}</dd></div>`;
