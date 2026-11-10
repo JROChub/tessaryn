@@ -487,7 +487,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
   setText("frame-count", "0");
   setText("tracking-value", "0%");
   setText("parallax-value", "0.00°");
-  setText("error-value", "—");
+  setText("error-value", "--");
   setText("coverage-value", "0%");
   setText("confirmed-value", "0");
   setText("uncertain-value", "0");
@@ -822,7 +822,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
     setText("surfel-count", "0 AUTH / 0 REL PTS");
     setText("frame-count", "0");
     setText("dispatch-time", "NO SCAN");
-    setText("error-value", "—");
+    setText("error-value", "--");
     setMeter("quality-meter", 0);
     setMeter("compute-meter", 0);
     if (message) setStageMessage(
@@ -957,7 +957,7 @@ export function installWorldCellPreviewFallback(reason: unknown): void {
       setText("gpu-badge", "REJECTED");
       setText("surfel-count", "0 AUTH / 0 REL PTS");
       setText("error-value", Number.isFinite(result.metrics.reprojectionErrorPixels) ?
-        `${Number(result.metrics.reprojectionErrorPixels).toFixed(2)} px` : "—");
+        `${Number(result.metrics.reprojectionErrorPixels).toFixed(2)} px` : "--");
       setText("dispatch-time", `${result.metrics.processingMs.toFixed(1)} ms / worker`);
       setMeter("compute-meter", 0);
       start.textContent = "RESCAN";

@@ -5,6 +5,39 @@ root.dataset.worldCellMode = "initializing";
 const BOOT_PHASE_TIMEOUT_MS = 20_000;
 const PREVIEW_LOAD_TIMEOUT_MS = 20_000;
 
+/** Shared by the authoritative path and the preview fallback. */
+const THEATER_TOUR_STEPS = [
+  {
+    anchor: ".capture-dock",
+    title: "Capture a World Cell",
+    body: "Frame a textured subject, move slowly sideways, then explore. Each step builds measured geometry. Nothing leaves this device.",
+  },
+  {
+    anchor: ".moment-tray",
+    title: "Moments",
+    body: "Every saved Moment is a snapshot you can replay: one saved state of a place in time.",
+  },
+  {
+    anchor: "#seal-button",
+    title: "Seal",
+    body: "A seal locks this World Cell so it can travel as authoritative proof. It needs an eform first: the verified form that approves transfer.",
+  },
+];
+
+/** Glossary + first-run tour. Guarded: help must never break theater boot. */
+async function installTheaterHelp(): Promise<void> {
+  try {
+    const [{ installGlossary }, { installOnboarding }] = await Promise.all([
+      import("./glossary"),
+      import("./onboarding"),
+    ]);
+    installGlossary();
+    installOnboarding(THEATER_TOUR_STEPS);
+  } catch (error) {
+    console.error("TESSARYN help unavailable", error);
+  }
+}
+
 function setText(id: string, value: string): void {
   const node = document.getElementById(id);
   if (node) node.textContent = value;
@@ -126,6 +159,7 @@ async function enterPreview(error: unknown): Promise<void> {
       "World Cell preview module load",
     );
     installWorldCellPreviewFallback(error);
+    await installTheaterHelp();
   } catch (previewError) {
     console.error("World Cell preview path also failed", previewError);
     installEmergencyShell(previewError);
@@ -168,6 +202,7 @@ async function boot(): Promise<void> {
       "World Cell authoritative runtime installation",
     );
     installWorldCellGuidance();
+    await installTheaterHelp();
     document.documentElement.dataset.keyxymAuthority = "verified";
     document.documentElement.dataset.keyxymSource = manifest.source_commit;
     document.documentElement.dataset.keyxymAbi = manifest.abi;

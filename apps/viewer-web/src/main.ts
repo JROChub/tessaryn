@@ -31,6 +31,8 @@ import {
   createIcons,
 } from "lucide";
 import "./style.css";
+import { bindHashCopy, formatShortHash, installGlossary } from "./glossary";
+import { installOnboarding } from "./onboarding";
 import type {
   CinematicMomentView,
   CinematicObjectBrowserReport,
@@ -343,6 +345,29 @@ void boot();
 
 async function boot(): Promise<void> {
   try {
+    try {
+      // Glossary + first-run tour must never break boot.
+      installGlossary();
+      installOnboarding([
+        {
+          anchor: "#moment-rail",
+          title: "Moments",
+          body: "Each Moment is a saved state of this place. Pick one to return to it.",
+        },
+        {
+          anchor: "#construct-button",
+          title: "Construct a place",
+          body: "Build a place from files on this device: a verified capture, a model, or any source file. Nothing uploads unless you publish it.",
+        },
+        {
+          anchor: "#chronofold-button",
+          title: "Chronofold",
+          body: "Fold time across Moments. Words like Rootprint and SLBIT are explained: tap any underlined word, or the ? in the topbar.",
+        },
+      ]);
+    } catch (error) {
+      console.error("TESSARYN help unavailable", error);
+    }
     elements.bootStatus.textContent = "READING LOCAL CELL MANIFESTS";
     const [
       worldResponse,
@@ -686,7 +711,7 @@ function populateValidationPortfolio(
   elements.sourceGroundTruth.textContent = `${profile.ground_truth.reference.toUpperCase()} / DEPTH + POSE`;
   const assetBytes = profile.assets.reduce((total, asset) => total + asset.bytes, 0);
   elements.sourceAssets.textContent = `${String(profile.assets.length)} / ${(assetBytes / 1_000_000).toFixed(1)} MB`;
-  elements.sourceProfileId.textContent = profile.id;
+  bindHashCopy(elements.sourceProfileId, profile.id);
   elements.portfolioList.replaceChildren();
   for (const entry of portfolio.entries) {
     const row = document.createElement("div");
@@ -741,7 +766,11 @@ function populatePublicObjects(
     const title = document.createElement("b");
     const id = document.createElement("code");
     title.textContent = entry.title;
-    id.textContent = entry.object_id;
+    // Short form plus full value on hover. The code sits inside the entry
+    // button, so it is not itself a copy control: a nested button would
+    // double-activate with the entry. The full hash copies from Trace.
+    id.textContent = formatShortHash(entry.object_id);
+    id.title = entry.object_id;
     identity.append(title, id);
     const detail = document.createElement("span");
     const summary = document.createElement("small");
@@ -784,7 +813,10 @@ function populatePersonalObjects(entries: PersonalWeaveObject[], query = ""): vo
     const title = document.createElement("b");
     const id = document.createElement("code");
     title.textContent = entry.title;
-    id.textContent = entry.objectId;
+    // Short form plus full value on hover. See populatePublicObjects: the
+    // code sits inside the entry button, so it is not itself a copy control.
+    id.textContent = formatShortHash(entry.objectId);
+    id.title = entry.objectId;
     identity.append(title, id);
     const detail = document.createElement("span");
     const summary = document.createElement("small");
@@ -987,8 +1019,16 @@ function isPublicObjectCatalog(value: unknown): value is PublicObjectCatalog {
   );
 }
 
+/**
+ * Remove only the moment buttons from the rail. The rail heading is a real
+ * DOM h2 and must survive every re-render of the buttons.
+ */
+function clearMomentButtons(): void {
+  elements.momentRail.querySelectorAll("button").forEach((button) => button.remove());
+}
+
 function populateMoments(moments: DemoMoment[]): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   moments.forEach((moment, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1019,7 +1059,7 @@ function populateMoments(moments: DemoMoment[]): void {
 }
 
 function populateTemporalMoments(report: ValidationLocusBrowserReport): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   report.moments.forEach((moment, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1098,10 +1138,10 @@ function openTrace(cell: DemoCell): void {
   elements.traceCore.textContent = "VALID";
   elements.traceReplay.textContent = "BOUND";
   elements.traceDisclosure.textContent = cell.manifest.evidence.restricted ? "RESTRICTED" : "VISIBLE";
-  elements.traceCellId.textContent = cell.cell_id;
-  elements.tracePha.textContent = cell.proof.pha.phx_fingerprint;
-  elements.traceRootprint.textContent = cell.proof.rootprint_id;
-  elements.traceAnchor.textContent = cell.manifest.anchor_id;
+  bindHashCopy(elements.traceCellId, cell.cell_id);
+  bindHashCopy(elements.tracePha, cell.proof.pha.phx_fingerprint);
+  bindHashCopy(elements.traceRootprint, cell.proof.rootprint_id);
+  bindHashCopy(elements.traceAnchor, cell.manifest.anchor_id);
   elements.traceSummary.textContent = cell.semantic_summary;
   elements.worldLabelTitle.textContent = cell.label.toUpperCase();
   elements.worldLabelState.textContent = evidenceLabel(cell);
@@ -1484,7 +1524,7 @@ async function importReconstructionFile(
     elements.localName.textContent = requestedEntry?.title ?? file.name;
     elements.localStatus.textContent = `${String(verification.surfels.length)} SURFELS + POWER HOUSE ACCEPTED`;
     elements.localSize.textContent = `${formatBytes(file.size)} / REAL RGB-D`;
-    elements.localRoot.textContent = shortDigest(parsed.report.sdf_cell_id, 24);
+    bindHashCopy(elements.localRoot, parsed.report.sdf_cell_id);
     elements.localProgress.style.width = "100%";
     elements.localExport.disabled = true;
     elements.localShare.disabled = false;
@@ -1557,7 +1597,7 @@ async function importValidationLocusFile(
     elements.localName.textContent = artifact.origin || file.name;
     elements.localStatus.textContent = `${String(verification.cellsValid)} CELLS + POWER HOUSE ACCEPTED`;
     elements.localSize.textContent = `${formatBytes(file.size)} / FOUR MOMENTS`;
-    elements.localRoot.textContent = shortDigest(artifact.source_proof.cell_id, 24);
+    bindHashCopy(elements.localRoot, artifact.source_proof.cell_id);
     elements.localProgress.style.width = "100%";
     elements.localExport.disabled = true;
     elements.localShare.disabled = true;
@@ -1748,7 +1788,7 @@ function cinematicCell(envelope: CinematicObjectEnvelopeView): DemoCell {
 }
 
 function populateCinematicMoments(moments: CinematicMomentView[]): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   moments.forEach((moment, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1850,7 +1890,7 @@ async function importSourceGeometry(file: File, companions: readonly File[]): Pr
   elements.localName.textContent = file.name;
   elements.localStatus.textContent = `${String(drawables)} DRAWABLES / ${String(stats.vertices)} VERTICES`;
   elements.localSize.textContent = `${formatBytes(file.size)} / ${stats.format.toUpperCase()} / INDEXED`;
-  elements.localRoot.textContent = state.identity.streamRoot;
+  bindHashCopy(elements.localRoot, state.identity.streamRoot);
   elements.localProgress.style.width = "100%";
   elements.localExport.disabled = false;
   elements.localShare.disabled = true;
@@ -1877,7 +1917,7 @@ async function importSourceGeometry(file: File, companions: readonly File[]): Pr
 }
 
 function populateSourceGeometryMoment(stats: SourceGeometryStats): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "active";
@@ -1985,7 +2025,7 @@ async function openFileBackedArtifact(
     activeLocalTask = null;
     elements.localStatus.textContent = `LOCAL STREAM INDEXED / ${String(identity.chunkCount)} CHUNKS`;
     elements.localSize.textContent = `${formatBytes(file.size)} / 100%`;
-    elements.localRoot.textContent = identity.streamRoot;
+    bindHashCopy(elements.localRoot, identity.streamRoot);
     elements.localProgress.style.width = "100%";
     elements.condensation.style.width = "100%";
     elements.originStatus.textContent = "SOURCE EVIDENCE INDEXED / LOCAL IDENTITY READY";
@@ -2205,7 +2245,7 @@ function validationVerificationReport(
 }
 
 function populateImportedMoment(cell: DemoCell): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "active";
@@ -2379,7 +2419,7 @@ function openPublishDialog(): void {
       ? "REAL RGB-D CONSTRUCTION"
       : "NATIVE TEMPORAL OBJECT";
   elements.publishFile.textContent = activeArtifactFile.name;
-  elements.publishCell.textContent = metadata.cellId;
+  bindHashCopy(elements.publishCell, metadata.cellId);
   elements.publishObjectId.value = metadata.objectId;
   elements.publishTitle.value = metadata.title;
   elements.publishSummary.value = metadata.summary;
