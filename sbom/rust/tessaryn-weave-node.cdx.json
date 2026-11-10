@@ -1732,41 +1732,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6",
-      "author": "Jane Lusby <jlusby@yaah.dev>",
-      "name": "displaydoc",
-      "version": "0.2.6",
-      "description": "A derive macro for implementing the display Trait via a doc comment and string interpolation ",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "1ac70aa55017e108007fbaf5aa0f54b021c98f92ff8af59d42eda9da96e3dd4f"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/displaydoc@0.2.6",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/displaydoc"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/yaahc/displaydoc"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/yaahc/displaydoc"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#ed25519-dalek@2.2.0",
       "author": "isis lovecruft <isis@patternsinthevoid.net>, Tony Arcieri <bascule@gmail.com>, Michael Rosenberg <michael@mrosenberg.pub>",
       "name": "ed25519-dalek",
@@ -4440,16 +4405,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
       "author": "Tokio Contributors <team@tokio.rs>",
       "name": "tokio",
-      "version": "1.52.3",
+      "version": "1.53.3",
       "description": "An event-driven, non-blocking I/O platform for writing asynchronous I/O backed applications. ",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
+          "content": "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
         }
       ],
       "licenses": [
@@ -4457,7 +4422,7 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:cargo/tokio@1.52.3",
+      "purl": "pkg:cargo/tokio@1.53.3",
       "externalReferences": [
         {
           "type": "website",
@@ -4727,6 +4692,37 @@
     },
     {
       "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#typed-path@0.12.4",
+      "author": "Chip Senkbeil <chip@senkbeil.org>",
+      "name": "typed-path",
+      "version": "0.12.4",
+      "description": "Provides typed variants of Path and PathBuf for Unix and Windows",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "54ec2755506471f54baf5e4bb5499d8e510cc1caf271270e778a736bd2d7336c"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/typed-path@0.12.4",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/chipsenkbeil/typed-path"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/chipsenkbeil/typed-path"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#typenum@1.20.1",
       "name": "typenum",
       "version": "1.20.1",
@@ -4974,16 +4970,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#zip@2.4.2",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#zip@9.0.5",
       "author": "Mathijs van de Nes <git@mathijs.vd-nes.nl>, Marli Frost <marli@frost.red>, Ryan Levick <ryan.levick@gmail.com>, Chris Hennick <hennickc@amazon.com>",
       "name": "zip",
-      "version": "2.4.2",
-      "description": "Library to support the reading and writing of zip files. ",
+      "version": "9.0.5",
+      "description": "Library to support the reading and writing of zip files.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "fabe6324e908f85a1c52063ce7aa26b68dcb7eb6dbc83a2d148403c9bc3eba50"
+          "content": "6e04976da629d3b04204ba8105b396a193af8ad2583b2c79bfb3ab8af580a11e"
         }
       ],
       "licenses": [
@@ -4991,11 +4987,41 @@
           "expression": "MIT"
         }
       ],
-      "purl": "pkg:cargo/zip@2.4.2",
+      "purl": "pkg:cargo/zip@9.0.5",
       "externalReferences": [
         {
           "type": "vcs",
-          "url": "https://github.com/zip-rs/zip2.git"
+          "url": "https://github.com/zip-rs/zip2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#zlib-rs@0.6.8",
+      "name": "zlib-rs",
+      "version": "0.6.8",
+      "description": "A memory-safe zlib implementation written in rust",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Zlib"
+        }
+      ],
+      "purl": "pkg:cargo/zlib-rs@0.6.8",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/trifectatechfoundation/zlib-rs"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/trifectatechfoundation/zlib-rs"
         }
       ]
     },
@@ -5197,7 +5223,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
         "path+file:///workspace/tessaryn/tools/tessaryn-cli#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
-        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
+        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
         "registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.18",
         "registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.7.0"
@@ -5219,7 +5245,7 @@
         "path+file:///workspace/tessaryn/crates/tessaryn-schema#0.5.0",
         "path+file:///workspace/tessaryn/crates/tessaryn-sync#0.5.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
-        "registry+https://github.com/rust-lang/crates.io-index#zip@2.4.2"
+        "registry+https://github.com/rust-lang/crates.io-index#zip@9.0.5"
       ]
     },
     {
@@ -5453,7 +5479,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#serde_path_to_error@0.1.20",
         "registry+https://github.com/rust-lang/crates.io-index#serde_urlencoded@0.7.1",
         "registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2",
-        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
+        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3",
@@ -5596,14 +5622,6 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106",
-        "registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46",
-        "registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118"
-      ]
-    },
-    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#ed25519-dalek@2.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#curve25519-dalek@4.1.3",
@@ -5643,7 +5661,8 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#flate2@1.1.9",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#crc32fast@1.5.0",
-        "registry+https://github.com/rust-lang/crates.io-index#miniz_oxide@0.8.9"
+        "registry+https://github.com/rust-lang/crates.io-index#miniz_oxide@0.8.9",
+        "registry+https://github.com/rust-lang/crates.io-index#zlib-rs@0.6.8"
       ]
     },
     {
@@ -5759,7 +5778,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#http-body@1.0.1",
         "registry+https://github.com/rust-lang/crates.io-index#hyper@1.10.1",
         "registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17",
-        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
+        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3"
       ]
     },
@@ -5777,7 +5796,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18",
         "registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17",
         "registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2",
-        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3"
+        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3"
       ]
     },
     {
@@ -6123,11 +6142,11 @@
         "registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32",
         "registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32",
         "registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17",
-        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3"
+        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3"
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1",
         "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186",
@@ -6165,7 +6184,7 @@
         "registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32",
         "registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17",
         "registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2",
-        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3",
+        "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3",
         "registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3",
         "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44"
@@ -6199,6 +6218,9 @@
         "registry+https://github.com/rust-lang/crates.io-index#tracing-attributes@0.1.31",
         "registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36"
       ]
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#typed-path@0.12.4"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#typenum@1.20.1"
@@ -6243,16 +6265,18 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#zip@2.4.2",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#zip@9.0.5",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#crc32fast@1.5.0",
-        "registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6",
         "registry+https://github.com/rust-lang/crates.io-index#flate2@1.1.9",
         "registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.0",
         "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
-        "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18",
+        "registry+https://github.com/rust-lang/crates.io-index#typed-path@0.12.4",
         "registry+https://github.com/rust-lang/crates.io-index#zopfli@0.8.3"
       ]
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#zlib-rs@0.6.8"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.21"

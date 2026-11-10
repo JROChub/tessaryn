@@ -14,9 +14,9 @@
 <div class="theater-shell">
   <header class="topbar theater-topbar">
     <a class="brand" href="./"><span class="brand-mark"><i></i><i></i><i></i></span><span><b>TESSARYN</b><small>NATIVE 4D CONTINUUM</small></span></a>
-    <div class="origin-title"><small>ACTIVE INSTRUMENT</small><b>REALITY WORLD CELL THEATER</b></div>
+    <div class="origin-title"><small>ACTIVE INSTRUMENT</small><h1 data-glossary-term="world-cell" tabindex="0">REALITY WORLD CELL THEATER</h1></div>
     <div class="top-states"><span id="capture-state"><i></i>VERIFYING</span><span id="compute-state">PROVENANCE</span><span id="peer-state">UNPAIRED</span></div>
-    <div class="top-actions"><button id="details-button" class="icon-command secondary" type="button" aria-expanded="false">DETAILS</button><button id="evidence-button" class="icon-command secondary">PROOF</button><a class="icon-button" href="./" aria-label="Close World Cell Theater">×</a></div>
+    <div class="top-actions"><button id="details-button" class="icon-command secondary" type="button" aria-expanded="false">DETAILS</button><button id="evidence-button" class="icon-command secondary">PROOF</button><button id="help-button" class="icon-button help-button" type="button" aria-label="Open help and glossary">?</button><a class="icon-button" href="./" aria-label="Close World Cell Theater">×</a></div>
   </header>
 
   <main class="theater-main">
@@ -31,7 +31,7 @@
           <span><small>GEOMETRY</small><b id="surfel-count">0</b></span>
           <span><small>VIEWS</small><b id="frame-count">0</b></span>
           <span><small>POSE</small><b id="pose-state">AUTHORITY OFFLINE</b></span>
-          <span><small>ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
+          <span><small data-glossary-term="rootprint" tabindex="0">ROOTPRINT</small><b id="rootprint">UNSEALED</b></span>
         </div>
         <div id="stage-message" class="stage-message"><b>PREPARING YOUR WORLD CELL</b><span>We are verifying the reconstruction engine before the camera can start. Your images stay on this device.</span></div>
       </div>
@@ -56,7 +56,8 @@
       </section>
 
       <section class="instrument-panel accent-moss timeline-panel moment-tray">
-        <header><span><small>CAPTURED LINEAGE</small><b>WORLD CELL MOMENTS</b></span><button id="seal-button" class="icon-command secondary" disabled>EFORM REQUIRED</button></header>
+        <header><span><small>CAPTURED LINEAGE</small><h2>WORLD CELL MOMENTS</h2></span><button id="seal-button" class="icon-command secondary" disabled aria-describedby="seal-explainer" data-glossary-term="seal">EFORM REQUIRED</button></header>
+        <span id="seal-explainer" class="visually-hidden">Sealing needs an eform first: the assurance form that approves a World Cell for transfer as authoritative geometry.</span>
         <div id="timeline" class="timeline"><span class="empty">No Moments captured yet.</span></div>
         <div class="replay-controls"><button id="prev-button" disabled aria-label="Previous Moment">◀</button><input id="replay-slider" aria-label="Moment position" type="range" min="0" max="0" value="0"><button id="play-button" disabled>PLAY</button><button id="next-button" disabled aria-label="Next Moment">▶</button></div>
         <div class="model-actions"><button id="open-model-button" class="icon-command" disabled>OPEN IN ORIGIN</button><button id="download-model-button" class="icon-command secondary" disabled>DOWNLOAD MODEL</button><button id="export-cell-button" class="icon-command secondary" disabled>EXPORT WORLD CELL</button></div>
@@ -66,14 +67,14 @@
 
   <button id="details-backdrop" class="details-backdrop" type="button" aria-label="Close details"></button>
   <aside class="instrument-stack" aria-label="World Cell details" aria-hidden="true">
-      <div class="drawer-heading"><span><small>WORLD CELL</small><b>DETAILS</b></span><button id="details-close" class="icon-button" type="button" aria-label="Close details">×</button></div>
+      <div class="drawer-heading"><span><small>WORLD CELL</small><h2>DETAILS</h2></span><button id="details-close" class="icon-button" type="button" aria-label="Close details">×</button></div>
       <section class="instrument-panel accent-gold metric-quality-panel">
-        <header><span><small>CAPTURE QUALITY</small><b>MEASURED GEOMETRY</b></span><span id="scale-value" class="state-pill">RELATIVE</span></header>
+        <header><span><small>CAPTURE QUALITY</small><h2>MEASURED GEOMETRY</h2></span><span id="scale-value" class="state-pill">RELATIVE</span></header>
         <div class="quality-meter"><i id="quality-meter"></i></div>
         <dl class="quality-grid">
           <div><dt>TRACKING</dt><dd id="tracking-value">0%</dd></div>
           <div><dt>PARALLAX</dt><dd id="parallax-value">0.00°</dd></div>
-          <div><dt>POSE ERROR</dt><dd id="error-value">—</dd></div>
+          <div><dt>POSE ERROR</dt><dd id="error-value">--</dd></div>
           <div><dt>COVERAGE</dt><dd id="coverage-value">0%</dd></div>
           <div><dt>CONFIRMED</dt><dd id="confirmed-value">0</dd></div>
           <div><dt>UNCERTAIN</dt><dd id="uncertain-value">0</dd></div>
@@ -82,17 +83,17 @@
       </section>
 
       <section class="instrument-panel accent-gold">
-        <header><span><small>COMPUTE</small><b>WORKER RECONSTRUCTION ENGINE</b></span><span id="gpu-badge" class="state-pill">VERIFYING</span></header>
+        <header><span><small>COMPUTE</small><h2>WORKER RECONSTRUCTION ENGINE</h2></span><span id="gpu-badge" class="state-pill">VERIFYING</span></header>
         <div class="compute-meter"><i id="compute-meter"></i></div>
-        <dl><div><dt>BACKEND</dt><dd id="backend-name">KEYXYM V0.26</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">PROVENANCE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">—</dd></div></dl>
+        <dl><div><dt>BACKEND</dt><dd id="backend-name" data-glossary-term="keyxym" tabindex="0">KEYXYM V0.26</dd></div><div><dt>ADAPTER</dt><dd id="adapter-name">PROVENANCE</dd></div><div><dt>LAST DISPATCH</dt><dd id="dispatch-time">--</dd></div></dl>
       </section>
 
       <section class="instrument-panel accent-rust">
-        <header><span><small>CROSS-DEVICE</small><b>VERIFIED WORLD CELL LINK</b></span><span id="channel-state" class="state-pill">CLOSED</span></header>
+        <header><span><small>CROSS-DEVICE</small><h2>VERIFIED WORLD CELL LINK</h2></span><span id="channel-state" class="state-pill">CLOSED</span></header>
         <div class="pair-actions"><button id="host-button" class="icon-command">CREATE OFFER</button><button id="join-button" class="icon-command secondary">JOIN OFFER</button><button id="answer-button" class="icon-command secondary">APPLY ANSWER</button><button id="send-button" class="icon-command" disabled>SEND SEALED WORLD CELL</button></div>
         <textarea id="pairing-text" spellcheck="false" placeholder="Offer/answer appears here. Copy it to the other device."></textarea>
         <div class="transfer-track"><i id="transfer-meter"></i></div>
-        <p id="transfer-state">Only an eform and Power House verified v0.26 World Cell can be transferred and rendered as authoritative.</p>
+        <p id="transfer-state">Only an <span data-glossary-term="eform" tabindex="0">eform</span> and Power House verified v0.26 World Cell can be transferred and rendered as authoritative.</p>
       </section>
       <nav class="drawer-links" aria-label="Related TESSARYN tools"><a href="./">ORIGIN</a><a href="./personal-weave.html">PERSONAL WEAVE</a><a href="./keyxym-mobile.html">DEVICE LAB</a></nav>
   </aside>
@@ -105,11 +106,11 @@
 </div>
 
 <dialog id="calibration-dialog" class="theater-dialog">
-  <header><span><small>SCALE REQUEST</small><b>KNOWN REFERENCE LENGTH</b></span><button class="icon-button" data-close="calibration-dialog">×</button></header>
+  <header><span><small>SCALE REQUEST</small><h2>KNOWN REFERENCE LENGTH</h2></span><button class="icon-button" data-close="calibration-dialog">×</button></header>
   <div class="dialog-body"><p>Recording a known length does not itself establish metric scale. A verified sensor or spatial-correspondence adapter must bind the reference to the capture and supply a calibration receipt.</p><label class="metric-input-label">REFERENCE LENGTH / METERS<input id="scale-input" type="number" min="0.01" max="20" step="0.01" value="0.12"></label><button id="apply-calibration" class="icon-command">RECORD REFERENCE REQUEST</button></div>
 </dialog>
-<dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><b>DEPTH + EVENT CAMERA</b></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Browser multi-view reconstruction begins in relative scale. WebSerial, WebUSB, or WebXR transport does not activate metric status unless the installed adapter exposes a verified scale receipt.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
-<dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><b>WORLD CELL EVIDENCE</b></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
+<dialog id="sensor-dialog" class="theater-dialog"><header><span><small>NATIVE SENSOR BRIDGE</small><h2>DEPTH + EVENT CAMERA</h2></span><button class="icon-button" data-close="sensor-dialog">×</button></header><div class="dialog-body"><p>Browser multi-view reconstruction begins in relative scale. WebSerial, WebUSB, or WebXR transport does not activate metric status unless the installed adapter exposes a verified scale receipt.</p><div class="command-grid"><button id="serial-button" class="icon-command">CONNECT WEBSERIAL</button><button id="usb-button" class="icon-command secondary">CONNECT WEBUSB</button><button id="xr-button" class="icon-command secondary">PROBE WEBXR DEPTH</button></div><pre id="sensor-log">No external sensor connected.</pre></div></dialog>
+<dialog id="evidence-dialog" class="theater-dialog"><header><span><small>EXECUTION PROOF</small><h2>WORLD CELL EVIDENCE</h2></span><button class="icon-button" data-close="evidence-dialog">×</button></header><div class="dialog-body"><pre id="evidence-log">No evidence recorded.</pre></div></dialog>
 <script>
 (() => {
   const root = document.documentElement;

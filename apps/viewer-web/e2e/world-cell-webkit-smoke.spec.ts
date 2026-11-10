@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+// The theater page allows 45 seconds for startup before it enters recovery
+// (see the startup timeout in world-cell-theater.html), so these waits use
+// the same bound. A shorter bound can fail a boot that would still succeed.
+const BOOT_WAIT_MS = 45_000;
+
 test("iPhone WebKit initializes the provenance-gated Keyxym authority", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -8,7 +13,7 @@ test("iPhone WebKit initializes the provenance-gated Keyxym authority", async ({
   expect(response?.ok()).toBe(true);
 
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "authoritative", {
-    timeout: 15_000,
+    timeout: BOOT_WAIT_MS,
   });
   await expect(page.locator("html")).toHaveAttribute("data-keyxym-authority", "verified");
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-controller", "keyxym-v026-worker-v1");
@@ -50,7 +55,7 @@ test("iPhone WebKit exposes a basic camera fallback when the release module fail
   });
 
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "boot-recovery", {
-    timeout: 15_000,
+    timeout: BOOT_WAIT_MS,
   });
   await expect(page.locator("#stage-message b")).toHaveText("WORLD CELL MODULE UNAVAILABLE");
   await expect(page.locator("#start-button")).toBeEnabled();
@@ -64,7 +69,7 @@ test("small iPhone keeps Theater controls in one reachable scroll flow", async (
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/world-cell-theater.html", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-world-cell-mode", "authoritative", {
-    timeout: 15_000,
+    timeout: BOOT_WAIT_MS,
   });
 
   const initial = await page.evaluate(() => {

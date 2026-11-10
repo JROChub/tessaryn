@@ -28,6 +28,55 @@ export interface LocalIngestTask {
 let worker: Worker | null = null;
 let sequence = 0;
 const pending = new Map<number, Pending>();
+/**
+ * Silence budget for the indexer worker. A healthy worker posts progress
+ * at least every few hundred milliseconds while it has chunks to hash, so
+ * three seconds without any message means the worker never started, its
+ * script fetch stalled, or its thread is stuck. The request then falls
+ * back to the main thread instead of hanging forever: a stalled worker
+ * must never leave a local import at 0% with no way forward.
+ */
+const WATCHDOG_MS = 3_000;
+const watchdogs = new Map<number, ReturnType<typeof setTimeout>>();
+
+function armWatchdog(id: number): void {
+  clearWatchdog(id);
+  watchdogs.set(
+    id,
+    setTimeout(() => {
+      watchdogs.delete(id);
+      if (!pending.has(id)) return;
+      fallbackAllToMainThread();
+    }, WATCHDOG_MS),
+  );
+}
+
+function clearWatchdog(id: number): void {
+  const timer = watchdogs.get(id);
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    watchdogs.delete(id);
+  }
+}
+
+/** Run every pending indexing request on the main thread and drop the worker. */
+function fallbackAllToMainThread(): void {
+  const requests = [...pending.values()];
+  pending.clear();
+  for (const id of [...watchdogs.keys()]) clearWatchdog(id);
+  worker?.terminate();
+  worker = null;
+  for (const request of requests) {
+    if (request.cancelled) continue;
+    void calculateLocalFileIdentity(
+      request.file,
+      request.onProgress,
+      () => request.cancelled,
+    ).then(request.resolve, (error: unknown) => {
+      request.reject(error instanceof Error ? error : new Error(String(error)));
+    });
+  }
+}
 
 export function indexLocalFileOffThread(
   file: File,
@@ -51,6 +100,7 @@ export function indexLocalFileOffThread(
     request = { file, resolve, reject, onProgress, cancelled: false };
     pending.set(id, request);
     active.postMessage({ kind: "index", id, file });
+    armWatchdog(id);
   });
 
   return {
@@ -59,6 +109,7 @@ export function indexLocalFileOffThread(
       if (request.cancelled) return;
       request.cancelled = true;
       pending.delete(id);
+      clearWatchdog(id);
       if (worker === active) active.postMessage({ kind: "cancel", id });
       request.reject(new DOMException("local file indexing cancelled", "AbortError"));
     },
@@ -68,6 +119,7 @@ export function indexLocalFileOffThread(
 export function destroyLocalIngestWorker(): void {
   worker?.terminate();
   worker = null;
+  for (const id of [...watchdogs.keys()]) clearWatchdog(id);
   for (const request of pending.values()) {
     request.cancelled = true;
     request.reject(new Error("local file indexing worker terminated"));
@@ -86,8 +138,10 @@ function getWorker(): Worker {
     if (!request || request.cancelled) return;
     if (event.data.kind === "progress" && event.data.progress) {
       request.onProgress(event.data.progress);
+      armWatchdog(event.data.id);
       return;
     }
+    clearWatchdog(event.data.id);
     pending.delete(event.data.id);
     if (event.data.kind === "complete" && event.data.identity) {
       request.resolve(event.data.identity);
@@ -97,20 +151,7 @@ function getWorker(): Worker {
   });
   worker.addEventListener("error", (event) => {
     event.preventDefault();
-    const requests = [...pending.values()];
-    pending.clear();
-    worker?.terminate();
-    worker = null;
-    for (const request of requests) {
-      if (request.cancelled) continue;
-      void calculateLocalFileIdentity(
-        request.file,
-        request.onProgress,
-        () => request.cancelled,
-      ).then(request.resolve, (error: unknown) => {
-        request.reject(error instanceof Error ? error : new Error(String(error)));
-      });
-    }
+    fallbackAllToMainThread();
   });
   return worker;
 }

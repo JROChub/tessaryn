@@ -10,6 +10,7 @@
   --glass-solid: #091016;
   --bone: #edf0e8;
   --muted: #87949a;
+  --label: #b9cbd0;
   --moss: #b7ce80;
   --cyan: #7eced0;
   --rust: #db8069;
@@ -36,6 +37,24 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
+}
+
+/* Semantic headings keep the HUD voice: headings inherit the visual type. */
+h1,
+h2,
+h3 {
+  margin: 0;
+  font: inherit;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 body {
@@ -117,7 +136,7 @@ canvas:focus-visible {
 .local-stage-identity code {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .local-stage-heading b {
@@ -146,7 +165,6 @@ canvas:focus-visible {
   color: var(--muted);
   border-color: rgba(230, 239, 231, 0.12);
   cursor: wait;
-  opacity: 0.62;
 }
 
 .local-stage-identity {
@@ -303,7 +321,7 @@ canvas:focus-visible {
   }
 
   .local-stage-identity code {
-    font-size: 6px;
+    font-size: 12px;
     text-align: left;
   }
 
@@ -325,7 +343,7 @@ canvas:focus-visible {
   background: #e0bf73;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.26);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -436,7 +454,7 @@ canvas:focus-visible {
 .sources-dialog small {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
@@ -471,7 +489,7 @@ canvas:focus-visible {
   color: var(--muted);
   border-right: 1px solid var(--line);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .top-states i {
@@ -515,7 +533,6 @@ canvas:focus-visible {
   border-color: var(--line);
   background: rgba(232, 229, 215, 0.025);
   cursor: wait;
-  opacity: 0.62;
 }
 
 .icon-button:hover,
@@ -542,7 +559,7 @@ canvas:focus-visible {
   color: var(--ink);
   border-color: var(--moss);
   background: var(--moss);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -559,15 +576,6 @@ canvas:focus-visible {
   background: var(--glass);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(20px) saturate(120%);
-}
-
-.moment-rail::before {
-  padding: 11px 13px 9px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--line);
-  content: "CHRONOFIELD / 3 MOMENTS";
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
 }
 
 .moment-rail button {
@@ -592,13 +600,13 @@ canvas:focus-visible {
 
 .moment-rail button b {
   color: var(--bone);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .moment-rail button small {
   overflow: hidden;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 7px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -678,7 +686,7 @@ canvas:focus-visible {
   overflow: hidden;
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 7px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -725,14 +733,14 @@ canvas:focus-visible {
 }
 
 .world-label b {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .world-label small {
   margin-top: 2px;
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .trace-drawer,
@@ -780,9 +788,13 @@ canvas:focus-visible {
 }
 
 .trace-drawer > header b,
+.trace-drawer > header h2,
 .challenge-drawer > header b,
+.challenge-drawer > header h2,
 .verification-dialog > header b,
-.sources-dialog > header b {
+.verification-dialog > header h2,
+.sources-dialog > header b,
+.sources-dialog > header h2 {
   overflow: hidden;
   font-size: 13px;
   text-overflow: ellipsis;
@@ -801,7 +813,7 @@ canvas:focus-visible {
   border-right: 1px solid var(--line);
   background: transparent;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .trace-tabs button:last-child {
@@ -846,7 +858,7 @@ canvas:focus-visible {
   overflow: hidden;
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -875,7 +887,7 @@ canvas:focus-visible {
   margin-top: 7px;
   color: var(--bone);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -894,7 +906,7 @@ canvas:focus-visible {
   border: 1px solid var(--line);
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .evidence-vector b {
@@ -915,7 +927,7 @@ canvas:focus-visible {
   padding: 8px 10px 8px 30px;
   border-left: 1px solid var(--line-strong);
   background: rgba(232, 229, 215, 0.03);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .lineage-path span::before {
@@ -974,7 +986,7 @@ canvas:focus-visible {
   color: var(--muted);
   border-right: 1px solid var(--line);
   background: transparent;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .challenge-commands button:last-child {
@@ -1060,7 +1072,7 @@ canvas:focus-visible {
 .active-source dt {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .source-heading b {
@@ -1076,7 +1088,7 @@ canvas:focus-visible {
   border-radius: 3px;
   background: var(--cyan);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 7px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 800;
 }
@@ -1099,7 +1111,7 @@ canvas:focus-visible {
 .active-source dd {
   overflow: hidden;
   margin: 5px 0 0;
-  font-size: 9px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1108,7 +1120,7 @@ canvas:focus-visible {
   display: block;
   overflow-wrap: anywhere;
   color: var(--cyan);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .portfolio-heading {
@@ -1123,7 +1135,7 @@ canvas:focus-visible {
 .portfolio-heading span {
   color: var(--gold);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .portfolio-list {
@@ -1164,7 +1176,7 @@ canvas:focus-visible {
 
 .portfolio-row p {
   color: #b6bbb1;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -1186,7 +1198,7 @@ canvas:focus-visible {
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .verification-matrix div:nth-child(even) {
@@ -1256,7 +1268,7 @@ canvas:focus-visible {
   border-right: 1px solid var(--line);
   background: transparent;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .world-controls button.active {
@@ -1286,6 +1298,8 @@ canvas:focus-visible {
 .app-shell[data-ready="true"] .boot-field {
   visibility: hidden;
   opacity: 0;
+  /* Never intercept pointer input while fading out after boot. */
+  pointer-events: none;
 }
 
 .boot-glyph {
@@ -1331,7 +1345,7 @@ canvas:focus-visible {
 .boot-field > span {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .boot-field > b {
@@ -1351,7 +1365,7 @@ canvas:focus-visible {
   border-radius: 5px;
   background: var(--bone);
   box-shadow: 0 16px 46px rgba(0, 0, 0, 0.28);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   opacity: 0;
   pointer-events: none;
@@ -1467,10 +1481,6 @@ canvas:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .moment-rail::before {
-    display: none;
-  }
-
   .moment-rail button {
     min-height: 46px;
     padding: 7px 8px 7px 11px;
@@ -1483,11 +1493,11 @@ canvas:focus-visible {
   }
 
   .moment-rail button b {
-    font-size: 8px;
+    font-size: 13px;
   }
 
   .moment-rail button small {
-    font-size: 6px;
+    font-size: 11px;
   }
 
   .origin-status {
@@ -1575,7 +1585,7 @@ canvas:focus-visible {
 
   .scale-control button span {
     display: inline;
-    font-size: 7px;
+    font-size: 11px;
   }
 
   .boot-field {
@@ -1687,7 +1697,8 @@ canvas:focus-visible {
 }
 
 .intake-dialog > header small,
-.intake-dialog > header b {
+.intake-dialog > header b,
+.intake-dialog > header h2 {
   display: block;
 }
 
@@ -1695,12 +1706,13 @@ canvas:focus-visible {
 .intake-drop small,
 .intake-routes small,
 .intake-result small {
-  color: rgba(198, 211, 205, 0.56);
+  color: var(--label);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 7px;
+  font-size: 11px;
 }
 
-.intake-dialog > header b {
+.intake-dialog > header b,
+.intake-dialog > header h2 {
   margin-top: 4px;
   font-size: 13px;
   font-weight: 640;
@@ -1776,13 +1788,13 @@ canvas:focus-visible {
 
 .intake-routes b {
   overflow-wrap: anywhere;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 640;
 }
 
 .intake-routes small {
   overflow-wrap: anywhere;
-  font-size: 6px;
+  font-size: 11px;
 }
 
 .intake-result {
@@ -1817,15 +1829,15 @@ canvas:focus-visible {
 
 .intake-result b {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .intake-result p {
   margin: 0;
-  color: rgba(224, 232, 223, 0.74);
-  font-size: 9px;
+  color: var(--bone);
+  font-size: 11px;
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
@@ -1839,7 +1851,7 @@ canvas:focus-visible {
 }
 
 .app-shell[data-source="source-geometry"] .origin-status {
-  border-left-color: rgba(224, 191, 115, 0.72);
+  border-left-color: var(--gold);
 }
 
 .app-shell[data-source="local-file"] .origin-status {
@@ -1893,11 +1905,11 @@ canvas:focus-visible {
     [data-source="imported-validation"],
     [data-source="cinematic"]
   ) .toast {
-    top: calc(var(--top) + 154px);
+    top: auto;
     right: auto;
-    bottom: auto;
+    bottom: calc(var(--controls) + 120px);
     left: 50%;
-    transform: translate(-50%, -8px);
+    transform: translate(-50%, 8px);
   }
 
   .app-shell:is(
@@ -1952,8 +1964,8 @@ canvas:focus-visible {
 
 .local-stage-heading small,
 .local-stage-identity small {
-  color: rgba(213, 220, 207, 0.58);
-  font-size: 6px;
+  color: var(--label);
+  font-size: 11px;
   letter-spacing: 0;
 }
 
@@ -1963,7 +1975,7 @@ canvas:focus-visible {
   margin-top: 4px;
   overflow: hidden;
   color: #eef0e7;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 620;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1997,18 +2009,15 @@ canvas:focus-visible {
 .local-stage-identity b {
   display: block;
   margin-top: 2px;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 540;
 }
 
 .local-stage-identity code {
   align-self: end;
-  max-width: 150px;
-  overflow: hidden;
-  color: rgba(193, 219, 133, 0.74);
-  font-size: 6px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  color: var(--moss);
+  font-size: 12px;
 }
 
 .local-stream-progress {
@@ -2031,13 +2040,9 @@ canvas:focus-visible {
 }
 
 .app-shell[data-source="cinematic"] .origin-title {
-  color: rgba(240, 241, 232, 0.72);
+  color: var(--bone);
   border-bottom-color: rgba(224, 191, 115, 0.28);
   background: rgba(5, 9, 8, 0.18);
-}
-
-.app-shell[data-source="cinematic"] .moment-rail::before {
-  content: "TIME / CONSTRUCTED MOMENTS";
 }
 
 .app-shell[data-source="cinematic"] .origin-status {
@@ -2118,9 +2123,9 @@ canvas:focus-visible {
 }
 
 #cinematic-clock {
-  color: rgba(235, 229, 210, 0.72);
+  color: var(--label);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 7px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2149,16 +2154,18 @@ canvas:focus-visible {
 }
 
 .objects-dialog > header small,
-.objects-dialog > header b {
+.objects-dialog > header b,
+.objects-dialog > header h2 {
   display: block;
 }
 
 .objects-dialog > header small {
-  color: rgba(195, 205, 191, 0.54);
-  font-size: 7px;
+  color: var(--label);
+  font-size: 11px;
 }
 
-.objects-dialog > header b {
+.objects-dialog > header b,
+.objects-dialog > header h2 {
   margin-top: 4px;
   font-size: 12px;
   font-weight: 620;
@@ -2168,9 +2175,9 @@ canvas:focus-visible {
   margin-left: auto;
   margin-right: 8px;
   padding: 5px 7px;
-  color: rgba(198, 208, 194, 0.58);
+  color: var(--label);
   border-left: 1px solid rgba(198, 208, 194, 0.18);
-  font-size: 6px;
+  font-size: 11px;
 }
 
 .weave-node-state[data-state="live"] {
@@ -2196,7 +2203,7 @@ canvas:focus-visible {
   align-items: center;
   gap: 8px;
   padding: 0 18px;
-  color: rgba(215, 222, 210, 0.5);
+  color: var(--label);
   border: 0;
   border-right: 1px solid rgba(209, 222, 209, 0.08);
   background: transparent;
@@ -2220,7 +2227,7 @@ canvas:focus-visible {
 
 .weave-scope span,
 .weave-scope b {
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .weave-scope span {
@@ -2228,7 +2235,7 @@ canvas:focus-visible {
 }
 
 .weave-scope b {
-  color: rgba(193, 219, 133, 0.72);
+  color: var(--moss);
   font-weight: 550;
 }
 
@@ -2239,7 +2246,7 @@ canvas:focus-visible {
   gap: 9px;
   margin: 14px 18px 4px;
   padding: 0 0 8px;
-  color: rgba(224, 191, 115, 0.72);
+  color: var(--gold);
   border-bottom: 1px solid rgba(224, 191, 115, 0.22);
 }
 
@@ -2259,7 +2266,7 @@ canvas:focus-visible {
 }
 
 .object-search input::placeholder {
-  color: rgba(207, 215, 203, 0.38);
+  color: var(--muted);
 }
 
 .object-list {
@@ -2306,20 +2313,20 @@ canvas:focus-visible {
 
 .object-entry code {
   margin-top: 5px;
-  color: rgba(193, 219, 133, 0.7);
-  font-size: 7px;
+  color: var(--moss);
+  font-size: 12px;
 }
 
 .object-entry small {
-  color: rgba(218, 222, 210, 0.62);
-  font-size: 8px;
+  color: var(--label);
+  font-size: 11px;
   line-height: 1.5;
 }
 
 .object-entry em {
   margin-top: 7px;
-  color: rgba(111, 174, 170, 0.7);
-  font-size: 6px;
+  color: var(--cyan);
+  font-size: 11px;
   font-style: normal;
 }
 
@@ -2381,8 +2388,8 @@ canvas:focus-visible {
 
 .object-empty {
   padding: 40px 12px;
-  color: rgba(207, 215, 203, 0.48);
-  font-size: 8px;
+  color: var(--label);
+  font-size: 11px;
   text-align: center;
 }
 
@@ -2411,16 +2418,18 @@ canvas:focus-visible {
 }
 
 .publish-dialog > header small,
-.publish-dialog > header b {
+.publish-dialog > header b,
+.publish-dialog > header h2 {
   display: block;
 }
 
 .publish-dialog > header small {
-  color: rgba(195, 205, 191, 0.54);
-  font-size: 7px;
+  color: var(--label);
+  font-size: 11px;
 }
 
-.publish-dialog > header b {
+.publish-dialog > header b,
+.publish-dialog > header h2 {
   margin-top: 4px;
   font-size: 12px;
   font-weight: 620;
@@ -2448,24 +2457,22 @@ canvas:focus-visible {
 }
 
 .publish-identity small {
-  color: rgba(193, 219, 133, 0.64);
-  font-size: 6px;
+  color: var(--moss);
+  font-size: 11px;
 }
 
 .publish-identity b {
   margin-top: 4px;
   overflow: hidden;
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .publish-identity code {
-  overflow: hidden;
-  color: rgba(111, 174, 170, 0.72);
-  font-size: 6px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  color: var(--cyan);
+  font-size: 12px;
 }
 
 .publish-fields {
@@ -2485,8 +2492,8 @@ canvas:focus-visible {
 }
 
 .publish-fields label > span {
-  color: rgba(199, 208, 195, 0.58);
-  font-size: 6px;
+  color: var(--label);
+  font-size: 11px;
 }
 
 .publish-fields input,
@@ -2499,7 +2506,7 @@ canvas:focus-visible {
   outline: none;
   background: #0a100e;
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   resize: vertical;
 }
@@ -2531,13 +2538,13 @@ canvas:focus-visible {
 }
 
 .publish-consent b {
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .publish-consent small {
   margin-top: 3px;
-  color: rgba(199, 208, 195, 0.52);
-  font-size: 7px;
+  color: var(--label);
+  font-size: 11px;
 }
 
 .publish-progress {
@@ -2549,7 +2556,7 @@ canvas:focus-visible {
 .publish-progress > span {
   display: flex;
   justify-content: space-between;
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .publish-progress > div {
@@ -2570,11 +2577,9 @@ canvas:focus-visible {
 }
 
 .publish-progress code {
-  overflow: hidden;
-  color: rgba(111, 174, 170, 0.62);
-  font-size: 6px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  color: var(--cyan);
+  font-size: 12px;
 }
 
 .publish-dialog > footer {
@@ -2582,6 +2587,31 @@ canvas:focus-visible {
   justify-content: flex-end;
   gap: 8px;
   padding: 0 18px 18px;
+}
+
+@media (max-width: 1420px) {
+  /* The four topbar columns need 1403px at their minimum widths, plus the
+  36px of inset, so below 1421px the last actions fall past the right edge
+  where they cannot be reached. Collapse the bar the same way the narrow
+  layout already does, so every control stays inside the viewport. */
+  .origin-title {
+    display: none;
+  }
+
+  .top-states span:nth-child(2),
+  .top-states span:nth-child(3) {
+    display: none;
+  }
+
+  .top-actions .icon-command span {
+    display: none;
+  }
+
+  .top-actions .icon-command {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
 }
 
 @media (max-width: 980px) {
@@ -2817,7 +2847,7 @@ body {
 
 .brand small {
   color: #9eb3ae;
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .origin-title {
@@ -2832,7 +2862,7 @@ body {
 
 .origin-title b {
   max-width: 280px;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .top-states {
@@ -2848,7 +2878,7 @@ body {
   height: 34px;
   padding: 0 12px;
   border-right-color: var(--line);
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .top-states i {
@@ -2894,11 +2924,11 @@ body {
   backdrop-filter: none;
 }
 
-.moment-rail::before {
+.moment-rail > h2 {
   padding: 0 0 13px 18px;
-  border: 0;
-  color: rgba(197, 219, 213, 0.54);
-  content: "TIME / THREE MOMENTS";
+  color: var(--label);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
 }
 
 .moment-rail::after {
@@ -2931,12 +2961,12 @@ body {
 }
 
 .moment-rail button b {
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .moment-rail button small {
-  color: rgba(183, 204, 199, 0.52);
-  font-size: 6px;
+  color: var(--label);
+  font-size: 11px;
 }
 
 .moment-rail button.active {
@@ -3021,9 +3051,9 @@ body {
   min-width: 40px;
   height: 38px;
   padding: 0 10px;
-  color: rgba(198, 215, 211, 0.66);
+  color: var(--label);
   border-right-color: rgba(205, 228, 221, 0.1);
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .world-controls button.active {
@@ -3033,16 +3063,22 @@ body {
 
 .scale-control {
   position: relative;
-  padding-bottom: 4px;
+  /* The slider lives in its own strip below the scale buttons, so it never
+     covers them: buttons occupy the top 38px, the 24px slider the bottom
+     strip, with a 4px gap between them. */
+  align-items: flex-start;
+  height: 66px;
+  padding-bottom: 0;
 }
 
 #scale-breath {
   position: absolute;
   right: 8px;
-  bottom: 2px;
+  bottom: 0;
   left: 8px;
   width: auto;
-  height: 8px;
+  /* 24px touch target. The 1px track stays centred in the box. */
+  height: 24px;
   margin: 0;
   appearance: none;
   background: transparent;
@@ -3214,7 +3250,7 @@ body {
   }
 
   .origin-status > b {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .condensation-track {
@@ -3257,4 +3293,15 @@ body {
   .moment-rail button {
     min-height: 38px;
   }
+}
+
+/* Drawer and dialog headings are real h2 elements. */
+.trace-drawer > header h2,
+.challenge-drawer > header h2,
+.verification-dialog > header h2,
+.sources-dialog > header h2,
+.intake-dialog > header h2,
+.objects-dialog > header h2,
+.publish-dialog > header h2 {
+  font-weight: 700;
 }

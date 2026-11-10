@@ -1,0 +1,204 @@
+/* Glossary tooltips, glossary panel, first-run tour, hash copy.
+   Glass panel, cyan and bone, 12 to 13px, the same minimal voice as the HUD. */
+
+[data-glossary-term]:not(button),
+.glossary-term {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+[data-glossary-term]:focus-visible {
+  outline: 2px solid var(--gold, #dfba70);
+  outline-offset: 2px;
+}
+
+.help-button {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hash-copy {
+  cursor: pointer;
+}
+
+.hash-copy:focus-visible {
+  outline: 2px solid var(--gold, #dfba70);
+  outline-offset: 2px;
+}
+
+.hash-copy.copied {
+  color: var(--moss, #b7ce80);
+}
+
+#tessaryn-tooltip {
+  position: fixed;
+  z-index: 90;
+  padding: 10px 12px;
+  color: #edf0e8;
+  border: 1px solid rgba(126, 206, 208, 0.32);
+  border-radius: 6px;
+  background: rgba(9, 16, 22, 0.97);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  line-height: 1.55;
+  /* The tooltip is not interactive: it must never intercept a pointer
+  event aimed at the control it describes. */
+  pointer-events: none;
+}
+
+#tessaryn-tooltip b {
+  display: block;
+  margin-bottom: 3px;
+  color: #7eced0;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.tessaryn-glossary {
+  position: fixed;
+  z-index: 80;
+  top: 76px;
+  right: 12px;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 100px);
+  overflow: auto;
+  padding: 16px;
+  color: #edf0e8;
+  border: 1px solid rgba(126, 206, 208, 0.2);
+  border-radius: 8px;
+  background: rgba(9, 16, 22, 0.97);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.52);
+}
+
+.tessaryn-glossary header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.tessaryn-glossary header h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.tessaryn-glossary dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.tessaryn-glossary dt {
+  color: #7eced0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.tessaryn-glossary dd {
+  margin: 4px 0 0;
+  color: #b9cbd0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tessaryn-glossary footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(206, 227, 222, 0.13);
+}
+
+.tessaryn-tour {
+  position: fixed;
+  z-index: 85;
+  width: min(360px, calc(100vw - 24px));
+  padding: 16px;
+  color: #edf0e8;
+  border: 1px solid rgba(126, 206, 208, 0.28);
+  border-radius: 8px;
+  background: rgba(9, 16, 22, 0.97);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.52);
+}
+
+.tessaryn-tour .tour-kicker {
+  color: #dfba70;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.tessaryn-tour h2 {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tessaryn-tour p {
+  margin: 8px 0 0;
+  color: #b9cbd0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.tessaryn-tour footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tessaryn-tour .tour-step {
+  margin-right: auto;
+  color: #87949a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+.tessaryn-tour button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: #edf0e8;
+  border: 1px solid rgba(206, 227, 222, 0.28);
+  border-radius: 5px;
+  background: rgba(232, 229, 215, 0.05);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tessaryn-tour button.tour-next {
+  color: #05080d;
+  border-color: #b7ce80;
+  background: #b7ce80;
+}
+
+.tessaryn-tour .tour-glossary {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  color: #7eced0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .tessaryn-tour {
+    top: 50%;
+    right: 12px;
+    bottom: auto;
+    left: 12px;
+    width: auto;
+    transform: translateY(-50%);
+  }
+}
