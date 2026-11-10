@@ -122,6 +122,13 @@ html[data-reconstruction-visible="true"] .capture-steps li b { border-color:var(
 
 .moment-tray { position:absolute!important; z-index:7; right:18px; bottom:128px; left:18px; display:grid; grid-template-columns:auto minmax(180px,1fr) minmax(220px,360px) auto; align-items:center; gap:14px; padding:9px 12px!important; border-radius:8px!important; }
 .moment-tray:not(:has(.timeline button)) { display:none; }
+/* While the first-run tour is open, the Moments tray stays visible so the
+   Moments and Seal steps have an anchor. These rules sit after the hiding
+   rule above, so they win at equal specificity. */
+html.tessaryn-tour-open .moment-tray { display:grid; }
+@media (max-width:760px) {
+  html.tessaryn-tour-open .moment-tray { display:block; }
+}
 .moment-tray header { margin:0!important; }
 .moment-tray header .icon-command { min-width:92px; height:34px; padding-inline:9px; font-size:11px; }
 .timeline { display:flex; min-width:0; gap:6px; overflow:auto; padding:0; }
@@ -148,9 +155,9 @@ html[data-reconstruction-visible="true"] .capture-steps li b { border-color:var(
 html[data-details-open="true"] .instrument-stack { transform:translateX(0); }
 html[data-details-open="true"] .details-backdrop { display:block; }
 .drawer-heading { display:flex; align-items:center; justify-content:space-between; min-height:50px; padding:0 2px 4px 8px; border-bottom:1px solid var(--line); }
-.drawer-heading small, .drawer-heading b { display:block; }
+.drawer-heading small, .drawer-heading h2 { display:block; }
 .drawer-heading small { color:var(--muted); font:650 11px ui-monospace,SFMono-Regular,Menlo,monospace; }
-.drawer-heading b { margin-top:3px; font-size:17px; }
+.drawer-heading h2 { margin-top:3px; font-size:17px; }
 .instrument-panel { flex:0 0 auto; padding:14px; }
 .instrument-panel header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:11px; }
 .instrument-panel header small, .instrument-panel header b { display:block; }
@@ -176,9 +183,9 @@ textarea { width:100%; min-height:100px; margin-top:9px; resize:vertical; paddin
 .theater-dialog { width:min(620px,calc(100vw - 24px)); padding:0; color:#e7f2fa; border:1px solid rgba(102,205,255,.24); border-radius:8px; background:#07101a; }
 .theater-dialog::backdrop { background:rgba(0,0,0,.76); backdrop-filter:blur(8px); }
 .theater-dialog header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.07); }
-.theater-dialog header small, .theater-dialog header b { display:block; }
+.theater-dialog header small, .theater-dialog header h2 { display:block; }
 .theater-dialog header small { color:#b9cbd0; font:650 11px ui-monospace,monospace; letter-spacing:.13em; }
-.theater-dialog header b { margin-top:4px; font:700 13px ui-monospace,monospace; }
+.theater-dialog header h2 { margin-top:4px; font:700 13px ui-monospace,monospace; }
 .dialog-body { padding:14px; }
 .dialog-body pre { max-height:50vh; overflow:auto; padding:12px; color:#9fdcff; border:1px solid rgba(255,255,255,.06); background:#03070c; font:11px/1.5 ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
 .metric-input-label { display:grid; gap:8px; margin:14px 0; color:#8da1b5; font:650 11px ui-monospace,monospace; }

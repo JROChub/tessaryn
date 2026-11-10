@@ -31,7 +31,7 @@ import {
   createIcons,
 } from "lucide";
 import "./style.css";
-import { bindHashCopy, installGlossary } from "./glossary";
+import { bindHashCopy, formatShortHash, installGlossary } from "./glossary";
 import { installOnboarding } from "./onboarding";
 import type {
   CinematicMomentView,
@@ -766,7 +766,11 @@ function populatePublicObjects(
     const title = document.createElement("b");
     const id = document.createElement("code");
     title.textContent = entry.title;
-    id.textContent = entry.object_id;
+    // Short form plus full value on hover. The code sits inside the entry
+    // button, so it is not itself a copy control: a nested button would
+    // double-activate with the entry. The full hash copies from Trace.
+    id.textContent = formatShortHash(entry.object_id);
+    id.title = entry.object_id;
     identity.append(title, id);
     const detail = document.createElement("span");
     const summary = document.createElement("small");
@@ -809,7 +813,10 @@ function populatePersonalObjects(entries: PersonalWeaveObject[], query = ""): vo
     const title = document.createElement("b");
     const id = document.createElement("code");
     title.textContent = entry.title;
-    id.textContent = entry.objectId;
+    // Short form plus full value on hover. See populatePublicObjects: the
+    // code sits inside the entry button, so it is not itself a copy control.
+    id.textContent = formatShortHash(entry.objectId);
+    id.title = entry.objectId;
     identity.append(title, id);
     const detail = document.createElement("span");
     const summary = document.createElement("small");
@@ -1012,8 +1019,16 @@ function isPublicObjectCatalog(value: unknown): value is PublicObjectCatalog {
   );
 }
 
+/**
+ * Remove only the moment buttons from the rail. The rail heading is a real
+ * DOM h2 and must survive every re-render of the buttons.
+ */
+function clearMomentButtons(): void {
+  elements.momentRail.querySelectorAll("button").forEach((button) => button.remove());
+}
+
 function populateMoments(moments: DemoMoment[]): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   moments.forEach((moment, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1044,7 +1059,7 @@ function populateMoments(moments: DemoMoment[]): void {
 }
 
 function populateTemporalMoments(report: ValidationLocusBrowserReport): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   report.moments.forEach((moment, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1773,7 +1788,7 @@ function cinematicCell(envelope: CinematicObjectEnvelopeView): DemoCell {
 }
 
 function populateCinematicMoments(moments: CinematicMomentView[]): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   moments.forEach((moment, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1902,7 +1917,7 @@ async function importSourceGeometry(file: File, companions: readonly File[]): Pr
 }
 
 function populateSourceGeometryMoment(stats: SourceGeometryStats): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "active";
@@ -2230,7 +2245,7 @@ function validationVerificationReport(
 }
 
 function populateImportedMoment(cell: DemoCell): void {
-  elements.momentRail.replaceChildren();
+  clearMomentButtons();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "active";

@@ -112,8 +112,7 @@
         </div>
       </header>
 
-      <h2 id="chronofield-heading" class="visually-hidden">Chronofield</h2>
-      <nav id="moment-rail" class="moment-rail" aria-labelledby="chronofield-heading"></nav>
+      <nav id="moment-rail" class="moment-rail" aria-labelledby="chronofield-heading"><h2 id="chronofield-heading">TIME / THREE MOMENTS</h2></nav>
 
       <section class="origin-status" aria-live="polite">
         <small id="origin-phase">ORIGIN / STRUCTURE</small>
@@ -128,6 +127,13 @@
           <i data-lucide="upload"></i><span>CONSTRUCT A PLACE</span>
         </button>
       </section>
+
+      <div id="boot-field" class="boot-field">
+        <div class="boot-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <small>TESSARYN / ORIGIN 01</small>
+        <b>CONTINUUM ASSEMBLING</b>
+        <span id="boot-status">READING LOCAL CELL MANIFESTS</span>
+      </div>
       </main>
 
       <div id="world-label" class="world-label" hidden>
@@ -323,7 +329,7 @@
 
       <footer class="world-controls" aria-label="World controls">
         <div id="cinematic-controls" class="cinematic-controls" hidden>
-          <button id="cinematic-play" class="icon-button" type="button" title="Pause temporal object" aria-pressed="true">
+          <button id="cinematic-play" class="icon-button" type="button" title="Pause temporal object" aria-label="Pause temporal object" aria-pressed="true">
             <i class="play-state" data-lucide="play"></i>
             <i class="pause-state" data-lucide="pause"></i>
           </button>
@@ -337,22 +343,15 @@
           <input id="scale-breath" type="range" min="0" max="1000" value="500" aria-label="Continuous scale breathing">
         </div>
         <div class="control-group">
-          <button id="chronofold-button" type="button" data-glossary-term="chronofold" aria-pressed="false"><i data-lucide="git-branch"></i><span>CHRONOFOLD</span></button>
-          <button id="evidence-button" class="active" type="button" data-glossary-term="provenance" aria-pressed="true"><i data-lucide="waypoints"></i><span>PROVENANCE</span></button>
+          <button id="chronofold-button" type="button" data-glossary-term="chronofold" aria-pressed="false" aria-label="CHRONOFOLD"><i data-lucide="git-branch"></i><span>CHRONOFOLD</span></button>
+          <button id="evidence-button" class="active" type="button" data-glossary-term="provenance" aria-pressed="true" aria-label="PROVENANCE"><i data-lucide="waypoints"></i><span>PROVENANCE</span></button>
         </div>
         <div class="control-group control-end">
-          <button id="challenge-button" type="button" title="Open mutation lab"><i data-lucide="flask-conical"></i><span>CHALLENGE</span></button>
-          <button id="export-button" type="button" title="Export local Memory Capsule"><i data-lucide="download"></i><span>EXPORT</span></button>
-          <button id="reset-button" class="icon-button" type="button" title="Return to Origin"><i data-lucide="rotate-ccw"></i></button>
+          <button id="challenge-button" type="button" title="Open mutation lab" aria-label="Open mutation lab"><i data-lucide="flask-conical"></i><span>CHALLENGE</span></button>
+          <button id="export-button" type="button" title="Export local Memory Capsule" aria-label="Export local Memory Capsule"><i data-lucide="download"></i><span>EXPORT</span></button>
+          <button id="reset-button" class="icon-button" type="button" title="Return to Origin" aria-label="Return to Origin"><i data-lucide="rotate-ccw"></i></button>
         </div>
       </footer>
-
-      <div id="boot-field" class="boot-field">
-        <div class="boot-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-        <small>TESSARYN / ORIGIN 01</small>
-        <b>CONTINUUM ASSEMBLING</b>
-        <span id="boot-status">READING LOCAL CELL MANIFESTS</span>
-      </div>
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </div>

@@ -135,11 +135,41 @@ export function bindHashCopy(element: HTMLElement, fullValue: string): void {
   });
 }
 
+/**
+ * Undo what `bindHashCopy` set, so a cleared digest no longer claims to
+ * copy a value it no longer holds. Safe to call on an unbound element.
+ */
+export function clearHashCopy(element: HTMLElement): void {
+  element.removeAttribute("role");
+  element.removeAttribute("aria-label");
+  element.removeAttribute("title");
+  element.removeAttribute("tabindex");
+  element.classList.remove("hash-copy", "copied");
+  delete element.dataset.fullHash;
+  delete element.dataset.hashCopyBound;
+}
+
 let installed = false;
 let tooltip: HTMLDivElement | null = null;
 let tooltipTerm: HTMLElement | null = null;
 let panel: HTMLElement | null = null;
 let lastFocused: HTMLElement | null = null;
+
+/**
+ * Values of `aria-describedby` that were on a trigger before a tooltip was
+ * shown, keyed by trigger. Restored on hide so a tooltip never discards
+ * another description, such as the seal explainer.
+ */
+const originalDescribedBy = new WeakMap<HTMLElement, string | null>();
+
+function setDescribedBy(anchor: HTMLElement, describedBy: string | null): void {
+  if (describedBy) anchor.setAttribute("aria-describedby", describedBy);
+  else anchor.removeAttribute("aria-describedby");
+}
+
+function restoreDescribedBy(anchor: HTMLElement): void {
+  setDescribedBy(anchor, originalDescribedBy.get(anchor) ?? null);
+}
 
 function entryFor(element: HTMLElement): GlossaryEntry | null {
   const id = element.dataset.glossaryTerm as GlossaryTermId | undefined;
@@ -167,7 +197,7 @@ function showTooltip(anchor: HTMLElement): void {
   const entry = entryFor(anchor);
   if (!tooltip || !entry) return;
   if (tooltipTerm && tooltipTerm !== anchor) {
-    tooltipTerm.removeAttribute("aria-describedby");
+    restoreDescribedBy(tooltipTerm);
   }
   tooltip.innerHTML = "";
   const term = document.createElement("b");
@@ -175,7 +205,14 @@ function showTooltip(anchor: HTMLElement): void {
   const definition = document.createElement("span");
   definition.textContent = entry.definition;
   tooltip.append(term, definition);
-  anchor.setAttribute("aria-describedby", "tessaryn-tooltip");
+  if (!originalDescribedBy.has(anchor)) {
+    originalDescribedBy.set(anchor, anchor.getAttribute("aria-describedby"));
+  }
+  const describedBy = (originalDescribedBy.get(anchor) ?? "")
+    .split(/\s+/)
+    .filter((token) => token.length > 0 && token !== "tessaryn-tooltip");
+  describedBy.push("tessaryn-tooltip");
+  anchor.setAttribute("aria-describedby", describedBy.join(" "));
   tooltip.hidden = false;
   tooltipTerm = anchor;
   positionTooltip(anchor);
@@ -184,7 +221,7 @@ function showTooltip(anchor: HTMLElement): void {
 function hideTooltip(): void {
   if (!tooltip) return;
   if (tooltipTerm) {
-    tooltipTerm.removeAttribute("aria-describedby");
+    restoreDescribedBy(tooltipTerm);
   }
   tooltip.hidden = true;
   tooltipTerm = null;
@@ -265,7 +302,9 @@ export function installGlossary(): void {
   tooltip.id = "tessaryn-tooltip";
   tooltip.setAttribute("role", "tooltip");
   tooltip.hidden = true;
-  document.body.append(tooltip);
+  // The tooltip is position fixed, so placing it inside main changes nothing
+  // visually, and keeps its visible text inside a landmark.
+  (document.querySelector("main") ?? document.body).append(tooltip);
   panel = buildPanel();
   document.body.append(panel);
 

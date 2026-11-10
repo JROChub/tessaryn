@@ -118,7 +118,7 @@ h1 { max-width:760px; margin:0; font-size:clamp(30px,6vw,58px); line-height:1; l
 .pipeline-card, .object-card, .sync-card, .weave-toolbar { margin-top:10px; padding:16px; }
 .pipeline-card header, .object-card header, .sync-card header, .preview-dialog header, .weave-object-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .pipeline-card header span, .object-card header span, .sync-card header span, .weave-object-heading span { min-width:0; }
-.pipeline-card header b, .object-card header b, .sync-card header b, .weave-object-heading b { display:block; overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.pipeline-card header h2, .object-card header h2, .sync-card header h2, .weave-object-heading h3 { display:block; overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 #pipeline-percent { color:var(--cyan); font:800 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 .pipeline-track { height:1px; margin:14px 0 16px; overflow:hidden; background:rgba(232,229,215,.09); }
 .pipeline-track i { display:block; width:0; height:100%; background:var(--cyan); box-shadow:0 0 12px rgba(126,206,208,.42); transition:width 250ms ease; }
@@ -156,12 +156,13 @@ dd { overflow-wrap:anywhere; margin-top:4px; color:var(--cyan); line-height:1.5;
 .preview-dialog header { min-height:62px; padding:10px 12px 10px 16px; border-bottom:1px solid var(--line); }
 .preview-dialog header span { min-width:0; }
 .preview-dialog header small { display:block; color:var(--muted); font:11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-.preview-dialog header b { display:block; overflow:hidden; max-width:65vw; margin-top:3px; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.preview-dialog header h2 { display:block; overflow:hidden; max-width:65vw; margin-top:3px; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 .preview-body { display:grid; min-height:220px; max-height:calc(92vh - 62px); place-items:center; overflow:auto; padding:12px; }
 .preview-body img, .preview-body video { display:block; max-width:100%; max-height:calc(92vh - 96px); border-radius:3px; }
 .preview-body audio { width:min(100%,640px); }
 .preview-body iframe { width:100%; min-height:70vh; border:0; background:white; }
 .unsupported-preview { max-width:520px; padding:30px; text-align:center; }
+.unsupported-preview h3 { font-weight:700; }
 .unsupported-preview p { color:var(--muted); line-height:1.5; }
 
 .weave-hero { margin-bottom:10px; }

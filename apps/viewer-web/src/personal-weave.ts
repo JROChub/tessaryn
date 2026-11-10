@@ -65,9 +65,10 @@ function render(): void {
     [object.title, object.objectId, object.artifactSha256, object.summary].join(" ").toLowerCase().includes(query));
   elements.list.replaceChildren();
   if (visible.length === 0 && visibleConstructions.length === 0) {
+    elements.list.append(sectionLabel("NO PERSONAL OBJECTS"));
     const empty = document.createElement("article");
     empty.className = "weave-empty";
-    empty.innerHTML = `<b>NO PERSONAL OBJECTS</b><p>Capture a World Cell or retain a source file on this device.</p><a href="./world-cell-theater.html">CAPTURE WORLD CELL</a>`;
+    empty.innerHTML = `<p>Capture a World Cell or retain a source file on this device.</p><a href="./world-cell-theater.html">CAPTURE WORLD CELL</a>`;
     elements.list.append(empty);
     return;
   }
@@ -93,8 +94,8 @@ function createConstructionCard(object: PersonalWeaveObject): HTMLElement {
   heading.className = "weave-object-heading";
   const title = document.createElement("span");
   const small = document.createElement("small"); small.textContent = new Date(object.addedAtUnixUs / 1_000).toLocaleString();
-  const strong = document.createElement("b"); strong.textContent = object.title;
-  title.append(small, strong);
+  const name = document.createElement("h3"); name.textContent = object.title;
+  title.append(small, name);
   const digest = document.createElement("code"); bindHashCopy(digest, object.artifactSha256);
   heading.append(title, digest);
   const meta = document.createElement("dl");
@@ -135,8 +136,8 @@ function createCard(object: StoredObject): HTMLElement {
   heading.className = "weave-object-heading";
   const title = document.createElement("span");
   const small = document.createElement("small"); small.textContent = new Date(object.createdAt).toLocaleString();
-  const strong = document.createElement("b"); strong.textContent = object.name;
-  title.append(small, strong);
+  const name = document.createElement("h3"); name.textContent = object.name;
+  title.append(small, name);
   const digest = document.createElement("code"); bindHashCopy(digest, object.id);
   heading.append(title, digest);
   const meta = document.createElement("dl");
@@ -193,7 +194,7 @@ function createPreview(blob: Blob, url: string, name: string): HTMLElement {
   if (blob.type.startsWith("audio/")) { const audio = document.createElement("audio"); audio.src = url; audio.controls = true; return audio; }
   if (blob.type === "application/pdf" || blob.type.startsWith("text/") || blob.type.includes("json")) { const frame = document.createElement("iframe"); frame.src = url; frame.title = name; return frame; }
   const box = document.createElement("div"); box.className = "unsupported-preview";
-  const title = document.createElement("b"); title.textContent = "PREVIEW NOT AVAILABLE";
+  const title = document.createElement("h3"); title.textContent = "PREVIEW NOT AVAILABLE";
   const text = document.createElement("p"); text.textContent = "The original file is retained intact and can be shared or downloaded.";
   const button = action("DOWNLOAD OBJECT", "primary-action", () => downloadBlob(blob, name));
   box.append(title, text, button); return box;

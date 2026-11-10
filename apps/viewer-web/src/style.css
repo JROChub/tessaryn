@@ -578,15 +578,6 @@ canvas:focus-visible {
   backdrop-filter: blur(20px) saturate(120%);
 }
 
-.moment-rail::before {
-  padding: 11px 13px 9px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--line);
-  content: "CHRONOFIELD / 3 MOMENTS";
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-}
-
 .moment-rail button {
   position: relative;
   display: grid;
@@ -1488,10 +1479,6 @@ canvas:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .moment-rail::before {
-    display: none;
-  }
-
   .moment-rail button {
     min-height: 46px;
     padding: 7px 8px 7px 11px;
@@ -2054,10 +2041,6 @@ canvas:focus-visible {
   color: var(--bone);
   border-bottom-color: rgba(224, 191, 115, 0.28);
   background: rgba(5, 9, 8, 0.18);
-}
-
-.app-shell[data-source="cinematic"] .moment-rail::before {
-  content: "TIME / CONSTRUCTED MOMENTS";
 }
 
 .app-shell[data-source="cinematic"] .origin-status {
@@ -2914,11 +2897,11 @@ body {
   backdrop-filter: none;
 }
 
-.moment-rail::before {
+.moment-rail > h2 {
   padding: 0 0 13px 18px;
-  border: 0;
   color: var(--label);
-  content: "TIME / THREE MOMENTS";
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
 }
 
 .moment-rail::after {
@@ -3059,10 +3042,12 @@ body {
 #scale-breath {
   position: absolute;
   right: 8px;
-  bottom: 2px;
+  bottom: -6px;
   left: 8px;
   width: auto;
-  height: 8px;
+  /* 24px touch target. The 1px track stays centred in the box, so it sits
+     exactly where the old 8px control put it. */
+  height: 24px;
   margin: 0;
   appearance: none;
   background: transparent;

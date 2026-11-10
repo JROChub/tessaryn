@@ -8,7 +8,7 @@
  */
 
 export interface OnboardingStep {
-  /** CSS selector for the anchor element. Hidden anchors are skipped. */
+  /** CSS selector for the anchor element. A hidden anchor is waited for, briefly, never skipped. */
   anchor: string;
   title: string;
   body: string;
@@ -25,6 +25,26 @@ let stepEl: HTMLElement | null = null;
 let prevButton: HTMLButtonElement | null = null;
 let nextButton: HTMLButtonElement | null = null;
 let current = -1;
+
+/**
+ * Retries for an anchor that is not visible yet, such as the Construct
+ * button, which stays `display: none` until boot sets the reference
+ * source. A step is never silently skipped: while its anchor is missing
+ * the tour waits, and if the anchor never appears the tour closes
+ * without marking itself seen, so it can try again on the next visit.
+ */
+const RETRY_DELAY_MS = 150;
+const MAX_RETRIES = 20;
+let session = 0;
+let pendingIndex = -1;
+/** Increments on every rendered step, so a pending retry never jumps the user after they navigate elsewhere. */
+let renderToken = 0;
+/**
+ * Present on `documentElement` while the tour is open. The theater keeps
+ * its Moments tray hidden until a Moment exists; this class reveals it
+ * for the tour, so the Moments and Seal steps always have an anchor.
+ */
+const TOUR_OPEN_CLASS = "tessaryn-tour-open";
 
 function markSeen(): void {
   try {
@@ -72,24 +92,37 @@ function positionCard(anchor: HTMLElement): void {
   card.style.left = `${String(Math.round(left))}px`;
 }
 
-function showStep(index: number): void {
-  // Skip anchors that are not on screen (e.g. an empty Moment tray).
-  let next = index;
-  let anchor: HTMLElement | null = null;
-  while (next < steps.length) {
-    const step = steps[next];
-    if (!step) break;
-    anchor = visibleAnchor(step);
-    if (anchor) break;
-    next += 1;
-  }
-  if (!anchor || next >= steps.length) {
+function showStep(index: number, attempt = 0): void {
+  if (index >= steps.length) {
     closeTour(true);
     return;
   }
-  const step = steps[next];
-  if (!step || !card || !titleEl || !bodyEl || !stepEl || !nextButton || !prevButton) return;
-  current = next;
+  if (index < 0) index = 0;
+  if (pendingIndex === index) return;
+  const step = steps[index];
+  if (!step) {
+    closeTour(false);
+    return;
+  }
+  const anchor = visibleAnchor(step);
+  if (!anchor) {
+    if (attempt < MAX_RETRIES) {
+      pendingIndex = index;
+      const token = session;
+      const rendered = renderToken;
+      window.setTimeout(() => {
+        pendingIndex = -1;
+        if (token !== session || rendered !== renderToken || !card || card.hidden) return;
+        showStep(index, attempt + 1);
+      }, RETRY_DELAY_MS);
+      return;
+    }
+    closeTour(false);
+    return;
+  }
+  if (!card || !titleEl || !bodyEl || !stepEl || !nextButton || !prevButton) return;
+  current = index;
+  renderToken += 1;
   titleEl.textContent = step.title;
   bodyEl.textContent = step.body;
   stepEl.textContent = `${String(current + 1)} / ${String(steps.length)}`;
@@ -101,6 +134,9 @@ function showStep(index: number): void {
 }
 
 function closeTour(seen: boolean): void {
+  session += 1;
+  pendingIndex = -1;
+  document.documentElement.classList.remove(TOUR_OPEN_CLASS);
   if (card) card.hidden = true;
   current = -1;
   if (seen) markSeen();
@@ -108,6 +144,9 @@ function closeTour(seen: boolean): void {
 
 export function openOnboarding(): void {
   if (steps.length === 0) return;
+  session += 1;
+  pendingIndex = -1;
+  document.documentElement.classList.add(TOUR_OPEN_CLASS);
   showStep(0);
 }
 

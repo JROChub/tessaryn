@@ -1,6 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import "./keyxym-mobile.css";
-import { bindHashCopy } from "./glossary";
+import { bindHashCopy, clearHashCopy } from "./glossary";
 import {
   CHUNK_BYTES,
   clearPersonalWeave,
@@ -225,7 +225,7 @@ function createPreview(blob: Blob, url: string, name: string): HTMLElement {
 }
 
 function resetObjectPanel(): void {
-  elements.objectName.textContent = "NONE"; elements.objectDigest.textContent = "--"; elements.objectSize.textContent = "--";
+  elements.objectName.textContent = "NONE"; clearHashCopy(elements.objectDigest); elements.objectDigest.textContent = "--"; elements.objectSize.textContent = "--";
   elements.objectChunks.textContent = "--"; elements.objectJournal.textContent = "EMPTY";
   for (const button of [elements.viewButton, elements.shareButton, elements.deleteButton, elements.syncButton, elements.interruptButton]) button.disabled = true;
 }
@@ -236,7 +236,19 @@ function setPeerState(label: string, state: string): void { elements.peerState.t
 function setControls(enabled: boolean): void { elements.captureButton.disabled = !enabled; elements.sampleButton.disabled = !enabled; elements.syncButton.disabled = !enabled || !activeObject; elements.interruptButton.disabled = !syncRunning && !activeObject; elements.viewButton.disabled = !enabled || !activeObject; elements.shareButton.disabled = !enabled || !activeObject; elements.deleteButton.disabled = !enabled || !activeObject; }
 function appendEvent(message: string): void { const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }); elements.eventLog.textContent += `\n${stamp} / ${message}`; elements.eventLog.scrollTop = elements.eventLog.scrollHeight; }
 function updateNetworkState(): void { elements.networkState.textContent = navigator.onLine ? "ONLINE" : "OFFLINE"; }
-async function getOrCreateDeviceId(): Promise<string> { const existing = localStorage.getItem("tessaryn-keyxym-device-id"); if (existing) return existing; const id = bytesToHex(sha256(crypto.getRandomValues(new Uint8Array(32)))); localStorage.setItem("tessaryn-keyxym-device-id", id); return id; }
+async function getOrCreateDeviceId(): Promise<string> {
+  try {
+    const existing = localStorage.getItem("tessaryn-keyxym-device-id");
+    if (existing) return existing;
+    const id = bytesToHex(sha256(crypto.getRandomValues(new Uint8Array(32))));
+    localStorage.setItem("tessaryn-keyxym-device-id", id);
+    return id;
+  } catch {
+    // Storage blocked (for example, private mode): fall back to an id that
+    // lasts for this session only, instead of failing device lab boot.
+    return bytesToHex(sha256(crypto.getRandomValues(new Uint8Array(32))));
+  }
+}
 function newJournal(id: string): TransferJournal { return { objectId: id, acknowledged: [], complete: false, updatedAt: Date.now() }; }
 function bytesToHex(bytes: Uint8Array): string { return [...bytes].map((value) => value.toString(16).padStart(2, "0")).join(""); }
 function formatBytes(bytes: number): string { if (bytes < 1024) return `${bytes} B`; if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KiB`; if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(2)} MiB`; return `${(bytes / 1024 ** 3).toFixed(2)} GiB`; }
