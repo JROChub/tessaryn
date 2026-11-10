@@ -181,6 +181,11 @@ function positionTooltip(anchor: HTMLElement): void {
   if (!tooltip) return;
   const rect = anchor.getBoundingClientRect();
   const width = Math.min(300, window.innerWidth - 24);
+  // Apply the width before measuring the height: the content reflows to the
+  // applied width, so measuring first reads the height at the element's
+  // unconstrained width and places the tooltip too low, where it can cover
+  // the anchor itself and swallow its click.
+  tooltip.style.width = `${String(Math.round(width))}px`;
   const height = tooltip.offsetHeight || 96;
   let top = rect.bottom + 10;
   if (top + height > window.innerHeight - 12) {
@@ -190,7 +195,6 @@ function positionTooltip(anchor: HTMLElement): void {
   if (left < 12) left = 12;
   tooltip.style.top = `${String(Math.round(top))}px`;
   tooltip.style.left = `${String(Math.round(left))}px`;
-  tooltip.style.width = `${String(Math.round(width))}px`;
 }
 
 function showTooltip(anchor: HTMLElement): void {

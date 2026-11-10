@@ -43,6 +43,9 @@
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
   font-size: 12px;
   line-height: 1.55;
+  /* The tooltip is not interactive: it must never intercept a pointer
+  event aimed at the control it describes. */
+  pointer-events: none;
 }
 
 #tessaryn-tooltip b {
