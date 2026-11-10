@@ -191,9 +191,11 @@
 
 @media (max-width: 760px) {
   .tessaryn-tour {
+    top: 50%;
     right: 12px;
-    bottom: 12px;
+    bottom: auto;
     left: 12px;
     width: auto;
+    transform: translateY(-50%);
   }
 }

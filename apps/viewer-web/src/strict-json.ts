@@ -4,8 +4,15 @@ const MAX_DEPTH = 256;
 export function parseStrictIntegerJson(text: string): unknown {
   let cursor = 0;
 
+  // Character codes are compared directly instead of regular expressions:
+  // this parser walks multi-megabyte artifacts character by character, and
+  // a regex test per character dominates the parse time.
+  const isWhitespaceCode = (code: number): boolean =>
+    code === 0x09 || code === 0x0a || code === 0x0d || code === 0x20;
+  const isDigitCode = (code: number): boolean => code >= 0x30 && code <= 0x39;
+
   const whitespace = (): void => {
-    while (cursor < text.length && /[\u0009\u000a\u000d\u0020]/.test(text[cursor] ?? "")) {
+    while (cursor < text.length && isWhitespaceCode(text.charCodeAt(cursor))) {
       cursor += 1;
     }
   };
@@ -108,10 +115,13 @@ export function parseStrictIntegerJson(text: string): unknown {
     if (text[cursor] === "-") cursor += 1;
     if (text[cursor] === "0") {
       cursor += 1;
-      if (/\d/.test(text[cursor] ?? "")) throw new Error("leading zero in JSON integer");
+      if (isDigitCode(text.charCodeAt(cursor))) throw new Error("leading zero in JSON integer");
     } else {
-      if (!/[1-9]/.test(text[cursor] ?? "")) throw new Error("invalid JSON value");
-      while (/\d/.test(text[cursor] ?? "")) cursor += 1;
+      const first = text.charCodeAt(cursor);
+      if (Number.isNaN(first) || first < 0x31 || first > 0x39) {
+        throw new Error("invalid JSON value");
+      }
+      while (isDigitCode(text.charCodeAt(cursor))) cursor += 1;
     }
     if ([".", "e", "E"].includes(text[cursor] ?? "")) {
       throw new Error("floating-point JSON is forbidden");

@@ -1298,6 +1298,8 @@ canvas:focus-visible {
 .app-shell[data-ready="true"] .boot-field {
   visibility: hidden;
   opacity: 0;
+  /* Never intercept pointer input while fading out after boot. */
+  pointer-events: none;
 }
 
 .boot-glyph {
@@ -1903,11 +1905,11 @@ canvas:focus-visible {
     [data-source="imported-validation"],
     [data-source="cinematic"]
   ) .toast {
-    top: calc(var(--top) + 154px);
+    top: auto;
     right: auto;
-    bottom: auto;
+    bottom: calc(var(--controls) + 120px);
     left: 50%;
-    transform: translate(-50%, -8px);
+    transform: translate(-50%, 8px);
   }
 
   .app-shell:is(
@@ -3036,17 +3038,21 @@ body {
 
 .scale-control {
   position: relative;
-  padding-bottom: 4px;
+  /* The slider lives in its own strip below the scale buttons, so it never
+     covers them: buttons occupy the top 38px, the 24px slider the bottom
+     strip, with a 4px gap between them. */
+  align-items: flex-start;
+  height: 66px;
+  padding-bottom: 0;
 }
 
 #scale-breath {
   position: absolute;
   right: 8px;
-  bottom: -6px;
+  bottom: 0;
   left: 8px;
   width: auto;
-  /* 24px touch target. The 1px track stays centred in the box, so it sits
-     exactly where the old 8px control put it. */
+  /* 24px touch target. The 1px track stays centred in the box. */
   height: 24px;
   margin: 0;
   appearance: none;

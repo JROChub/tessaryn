@@ -5,7 +5,7 @@
     "browser": "@cyclonedx/cyclonedx-npm 6.0.0"
   },
   "inputs": {
-    "Cargo.lock": "7544b3dccb0fc6913fb31cc484906392dee194c1dee3d949c05bbdf23feaeae3",
+    "Cargo.lock": "47b373413fec78c547af7cdbd6b900999844d4b2de167e0231f15821fabd5e14",
     "apps/viewer-web/package-lock.json": "671c409beb648170e773b18f5cb325d78ad6b1c8bc45f0985c51d591da066c56"
   },
   "files": {
@@ -21,8 +21,8 @@
     "sbom/rust/tessaryn-transport.cdx.json": "bf724dfeb687d82a5064886b1d3ca669ad838ccedf9f3556841c7c4ab76ed8dd",
     "sbom/rust/tessaryn-weave.cdx.json": "126a0e1f46752acc8546a98d16604642d4ed14c32dedb53660bf3e83292ea827",
     "sbom/rust/tessaryn-witness.cdx.json": "d9a0cf695584c61c1b02da06aae22a7d0c3c431f84d5a5bbd794e42c33239bc9",
-    "sbom/rust/tessaryn-cli.cdx.json": "2cb25f66547ef96c8915c636b70679748471d5233718224b8f27d8c9198fb9fe",
-    "sbom/rust/tessaryn-weave-node.cdx.json": "7e03b423fd1c1d6be5f70361e94b0e67a907781e7f9410390065fd85eed6e15a",
+    "sbom/rust/tessaryn-cli.cdx.json": "9d8ddd975c252bee92cf0d94475282f4411fcd3654560ba6563adce003a8db19",
+    "sbom/rust/tessaryn-weave-node.cdx.json": "918ea4b11fd0bd2650252f47c12202bde2372a7e90b4c230025d311e059db369",
     "sbom/viewer-web.cdx.json": "bcb4d0451984bc6fdc1b20121800ff6d7e288da68fd27a45a77d285a82874653"
   }
 }

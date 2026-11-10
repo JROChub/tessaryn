@@ -31,7 +31,7 @@ import {
   createIcons,
 } from "lucide";
 import "./style.css";
-import { bindHashCopy, formatShortHash, installGlossary } from "./glossary";
+import { bindHashCopy, installGlossary } from "./glossary";
 import { installOnboarding } from "./onboarding";
 import type {
   CinematicMomentView,
@@ -64,7 +64,11 @@ import {
   sourceGeometryFormat,
   type SourceGeometryStats,
 } from "./source-geometry";
-import { runMutation } from "./verification";
+import {
+  runMutation,
+  verifyValidationLocusArtifact,
+  verifyWorld,
+} from "./verification";
 import {
   destroyVerificationWorker,
   verifyReconstructionOffThread,
@@ -413,9 +417,13 @@ async function boot(): Promise<void> {
     personalWeaveObjects = personalObjects;
     validationArtifact = parsedValidation;
     elements.bootStatus.textContent = "VERIFYING REFERENCE + GROUND TRUTH";
+    // Boot verifies on the main thread. Posting the parsed artifacts to the
+    // verification worker costs more in structured cloning than the
+    // verification itself takes to compute, and boot is not interactive yet.
+    // The worker stays in use for interactive re-verification after boot.
     const [verifiedReference, verifiedValidation] = await Promise.all([
-      verifyWorldOffThread(worldData),
-      verifyValidationOffThread(parsedValidation),
+      verifyWorld(worldData),
+      verifyValidationLocusArtifact(parsedValidation),
     ]);
     referenceVerification = verifiedReference;
     validationVerification = verifiedValidation;
@@ -766,10 +774,10 @@ function populatePublicObjects(
     const title = document.createElement("b");
     const id = document.createElement("code");
     title.textContent = entry.title;
-    // Short form plus full value on hover. The code sits inside the entry
-    // button, so it is not itself a copy control: a nested button would
-    // double-activate with the entry. The full hash copies from Trace.
-    id.textContent = formatShortHash(entry.object_id);
+    // The full identifier is shown so the entry can be read and matched
+    // exactly. The code sits inside the entry button, so it is not itself
+    // a copy control: a nested button would double-activate with the entry.
+    id.textContent = entry.object_id;
     id.title = entry.object_id;
     identity.append(title, id);
     const detail = document.createElement("span");
@@ -813,9 +821,10 @@ function populatePersonalObjects(entries: PersonalWeaveObject[], query = ""): vo
     const title = document.createElement("b");
     const id = document.createElement("code");
     title.textContent = entry.title;
-    // Short form plus full value on hover. See populatePublicObjects: the
-    // code sits inside the entry button, so it is not itself a copy control.
-    id.textContent = formatShortHash(entry.objectId);
+    // The full identifier is shown so the entry can be read and matched
+    // exactly. See populatePublicObjects: the code sits inside the entry
+    // button, so it is not itself a copy control.
+    id.textContent = entry.objectId;
     id.title = entry.objectId;
     identity.append(title, id);
     const detail = document.createElement("span");
