@@ -243,6 +243,7 @@ function buildPanel(): HTMLElement {
     list.append(term, definition);
   }
   const footer = document.createElement("footer");
+  footer.setAttribute("role", "none");
   const tourButton = document.createElement("button");
   tourButton.type = "button";
   tourButton.className = "icon-command secondary";

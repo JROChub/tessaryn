@@ -49,13 +49,13 @@
             </button>
           </div>
         </header>
-        <footer class="local-stage-identity" aria-live="polite">
+        <div class="local-stage-identity" aria-live="polite">
           <span>
             <small id="local-status">AWAITING LOCAL STREAM</small><b id="local-size">--</b>
           </span>
           <code id="local-root">STREAM ROOT PENDING</code>
           <div class="local-stream-progress"><i id="local-progress"></i></div>
-        </footer>
+        </div>
       </section>
 
       <header class="topbar">
@@ -311,7 +311,7 @@
           <div><i id="publish-progress-bar"></i></div>
           <code id="publish-detail">LOCAL IDENTITY REMAINS ON THIS DEVICE</code>
         </div>
-        <footer>
+        <footer role="none">
           <button id="keep-object" class="icon-command secondary" type="button">
             <i data-lucide="hard-drive-download"></i><span>KEEP ON DEVICE</span>
           </button>

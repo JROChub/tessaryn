@@ -123,8 +123,10 @@ function buildCard(): HTMLElement {
   kicker.className = "tour-kicker";
   kicker.textContent = "FIRST RUN";
   const title = document.createElement("h2");
+  title.textContent = "First-run tour";
   const body = document.createElement("p");
   const footer = document.createElement("footer");
+  footer.setAttribute("role", "none");
   const step = document.createElement("span");
   step.className = "tour-step";
   const prev = document.createElement("button");
