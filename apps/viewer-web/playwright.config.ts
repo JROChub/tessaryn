@@ -14,9 +14,20 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "chromium-origin",
+      testMatch: /origin\.spec\.ts/u,
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { args: ["--disable-dev-shm-usage"] },
+      },
+    },
+    {
       name: "chromium",
-      testIgnore: /world-cell-webkit-smoke\.spec\.ts/u,
-      use: { ...devices["Desktop Chrome"] },
+      testIgnore: [/world-cell-webkit-smoke\.spec\.ts/u, /origin\.spec\.ts/u],
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { args: ["--disable-dev-shm-usage"] },
+      },
     },
     {
       name: "webkit-iphone",
