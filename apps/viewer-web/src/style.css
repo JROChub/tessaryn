@@ -2589,6 +2589,31 @@ canvas:focus-visible {
   padding: 0 18px 18px;
 }
 
+@media (max-width: 1420px) {
+  /* The four topbar columns need 1403px at their minimum widths, plus the
+  36px of inset, so below 1421px the last actions fall past the right edge
+  where they cannot be reached. Collapse the bar the same way the narrow
+  layout already does, so every control stays inside the viewport. */
+  .origin-title {
+    display: none;
+  }
+
+  .top-states span:nth-child(2),
+  .top-states span:nth-child(3) {
+    display: none;
+  }
+
+  .top-actions .icon-command span {
+    display: none;
+  }
+
+  .top-actions .icon-command {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
+}
+
 @media (max-width: 980px) {
   .top-actions .icon-command span {
     display: none;
